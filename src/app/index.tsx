@@ -1,61 +1,78 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { Button, Host, Switch, Text } from '@expo/ui';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Brand, Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+/**
+ * Foundation screen — Stage A (Expo Go).
+ *
+ * Purpose: prove the pipeline end to end. Everything inside <Host> below is a
+ * REAL native control — SwiftUI on iOS, Jetpack Compose on Android — rendered
+ * by @expo/ui universal components. Not styled lookalikes.
+ *
+ * This screen is temporary. The first real milestone screen replaces it.
+ */
+export default function FoundationScreen() {
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const colors = Colors[scheme];
+  const [monitoring, setMonitoring] = useState(true);
+  const [taps, setTaps] = useState(0);
 
-export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.hero}>
+            <View style={[styles.brandMark, { backgroundColor: Brand.primary }]}>
+              <ThemedText style={styles.brandLetter}>H</ThemedText>
+            </View>
+            <ThemedText type="title" style={styles.title}>
+              Horcery
+            </ThemedText>
+            <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Rewrite foundation · Stage A
+            </ThemedText>
+          </View>
+
+          <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle" style={styles.cardTitle}>
+              Native components check
+            </ThemedText>
+            <ThemedText style={[styles.cardHint, { color: colors.textSecondary }]}>
+              These controls are real native UI — SwiftUI on iPhone, Material on
+              Android. Same code, both platforms.
+            </ThemedText>
+
+            <View style={styles.controlRow}>
+              <Host matchContents>
+                <Text textStyle={{ fontSize: 16, color: colors.text }}>
+                  Monitoring
+                </Text>
+              </Host>
+              <Host matchContents>
+                <Switch value={monitoring} onValueChange={setMonitoring} />
+              </Host>
+            </View>
+
+            <Host matchContents style={styles.buttonHost}>
+              <Button
+                variant="filled"
+                label={taps === 0 ? 'Tap me' : `Tapped ${taps}×`}
+                onPress={() => setTaps((t) => t + 1)}
+              />
+            </Host>
+          </ThemedView>
+
+          <ThemedText style={[styles.footer, { color: colors.textSecondary }]}>
+            {monitoring
+              ? 'Status: watching the stable 🐎'
+              : 'Status: monitoring paused'}
           </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -64,35 +81,65 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     flexDirection: 'row',
+    justifyContent: 'center',
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
   },
-  heroSection: {
-    alignItems: 'center',
+  scroll: {
+    flexGrow: 1,
     justifyContent: 'center',
-    flex: 1,
     paddingHorizontal: Spacing.four,
     gap: Spacing.four,
+  },
+  hero: {
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  brandMark: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
+  },
+  brandLetter: {
+    color: '#ffffff',
+    fontSize: 40,
+    fontWeight: '700',
+    lineHeight: 48,
   },
   title: {
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
+  subtitle: {
+    fontSize: 15,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
+  card: {
     borderRadius: Spacing.four,
+    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  cardTitle: {
+    fontSize: 17,
+  },
+  cardHint: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  buttonHost: {
+    alignSelf: 'stretch',
+  },
+  footer: {
+    textAlign: 'center',
+    fontSize: 14,
   },
 });

@@ -7,6 +7,16 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * Horcery brand primary — carried over from the current app's design tokens
+ * (gluestack config --color-primary-500 / -600) so the rewrite matches the brand
+ * from day one. Each habit of the old palette we adopt gets recorded here.
+ */
+export const Brand = {
+  primary: '#615FFF', // rgb(97 95 255) — primary-500 in the current app
+  primaryStrong: '#4F39F6', // primary-600
+} as const;
+
 export const Colors = {
   light: {
     text: '#000000',
