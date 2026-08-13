@@ -17,72 +17,95 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fyp, Spacing } from '@/constants/theme';
 
 /**
- * PROTOTYPES — snapshot video carousel, four layouts.
+ * PROTOTYPES — snapshot video carousel.
  *
- * Throwaway exploration, deliberately on its own branch: which treatment of a
- * swipeable 4:3 video carousel looks premium with the fewest components?
+ * Layout per Inakshi's direction:
+ * - TOP ROW: an All/Behavior/People/Alert segmented filter, then a video
+ *   carousel sized so ~1.6 cards are visible — the partial next card is the
+ *   scroll affordance.
+ * - SECOND ROW: smaller cards, ~2.5 visible, so a static glance at the page
+ *   reads as "multiple rows, all swipeable".
  *
- *   1 Overlay — store name on a dark gradient scrim over the video
- *   2 Caption — text below the video, never overlapping it
- *   3 Peek    — next video's edge visible, invites the swipe
- *   4 Glass   — floating liquid-glass name chip inside the video
+ * The Overlay/Caption/Glass switcher at the very top is prototype scaffolding
+ * (it flips the text treatment on the top row), not part of the design.
  *
- * Component budget, kept deliberately tiny: native paging ScrollView,
- * expo-video, expo-linear-gradient (scrim), expo-glass-effect (variant 4),
- * and an @expo/ui segmented Picker to flip variants. Everything else is a
- * plain View.
+ * Component budget: snap ScrollView, expo-video, expo-linear-gradient,
+ * expo-glass-effect, @expo/ui segmented Pickers. Nothing else.
  */
 
 const RADIUS = 18;
 const PAGE_MARGIN = Spacing.three;
 
-// Google's classic gtv-videos-bucket samples now return 403; these are
-// verified reachable (curl 200) as of 2026-08-13.
-const ITEMS = [
-  {
-    uri: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
-    name: 'Claire Murphy',
-    meta: 'Stall 4 · Barn A',
-  },
-  {
-    uri: 'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
-    name: 'Midnight',
-    meta: 'Stall 7 · Barn A',
-  },
-  {
-    uri: 'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
-    name: 'Golden Boy',
-    meta: 'Stall 2 · Barn B',
-  },
+// Verified reachable (curl 200) 2026-08-13 — Google's classic sample bucket
+// now returns 403.
+const VIDEO_URIS = [
+  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
+  'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
+  'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
 ];
 
-type Variant = 'overlay' | 'caption' | 'peek' | 'glass';
+type Category = 'behavior' | 'people' | 'alert';
 
-const VARIANTS: { label: string; value: Variant; blurb: string }[] = [
-  { label: 'Overlay', value: 'overlay', blurb: 'Name on a gradient scrim over the video' },
-  { label: 'Caption', value: 'caption', blurb: 'Text below the video — nothing overlaps' },
-  { label: 'Peek', value: 'peek', blurb: 'Next video peeks in from the right' },
-  { label: 'Glass', value: 'glass', blurb: 'Floating liquid-glass chip inside the video' },
+const ITEMS = [
+  { name: 'Claire Murphy', meta: 'Stall 4 · Barn A', category: 'behavior' },
+  { name: 'Midnight', meta: 'Stall 7 · Barn A', category: 'people' },
+  { name: 'Golden Boy', meta: 'Stall 2 · Barn B', category: 'alert' },
+  { name: 'Storm', meta: 'Stall 1 · Barn A', category: 'behavior' },
+  { name: 'Biscuit', meta: 'Stall 3 · Barn B', category: 'alert' },
+].map((item, i) => ({
+  ...item,
+  category: item.category as Category,
+  uri: VIDEO_URIS[i % VIDEO_URIS.length],
+}));
+
+const RAIL_ITEMS = [
+  { name: 'Storm', meta: 'Stall 1' },
+  { name: 'Biscuit', meta: 'Stall 3' },
+  { name: 'Willow', meta: 'Stall 5' },
+  { name: 'Juniper', meta: 'Stall 6' },
+  { name: 'Comet', meta: 'Stall 8' },
+  { name: 'Clover', meta: 'Stall 9' },
+].map((item, i) => ({ ...item, uri: VIDEO_URIS[i % VIDEO_URIS.length] }));
+
+type Filter = 'all' | Category;
+
+const FILTERS: { label: string; value: Filter }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Behavior', value: 'behavior' },
+  { label: 'People', value: 'people' },
+  { label: 'Alert', value: 'alert' },
+];
+
+type Variant = 'overlay' | 'caption' | 'glass';
+
+const VARIANTS: { label: string; value: Variant }[] = [
+  { label: 'Overlay', value: 'overlay' },
+  { label: 'Caption', value: 'caption' },
+  { label: 'Glass', value: 'glass' },
 ];
 
 export default function CarouselPrototypes() {
   const [variant, setVariant] = useState<Variant>('overlay');
+  const [filter, setFilter] = useState<Filter>('all');
   const { width } = useWindowDimensions();
-  const active = VARIANTS.find((v) => v.value === variant)!;
+
+  const items =
+    filter === 'all' ? ITEMS : ITEMS.filter((i) => i.category === filter);
 
   return (
     <View style={styles.page}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <Text style={styles.title}>Snapshot carousel</Text>
-        <Text style={styles.subtitle}>Prototype — 4 layouts, swipe the videos</Text>
+        <Text style={styles.subtitle}>Prototype — text style: {variant}</Text>
 
-        <Host style={styles.picker}>
+        {/* Prototype scaffolding: flips the top row's text treatment. */}
+        <Host style={styles.variantPicker}>
           <Picker
             selection={variant}
             onSelectionChange={(v) => setVariant(v as Variant)}
             modifiers={[
               pickerStyle('segmented'),
-              frame({ width: width - PAGE_MARGIN * 2, height: 32 }),
+              frame({ width: width - PAGE_MARGIN * 2, height: 28 }),
             ]}>
             {VARIANTS.map((v) => (
               <SwiftUIText key={v.value} modifiers={[tag(v.value)]}>
@@ -91,56 +114,81 @@ export default function CarouselPrototypes() {
             ))}
           </Picker>
         </Host>
-        <Text style={styles.blurb}>{active.blurb}</Text>
 
-        <Carousel key={variant} variant={variant} viewportWidth={width} />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* ——— TOP ROW: filter + 1.6-cards-visible carousel ——— */}
+          <Text style={styles.sectionTitle}>Events</Text>
+          <Host style={styles.filterPicker}>
+            <Picker
+              selection={filter}
+              onSelectionChange={(v) => setFilter(v as Filter)}
+              modifiers={[
+                pickerStyle('segmented'),
+                frame({ width: width - PAGE_MARGIN * 2, height: 32 }),
+              ]}>
+              {FILTERS.map((f) => (
+                <SwiftUIText key={f.value} modifiers={[tag(f.value)]}>
+                  {f.label}
+                </SwiftUIText>
+              ))}
+            </Picker>
+          </Host>
+
+          <Carousel
+            key={`${variant}-${filter}`}
+            items={items}
+            variant={variant}
+            viewportWidth={width}
+          />
+
+          {/* ——— SECOND ROW: smaller, 2.5 visible ——— */}
+          <SmallRail viewportWidth={width} />
+          <View style={{ height: 120 }} />
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
 
-/** One carousel, styled per variant. Owns its own page state. */
+/**
+ * Top carousel. Cards at 62% of the viewport: one full card plus ~60% of the
+ * next — squarely in the "1.5 to 2 visible" band, so the swipe explains
+ * itself without dots doing the work.
+ */
 function Carousel({
+  items,
   variant,
   viewportWidth,
 }: {
+  items: typeof ITEMS;
   variant: Variant;
   viewportWidth: number;
 }) {
   const [page, setPage] = useState(0);
 
-  const peek = variant === 'peek';
-  // Peek: card narrower than the viewport so the next one shows. Others: full
-  // width minus the page margins.
-  const cardWidth = peek
-    ? Math.round(viewportWidth * 0.82)
-    : viewportWidth - PAGE_MARGIN * 2;
-  const cardHeight = Math.round((cardWidth * 3) / 4); // 4:3
   const gap = Spacing.two + 2;
-  const interval = peek ? cardWidth + gap : viewportWidth;
+  const cardWidth = Math.round(viewportWidth * 0.62);
+  const cardHeight = Math.round((cardWidth * 3) / 4); // 4:3
+  const interval = cardWidth + gap;
 
   return (
     <View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        // Native paging behaviour either way: pagingEnabled for full-width
-        // pages, snap-to-interval for the peek layout.
-        pagingEnabled={!peek}
-        snapToInterval={peek ? interval : undefined}
+        snapToInterval={interval}
         decelerationRate="fast"
-        contentContainerStyle={peek ? { paddingHorizontal: PAGE_MARGIN } : undefined}
+        contentContainerStyle={{ paddingHorizontal: PAGE_MARGIN }}
         onMomentumScrollEnd={(e) =>
           setPage(Math.round(e.nativeEvent.contentOffset.x / interval))
         }>
-        {ITEMS.map((item, index) => (
+        {items.map((item, index) => (
           <View
             key={item.name}
-            style={
-              peek
-                ? { width: cardWidth, marginRight: index === ITEMS.length - 1 ? 0 : gap }
-                : { width: viewportWidth, paddingHorizontal: PAGE_MARGIN }
-            }>
+            style={{
+              width: cardWidth,
+              marginRight: index === items.length - 1 ? 0 : gap,
+            }}>
             <VideoCard
               item={item}
               variant={variant}
@@ -153,7 +201,7 @@ function Carousel({
       </ScrollView>
 
       <View style={styles.dots}>
-        {ITEMS.map((_, index) => (
+        {items.map((_, index) => (
           <View
             key={index}
             style={[styles.dot, index === page && styles.dotActive]}
@@ -183,7 +231,7 @@ function VideoCard({
     p.play();
   });
 
-  // Only the page in view plays; neighbours hold their frame.
+  // Only the snapped card plays; neighbours hold their frame.
   if (active && !player.playing) player.play();
   if (!active && player.playing) player.pause();
 
@@ -201,23 +249,18 @@ function VideoCard({
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.78)']}
             style={styles.scrim}>
-            <Text style={styles.overlayName}>{item.name}</Text>
-            <Text style={styles.overlayMeta}>{item.meta}</Text>
-          </LinearGradient>
-        ) : null}
-
-        {variant === 'peek' ? (
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.72)']}
-            style={styles.scrim}>
-            <Text style={styles.overlayName}>{item.name}</Text>
+            <Text style={styles.overlayName} numberOfLines={1}>
+              {item.name}
+            </Text>
             <Text style={styles.overlayMeta}>{item.meta}</Text>
           </LinearGradient>
         ) : null}
 
         {variant === 'glass' ? (
           <GlassView glassEffectStyle="regular" style={styles.glassChip}>
-            <Text style={styles.glassName}>{item.name}</Text>
+            <Text style={styles.glassName} numberOfLines={1}>
+              {item.name}
+            </Text>
             <Text style={styles.glassMeta}>{item.meta}</Text>
           </GlassView>
         ) : null}
@@ -225,10 +268,77 @@ function VideoCard({
 
       {variant === 'caption' ? (
         <View style={styles.captionRow}>
-          <Text style={styles.captionName}>{item.name}</Text>
+          <Text style={styles.captionName} numberOfLines={1}>
+            {item.name}
+          </Text>
           <Text style={styles.captionMeta}>{item.meta}</Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** Second row — smaller cards, exactly 2.5 visible. */
+function SmallRail({ viewportWidth }: { viewportWidth: number }) {
+  const gap = Spacing.two + 2;
+  const cardWidth = Math.round((viewportWidth - PAGE_MARGIN - 2 * gap) / 2.5);
+  const cardHeight = Math.round((cardWidth * 3) / 4);
+
+  return (
+    <View style={styles.railBlock}>
+      <Text style={styles.sectionTitle}>All stalls</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={cardWidth + gap}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingHorizontal: PAGE_MARGIN }}>
+        {RAIL_ITEMS.map((item, index) => (
+          <View
+            key={item.name}
+            style={{
+              width: cardWidth,
+              marginRight: index === RAIL_ITEMS.length - 1 ? 0 : gap,
+            }}>
+            <RailTile item={item} width={cardWidth} height={cardHeight} />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function RailTile({
+  item,
+  width,
+  height,
+}: {
+  item: (typeof RAIL_ITEMS)[number];
+  width: number;
+  height: number;
+}) {
+  const player = useVideoPlayer(item.uri, (p) => {
+    p.muted = true;
+    p.loop = true;
+    p.play();
+  });
+
+  return (
+    <View style={[styles.videoShell, styles.railShell, { width, height }]}>
+      <VideoView
+        player={player}
+        style={{ width, height }}
+        contentFit="cover"
+        nativeControls={false}
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.7)']}
+        style={styles.railScrim}>
+        <Text style={styles.railName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.railMeta}>{item.meta}</Text>
+      </LinearGradient>
     </View>
   );
 }
@@ -249,21 +359,28 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: Fyp.muted,
     paddingHorizontal: PAGE_MARGIN,
     marginTop: 2,
   },
-  picker: {
+  variantPicker: {
+    height: 28,
+    marginHorizontal: PAGE_MARGIN,
+    marginTop: Spacing.two + 2,
+    marginBottom: Spacing.two,
+  },
+  sectionTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: Fyp.title,
+    paddingHorizontal: PAGE_MARGIN,
+    marginTop: Spacing.three,
+    marginBottom: Spacing.two,
+  },
+  filterPicker: {
     height: 32,
     marginHorizontal: PAGE_MARGIN,
-    marginTop: Spacing.three,
-  },
-  blurb: {
-    fontSize: 13,
-    color: Fyp.muted,
-    paddingHorizontal: PAGE_MARGIN,
-    marginTop: Spacing.two,
     marginBottom: Spacing.three,
   },
   videoShell: {
@@ -276,51 +393,77 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.six,
-    paddingBottom: Spacing.three,
+    paddingHorizontal: Spacing.two + 2,
+    paddingTop: Spacing.five,
+    paddingBottom: Spacing.two + 2,
   },
   overlayName: {
     color: '#FFFFFF',
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '700',
   },
   overlayMeta: {
     color: 'rgba(255,255,255,0.72)',
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: 1,
   },
   captionRow: {
-    paddingTop: Spacing.two + 2,
+    paddingTop: Spacing.two,
     paddingHorizontal: 2,
   },
   captionName: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: Fyp.title,
   },
   captionMeta: {
-    fontSize: 13,
+    fontSize: 12,
     color: Fyp.muted,
     marginTop: 1,
   },
   glassChip: {
     position: 'absolute',
-    left: Spacing.two + 2,
-    bottom: Spacing.two + 2,
-    borderRadius: 14,
+    left: Spacing.two,
+    bottom: Spacing.two,
+    borderRadius: 12,
     overflow: 'hidden',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: Spacing.one + 2,
+    maxWidth: '80%',
   },
   glassName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   glassMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
+    marginTop: 1,
+  },
+  railBlock: {
+    marginTop: Spacing.four,
+  },
+  railShell: {
+    borderRadius: 14,
+  },
+  railScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: Spacing.two + 2,
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.two,
+  },
+  railName: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  railMeta: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
     marginTop: 1,
   },
   dots: {
@@ -328,7 +471,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     alignItems: 'center',
     gap: Spacing.two,
-    marginTop: Spacing.three,
+    marginTop: Spacing.two + 2,
   },
   dot: {
     width: 6,
