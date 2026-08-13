@@ -10,6 +10,7 @@ import { IntakeCard } from '@/components/for-you/intake-card';
 import { OrganizationCard } from '@/components/for-you/organization-card';
 import { ReviewCard } from '@/components/for-you/review-card';
 import { SnapshotsCard } from '@/components/for-you/snapshots-card';
+import { useForYouData } from '@/hooks/use-for-you-data';
 import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constants/theme';
 
 /**
@@ -26,18 +27,11 @@ import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constant
 export default function ForYouScreen() {
   const [scrollY, setScrollY] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
+  const { organizationName, localTime, devices, isRefreshing, refresh } =
+    useForYouData();
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setScrollY(event.nativeEvent.contentOffset.y);
-  }, []);
-
-  const onRefresh = useCallback(() => {
-    // Placeholder until the query layer lands. The spinner is driven by real
-    // fetch state then — unlike the current app, where the refresh indicator
-    // never appears at all (its isRefreshing check can never be true).
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 600);
   }, []);
 
   return (
@@ -53,19 +47,16 @@ export default function ForYouScreen() {
           onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
+              refreshing={isRefreshing}
+              onRefresh={refresh}
               colors={[Brand.primary]}
               tintColor={Brand.primary}
             />
           }>
           <OrganizationCard
-            organizationName="Mobile Dev Testing"
-            localTime="10:29 am"
-            temperature="83°F"
-            humidity="85%"
+            organizationName={organizationName}
+            localTime={localTime}
             statusText="Everything looks normal"
-            metricsWatched={31}
           />
 
           <SnapshotsCard
@@ -86,27 +77,31 @@ export default function ForYouScreen() {
             <BehaviorTrackerCard />
           </Deferred>
 
-          <Deferred
-            reserve={230}
-            scrollY={scrollY}
-            viewportHeight={viewportHeight}>
-            <IntakeCard
-              title="Water Intake"
-              todayColor="#00B8DB"
-              testID="for-you-water-intake"
-            />
-          </Deferred>
+          {devices.hasWaterDevices ? (
+            <Deferred
+              reserve={230}
+              scrollY={scrollY}
+              viewportHeight={viewportHeight}>
+              <IntakeCard
+                title="Water Intake"
+                todayColor="#00B8DB"
+                testID="for-you-water-intake"
+              />
+            </Deferred>
+          ) : null}
 
-          <Deferred
-            reserve={230}
-            scrollY={scrollY}
-            viewportHeight={viewportHeight}>
-            <IntakeCard
-              title="Feed Intake"
-              todayColor="#F0B100"
-              testID="for-you-feed-intake"
-            />
-          </Deferred>
+          {devices.hasFeedDevices ? (
+            <Deferred
+              reserve={230}
+              scrollY={scrollY}
+              viewportHeight={viewportHeight}>
+              <IntakeCard
+                title="Feed Intake"
+                todayColor="#F0B100"
+                testID="for-you-feed-intake"
+              />
+            </Deferred>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
