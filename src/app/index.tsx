@@ -1,145 +1,131 @@
-import { Button, Host, Switch, Text } from '@expo/ui';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, View, useColorScheme } from 'react-native';
+import { useCallback, useState } from 'react';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Brand, Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BehaviorTrackerCard } from '@/components/for-you/behavior-tracker-card';
+import { Deferred } from '@/components/for-you/deferred';
+import { ForYouHeader } from '@/components/for-you/header';
+import { IntakeCard } from '@/components/for-you/intake-card';
+import { OrganizationCard } from '@/components/for-you/organization-card';
+import { ReviewCard } from '@/components/for-you/review-card';
+import { SnapshotsCard } from '@/components/for-you/snapshots-card';
+import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constants/theme';
 
 /**
- * Foundation screen — Stage A (Expo Go).
+ * For You — the screen customers land on.
  *
- * Purpose: prove the pipeline end to end. Everything inside <Host> below is a
- * REAL native control — SwiftUI on iOS, Jetpack Compose on Android — rendered
- * by @expo/ui universal components. Not styled lookalikes.
+ * Layout is a deliberate match for the current app. What differs is underneath:
+ * native controls instead of hand-drawn ones, still images instead of a video
+ * player per snapshot tile, and sections below the fold that mount as you reach
+ * them rather than all at once.
  *
- * This screen is temporary. The first real milestone screen replaces it.
+ * Data wiring lands in the next commit; the sections take props so that step is
+ * a change of source, not of structure.
  */
-export default function FoundationScreen() {
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const colors = Colors[scheme];
-  const [monitoring, setMonitoring] = useState(true);
-  const [taps, setTaps] = useState(0);
+export default function ForYouScreen() {
+  const [scrollY, setScrollY] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setScrollY(event.nativeEvent.contentOffset.y);
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    // Placeholder until the query layer lands. The spinner is driven by real
+    // fetch state then — unlike the current app, where the refresh indicator
+    // never appears at all (its isRefreshing check can never be true).
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.hero}>
-            <View style={[styles.brandMark, { backgroundColor: Brand.primary }]}>
-              <ThemedText style={styles.brandLetter}>H</ThemedText>
-            </View>
-            <ThemedText type="title" style={styles.title}>
-              Horcery
-            </ThemedText>
-            <ThemedText style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Rewrite foundation · Stage A
-            </ThemedText>
-          </View>
+    <View style={styles.page}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ForYouHeader />
+        <ScrollView
+          testID="for-you-scroll-view"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          scrollEventThrottle={64}
+          onScroll={onScroll}
+          onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Brand.primary]}
+              tintColor={Brand.primary}
+            />
+          }>
+          <OrganizationCard
+            organizationName="Mobile Dev Testing"
+            localTime="10:29 am"
+            temperature="83°F"
+            humidity="85%"
+            statusText="Everything looks normal"
+            metricsWatched={31}
+          />
 
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle" style={styles.cardTitle}>
-              Native components check
-            </ThemedText>
-            <ThemedText style={[styles.cardHint, { color: colors.textSecondary }]}>
-              These controls are real native UI — SwiftUI on iPhone, Material on
-              Android. Same code, both platforms.
-            </ThemedText>
+          <SnapshotsCard
+            snapshots={[
+              { id: 'a', name: 'new horse 16 dec' },
+              { id: 'b', name: 'Claire Murphy' },
+            ]}
+            pageCount={3}
+            activePage={0}
+          />
 
-            <View style={styles.controlRow}>
-              <Host matchContents>
-                <Text textStyle={{ fontSize: 16, color: colors.text }}>
-                  Monitoring
-                </Text>
-              </Host>
-              <Host matchContents>
-                <Switch value={monitoring} onValueChange={setMonitoring} />
-              </Host>
-            </View>
+          <ReviewCard />
 
-            <Host matchContents style={styles.buttonHost}>
-              <Button
-                variant="filled"
-                label={taps === 0 ? 'Tap me' : `Tapped ${taps}×`}
-                onPress={() => setTaps((t) => t + 1)}
-              />
-            </Host>
-          </ThemedView>
+          <Deferred
+            reserve={380}
+            scrollY={scrollY}
+            viewportHeight={viewportHeight}>
+            <BehaviorTrackerCard />
+          </Deferred>
 
-          <ThemedText style={[styles.footer, { color: colors.textSecondary }]}>
-            {monitoring
-              ? 'Status: watching the stable 🐎'
-              : 'Status: monitoring paused'}
-          </ThemedText>
+          <Deferred
+            reserve={230}
+            scrollY={scrollY}
+            viewportHeight={viewportHeight}>
+            <IntakeCard
+              title="Water Intake"
+              todayColor="#00B8DB"
+              testID="for-you-water-intake"
+            />
+          </Deferred>
+
+          <Deferred
+            reserve={230}
+            scrollY={scrollY}
+            viewportHeight={viewportHeight}>
+            <IntakeCard
+              title="Feed Intake"
+              todayColor="#F0B100"
+              testID="for-you-feed-intake"
+            />
+          </Deferred>
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  page: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
+    backgroundColor: Fyp.pageBackground,
   },
   safeArea: {
     flex: 1,
     maxWidth: MaxContentWidth,
   },
-  scroll: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  hero: {
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  brandMark: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.two,
-  },
-  brandLetter: {
-    color: '#ffffff',
-    fontSize: 40,
-    fontWeight: '700',
-    lineHeight: 48,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 15,
-  },
-  card: {
-    borderRadius: Spacing.four,
-    padding: Spacing.four,
+  content: {
     gap: Spacing.three,
-  },
-  cardTitle: {
-    fontSize: 17,
-  },
-  cardHint: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  buttonHost: {
-    alignSelf: 'stretch',
-  },
-  footer: {
-    textAlign: 'center',
-    fontSize: 14,
+    paddingBottom: BottomTabInset + Spacing.six,
   },
 });

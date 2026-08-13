@@ -3,12 +3,13 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/assets/*": [
-        "./assets/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"],
+      "@acme/services": ["./src/services/index.ts"],
+      "@acme/services/*": ["./src/services/*"],
+      "@acme/stores": ["./src/stores/index.ts"],
+      "@acme/stores/*": ["./src/stores/*"],
+      "@acme/config/*": ["./src/config/*"]
     }
   },
   "include": [

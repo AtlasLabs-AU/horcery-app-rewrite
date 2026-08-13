@@ -36,6 +36,43 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/**
+ * Surface palette sampled from the current app's For You page, so the rewrite
+ * matches it exactly. The current page is light-only; dark mode is a follow-up,
+ * which is why these are literal rather than theme-aware.
+ */
+export const Fyp = {
+  /** Page background behind the cards */
+  pageBackground: '#F1F3F7',
+  card: '#FFFFFF',
+  /** Section titles ("Snapshots", "Review") */
+  title: '#252B37',
+  /** Header title ("Hello Horcery") */
+  headerTitle: '#3F4A5F',
+  /** Body and metric text */
+  body: '#4B5565',
+  /** Muted captions ("Last 2 hours at a glance") */
+  muted: '#697586',
+  /** Hairline divider inside cards */
+  divider: '#E3E8EF',
+  /** Neutral pill background (the "10x" chip, segmented track) */
+  pill: '#EEF0F5',
+  /** Tinted information panel (AI banner, Review empty state) */
+  infoBackground: '#EEF0FE',
+  infoBorder: '#C7CDFD',
+  /** Status dot when everything is healthy */
+  statusOk: '#12B76A',
+  /** Placeholder surface where a chart will render */
+  chartPlaceholder: '#F8F9FB',
+} as const;
+
+/** Corner radii used across For You cards. */
+export const Radius = {
+  card: 12,
+  inner: 10,
+  pill: 999,
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
