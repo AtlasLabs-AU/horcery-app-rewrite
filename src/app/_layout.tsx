@@ -1,18 +1,57 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import SignInScreen from '@/app/sign-in';
+import { useSession } from '@/hooks/use-session';
+import { Brand, Fyp } from '@/constants/theme';
+import { initRemoteConfig } from '@acme/config/firebase-remote-config';
+import { queryClient } from '@acme/services';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <SessionGate />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
+}
+
+/**
+ * Shows the app once there is a session, the sign-in screen when there is not.
+ *
+ * Remote Config is kicked off here rather than gating render on it: the current
+ * app's feature flags read through safe getters that fall back to defaults, so
+ * a slow or failed fetch delays nothing.
+ */
+function SessionGate() {
+  const { status } = useSession();
+
+  useEffect(() => {
+    initRemoteConfig().catch(() => {
+      // Safe getters fall back to defaults; nothing to do here.
+    });
+  }, []);
+
+  useEffect(() => {
+    if (status !== 'loading') SplashScreen.hideAsync();
+  }, [status]);
+
+  if (status === 'loading') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Fyp.pageBackground }}>
+        <ActivityIndicator color={Brand.primary} />
+      </View>
+    );
+  }
+
+  return status === 'signed-in' ? <AppTabs /> : <SignInScreen />;
 }

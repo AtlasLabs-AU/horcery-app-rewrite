@@ -67,10 +67,31 @@ onlineManager.setEventListener((setOnline) => {
   };
 });
 
+/**
+ * Query defaults.
+ *
+ * The current app sets only `retry` and `networkMode`, which leaves
+ * `staleTime` at 0 — every query is stale the moment it resolves, so leaving
+ * the For You tab and coming back refetches the whole screen. That is a large
+ * part of why the app feels slow on a screen people open many times a day.
+ *
+ * - `staleTime: 60s` — barn data does not change second to second, and any
+ *   screen needing fresher data can lower it per query. Pull-to-refresh still
+ *   forces a real refetch, so the user is never stuck with stale data they
+ *   asked to update.
+ * - `gcTime: 15min` — keeps the cache alive across tab switches so returning
+ *   renders instantly from cache while any refetch happens in the background.
+ * - `retry: 1` on reads instead of 2. Three attempts against a dead endpoint
+ *   is how a loading skeleton ends up spinning for a minute; failing sooner
+ *   surfaces the error state the UI already knows how to draw. Mutations keep
+ *   the original retry count — a lost write is worse than a slow one.
+ */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 1,
+      staleTime: 60 * 1000,
+      gcTime: 15 * 60 * 1000,
       networkMode: 'offlineFirst',
     },
     mutations: {
