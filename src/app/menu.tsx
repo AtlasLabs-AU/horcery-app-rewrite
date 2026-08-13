@@ -1,8 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  Alert,
+  Animated,
+  Easing,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { authRn } from '@acme/config/firebase-rn';
 import { queries, queryClient } from '@acme/services';
@@ -10,17 +21,47 @@ import { useAuthStore } from '@acme/stores/authorization-states';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
+/** Sidebar takes most of a phone but never the whole screen; capped on tablet. */
+const PANEL_WIDTH_FRACTION = 0.84;
+const PANEL_MAX_WIDTH = 400;
+const OVERLAY_OPACITY = 0.45;
+const SLIDE_MS = 250; // motion token `base`
+
 /**
  * The main menu, redone per the UI design brief.
  *
  * The current app paints this as a full-screen solid #615FFF panel — the
  * largest saturated flood in the app, exactly what the accent rules forbid.
- * Here it is a native form sheet on the calm canvas: grouped cards, tonal
- * indigo icon wells, saturated accent only on the active-organization check.
- * Same six actions, same organization switcher.
+ * Here it is a side panel sliding over a dimmed page: calm canvas, grouped
+ * cards, tonal indigo icon wells, saturated accent only on the
+ * active-organization check. Same six actions, same organization switcher.
  */
 export default function MenuScreen() {
   const { colors } = useTokens();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const panelWidth = Math.min(width * PANEL_WIDTH_FRACTION, PANEL_MAX_WIDTH);
+
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: SLIDE_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [progress]);
+
+  const close = useCallback(() => {
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: SLIDE_MS,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => router.back());
+  }, [progress]);
+
   const organizationID = useAuthStore((s) => s.organizationID);
   const setOrganization = useAuthStore((s) => s.setOrganization);
 
@@ -36,7 +77,7 @@ export default function MenuScreen() {
     const next = organizations.find((org) => org.id === id);
     if (next) {
       setOrganization(next.id, next.name ?? null);
-      router.back();
+      close();
     }
   };
 
@@ -55,56 +96,90 @@ export default function MenuScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.content}
-      testID="main-menu">
-      <View style={styles.headerRow}>
-        <Text style={[type.title, { color: colors.foreground }]}>Menu</Text>
+    <View style={styles.root} testID="main-menu">
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          styles.overlay,
+          { opacity: Animated.multiply(progress, OVERLAY_OPACITY) },
+        ]}>
         <Pressable
-          onPress={() => router.back()}
-          hitSlop={8}
+          style={StyleSheet.absoluteFill}
+          onPress={close}
           accessibilityRole="button"
           accessibilityLabel="Close menu"
-          testID="menu-close"
-          style={[styles.closeButton, { backgroundColor: colors.fillTonal }]}>
-          <SymbolView name="xmark" size={14} tintColor={colors.secondary} weight="semibold" />
-        </Pressable>
-      </View>
-
-      <MenuGroup>
-        <MenuRow symbol="person.crop.circle" label="My Account" />
-        <MenuRow symbol="building.2" label="Manage Organization" external />
-        <MenuRow symbol="sensor.tag.radiowaves.forward" label="Devices" last />
-      </MenuGroup>
-
-      <Text style={[type.eyebrow, styles.eyebrow, { color: colors.tertiary }]}>
-        Organizations
-      </Text>
-      <MenuGroup>
-        {organizations.map((org, index) => (
-          <OrganizationRow
-            key={org.id}
-            name={org.name ?? 'Unnamed organization'}
-            active={org.id === organizationID}
-            last={index === organizations.length - 1}
-            onPress={() => selectOrganization(org.id)}
-          />
-        ))}
-      </MenuGroup>
-
-      <MenuGroup style={styles.footerGroup}>
-        <MenuRow symbol="info.circle" label="About Us" />
-        <MenuRow symbol="questionmark.circle" label="Support" external />
-        <MenuRow
-          symbol="rectangle.portrait.and.arrow.right"
-          label="Log Out"
-          last
-          onPress={confirmLogOut}
-          testID="menu-log-out"
         />
-      </MenuGroup>
-    </ScrollView>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.panel,
+          {
+            width: panelWidth,
+            backgroundColor: colors.background,
+            transform: [
+              {
+                translateX: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [panelWidth, 0],
+                }),
+              },
+            ],
+          },
+        ]}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + space.lg },
+          ]}>
+          <View style={styles.headerRow}>
+            <Text style={[type.title, { color: colors.foreground }]}>Menu</Text>
+            <Pressable
+              onPress={close}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Close menu"
+              testID="menu-close"
+              style={[styles.closeButton, { backgroundColor: colors.fillTonal }]}>
+              <SymbolView name="xmark" size={14} tintColor={colors.secondary} weight="semibold" />
+            </Pressable>
+          </View>
+
+          <MenuGroup>
+            <MenuRow symbol="person.crop.circle" label="My Account" />
+            <MenuRow symbol="building.2" label="Manage Organization" external />
+            <MenuRow symbol="sensor.tag.radiowaves.forward" label="Devices" last />
+          </MenuGroup>
+
+          <Text style={[type.eyebrow, styles.eyebrow, { color: colors.tertiary }]}>
+            Organizations
+          </Text>
+          <MenuGroup>
+            {organizations.map((org, index) => (
+              <OrganizationRow
+                key={org.id}
+                name={org.name ?? 'Unnamed organization'}
+                active={org.id === organizationID}
+                last={index === organizations.length - 1}
+                onPress={() => selectOrganization(org.id)}
+              />
+            ))}
+          </MenuGroup>
+
+          <MenuGroup style={styles.footerGroup}>
+            <MenuRow symbol="info.circle" label="About Us" />
+            <MenuRow symbol="questionmark.circle" label="Support" external />
+            <MenuRow
+              symbol="rectangle.portrait.and.arrow.right"
+              label="Log Out"
+              last
+              onPress={confirmLogOut}
+              testID="menu-log-out"
+            />
+          </MenuGroup>
+        </ScrollView>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -214,16 +289,30 @@ function OrganizationRow({
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  overlay: {
+    backgroundColor: '#000000',
+  },
+  panel: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: radius.xl,
+    borderBottomLeftRadius: radius.xl,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
   content: {
     padding: space.edge,
-    paddingBottom: space.xxl,
     gap: space.edge,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: space.sm,
     paddingHorizontal: space.xs,
   },
   closeButton: {

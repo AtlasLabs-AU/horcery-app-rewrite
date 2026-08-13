@@ -60,10 +60,9 @@ function SessionGate() {
       <Stack.Screen
         name="menu"
         options={{
-          presentation: 'formSheet',
-          sheetAllowedDetents: [0.85, 1],
-          sheetGrabberVisible: true,
-          sheetCornerRadius: 36,
+          presentation: 'transparentModal',
+          animation: 'fade',
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       />
     </Stack>
