@@ -1,10 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
-import AppTabs from '@/components/app-tabs';
 import SignInScreen from '@/app/sign-in';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
@@ -53,5 +52,20 @@ function SessionGate() {
     );
   }
 
-  return status === 'signed-in' ? <AppTabs /> : <SignInScreen />;
+  if (status !== 'signed-in') return <SignInScreen />;
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="menu"
+        options={{
+          presentation: 'formSheet',
+          sheetAllowedDetents: [0.85, 1],
+          sheetGrabberVisible: true,
+          sheetCornerRadius: 36,
+        }}
+      />
+    </Stack>
+  );
 }

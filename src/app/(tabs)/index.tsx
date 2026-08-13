@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -47,7 +48,7 @@ export default function ForYouScreen() {
   return (
     <View style={styles.page}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ForYouHeader />
+        <ForYouHeader onMenu={() => router.push('/menu')} />
         <ScrollView
           testID="for-you-scroll-view"
           showsVerticalScrollIndicator={false}

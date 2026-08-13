@@ -1,0 +1,280 @@
+import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { useMemo } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { authRn } from '@acme/config/firebase-rn';
+import { queries, queryClient } from '@acme/services';
+import { useAuthStore } from '@acme/stores/authorization-states';
+import { useTokens } from '@/hooks/use-tokens';
+import { radius, space, type } from '@/constants/tokens';
+
+/**
+ * The main menu, redone per the UI design brief.
+ *
+ * The current app paints this as a full-screen solid #615FFF panel — the
+ * largest saturated flood in the app, exactly what the accent rules forbid.
+ * Here it is a native form sheet on the calm canvas: grouped cards, tonal
+ * indigo icon wells, saturated accent only on the active-organization check.
+ * Same six actions, same organization switcher.
+ */
+export default function MenuScreen() {
+  const { colors } = useTokens();
+  const organizationID = useAuthStore((s) => s.organizationID);
+  const setOrganization = useAuthStore((s) => s.setOrganization);
+
+  const { data: organizationList } = useQuery({
+    ...queries.organization.list({ ordering: '-created_at' }),
+  });
+  const organizations = useMemo(
+    () => organizationList?.data ?? [],
+    [organizationList],
+  );
+
+  const selectOrganization = (id: string) => {
+    const next = organizations.find((org) => org.id === id);
+    if (next) {
+      setOrganization(next.id, next.name ?? null);
+      router.back();
+    }
+  };
+
+  const confirmLogOut = () => {
+    Alert.alert('Log out?', 'You can sign back in any time.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => {
+          queryClient.clear();
+          authRn.signOut();
+        },
+      },
+    ]);
+  };
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={styles.content}
+      testID="main-menu">
+      <View style={styles.headerRow}>
+        <Text style={[type.title, { color: colors.foreground }]}>Menu</Text>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Close menu"
+          testID="menu-close"
+          style={[styles.closeButton, { backgroundColor: colors.fillTonal }]}>
+          <SymbolView name="xmark" size={14} tintColor={colors.secondary} weight="semibold" />
+        </Pressable>
+      </View>
+
+      <MenuGroup>
+        <MenuRow symbol="person.crop.circle" label="My Account" />
+        <MenuRow symbol="building.2" label="Manage Organization" external />
+        <MenuRow symbol="sensor.tag.radiowaves.forward" label="Devices" last />
+      </MenuGroup>
+
+      <Text style={[type.eyebrow, styles.eyebrow, { color: colors.tertiary }]}>
+        Organizations
+      </Text>
+      <MenuGroup>
+        {organizations.map((org, index) => (
+          <OrganizationRow
+            key={org.id}
+            name={org.name ?? 'Unnamed organization'}
+            active={org.id === organizationID}
+            last={index === organizations.length - 1}
+            onPress={() => selectOrganization(org.id)}
+          />
+        ))}
+      </MenuGroup>
+
+      <MenuGroup style={styles.footerGroup}>
+        <MenuRow symbol="info.circle" label="About Us" />
+        <MenuRow symbol="questionmark.circle" label="Support" external />
+        <MenuRow
+          symbol="rectangle.portrait.and.arrow.right"
+          label="Log Out"
+          last
+          onPress={confirmLogOut}
+          testID="menu-log-out"
+        />
+      </MenuGroup>
+    </ScrollView>
+  );
+}
+
+function MenuGroup({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) {
+  const { colors } = useTokens();
+  return (
+    <View style={[styles.group, { backgroundColor: colors.card }, style]}>
+      {children}
+    </View>
+  );
+}
+
+/** One action row: tonal icon well, label, chevron (↗ for external links). */
+function MenuRow({
+  symbol,
+  label,
+  external,
+  last,
+  onPress,
+  testID,
+}: {
+  symbol: string;
+  label: string;
+  external?: boolean;
+  last?: boolean;
+  onPress?: () => void;
+  testID?: string;
+}) {
+  const { colors } = useTokens();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
+      <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
+        <SymbolView
+          name={symbol as never}
+          size={17}
+          tintColor={colors.accent}
+          resizeMode="scaleAspectFit"
+        />
+      </View>
+      <Text style={[type.body, styles.rowLabel, { color: colors.foreground }]} numberOfLines={1}>
+        {label}
+      </Text>
+      <SymbolView
+        name={external ? 'arrow.up.right' : 'chevron.right'}
+        size={13}
+        tintColor={colors.dimmed}
+        weight="semibold"
+      />
+      {last ? null : (
+        <View style={[styles.separator, { backgroundColor: colors.divider }]} />
+      )}
+    </Pressable>
+  );
+}
+
+function OrganizationRow({
+  name,
+  active,
+  last,
+  onPress,
+}: {
+  name: string;
+  active: boolean;
+  last?: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTokens();
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={name}
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
+      <View style={[styles.avatar, { backgroundColor: colors.bed }]}>
+        <Text style={[type.footnote, { color: colors.accent, fontWeight: '600' }]}>
+          {initials}
+        </Text>
+      </View>
+      <Text style={[type.body, styles.rowLabel, { color: colors.foreground }]} numberOfLines={1}>
+        {name}
+      </Text>
+      {active ? (
+        <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accent} />
+      ) : null}
+      {last ? null : (
+        <View style={[styles.separator, { backgroundColor: colors.divider }]} />
+      )}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: {
+    padding: space.edge,
+    paddingBottom: space.xxl,
+    gap: space.edge,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: space.sm,
+    paddingHorizontal: space.xs,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  group: {
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  eyebrow: {
+    marginTop: space.sm,
+    marginBottom: -space.sm,
+    paddingHorizontal: space.xs,
+  },
+  footerGroup: {
+    marginTop: space.sm,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingHorizontal: space.edge,
+    minHeight: 54,
+  },
+  rowLabel: {
+    flex: 1,
+  },
+  iconWell: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  separator: {
+    position: 'absolute',
+    left: space.edge + 32 + space.md,
+    right: 0,
+    bottom: 0,
+    height: StyleSheet.hairlineWidth,
+  },
+});
