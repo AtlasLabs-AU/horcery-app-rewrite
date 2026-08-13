@@ -22,6 +22,9 @@ export const palette = {
     fillTonal: '#E4E4F8',
     /** Small-emphasis accent only: links, active checkmarks, tints. */
     accent: '#615FFF',
+    /** The primary-button surface — near-black in light, flips in dark. */
+    inverse: '#1C1C22',
+    onInverse: '#FFFFFF',
     /** Ink ramp. */
     foreground: '#1C1C22',
     secondary: '#5B5B66',
@@ -39,6 +42,8 @@ export const palette = {
     bed: '#222234',
     fillTonal: '#2C2C48',
     accent: '#7B79FF',
+    inverse: '#F2F2F7',
+    onInverse: '#111114',
     foreground: '#F2F2F7',
     secondary: '#A7A7B4',
     tertiary: '#77777F',

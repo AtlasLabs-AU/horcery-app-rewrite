@@ -1,10 +1,11 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
-import SignInScreen from '@/app/sign-in';
+import { AuthFlow } from '@/components/auth/auth-flow';
+import { FACE_ID_UNLOCK_PREVIEW, LockScreen } from '@/components/auth/lock-screen';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
 import { initRemoteConfig } from '@acme/config/firebase-remote-config';
@@ -34,6 +35,19 @@ export default function RootLayout() {
 function SessionGate() {
   const { status } = useSession();
 
+  /**
+   * Face ID gate (front-end preview): lock only when a session was RESTORED
+   * on open — someone who just typed their password is not asked again.
+   */
+  const [locked, setLocked] = useState(false);
+  const sawSignedOut = useRef(false);
+  useEffect(() => {
+    if (status === 'signed-out') sawSignedOut.current = true;
+    if (status === 'signed-in' && !sawSignedOut.current && FACE_ID_UNLOCK_PREVIEW) {
+      setLocked(true);
+    }
+  }, [status]);
+
   useEffect(() => {
     initRemoteConfig().catch(() => {
       // Safe getters fall back to defaults; nothing to do here.
@@ -52,7 +66,9 @@ function SessionGate() {
     );
   }
 
-  if (status !== 'signed-in') return <SignInScreen />;
+  if (status !== 'signed-in') return <AuthFlow />;
+
+  if (locked) return <LockScreen onUnlock={() => setLocked(false)} />;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

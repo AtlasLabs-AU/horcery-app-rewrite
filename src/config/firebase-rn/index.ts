@@ -17,6 +17,7 @@
 import {
   getCurrentUser,
   onAuthStateChanged as onRestAuthStateChanged,
+  sendPasswordResetEmail as restSendPasswordResetEmail,
   signInWithEmailAndPassword as restSignIn,
   signOut as restSignOut,
   restoreSession,
@@ -32,6 +33,7 @@ export const authRn = {
 
 export {
   onRestAuthStateChanged as onAuthStateChanged,
+  restSendPasswordResetEmail as sendPasswordResetEmail,
   restSignIn as signInWithEmailAndPassword,
   restoreSession,
 };

@@ -207,6 +207,33 @@ export async function signInWithEmailAndPassword(
   return toUser(session)!;
 }
 
+/**
+ * Emails a password-reset link, the same call the native SDK makes
+ * (`accounts:sendOobCode`, requestType PASSWORD_RESET). Firebase's own email
+ * template and hosted reset page handle the rest — nothing to build app-side.
+ */
+export async function sendPasswordResetEmail(email: string): Promise<void> {
+  const response = await fetch(
+    `${IDENTITY_HOST}/accounts:sendOobCode?key=${requireApiKey()}`,
+    {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ requestType: 'PASSWORD_RESET', email }),
+    },
+  );
+
+  const data = (await response.json()) as { error?: { message?: string } };
+  if (!response.ok) {
+    // EMAIL_NOT_FOUND is deliberately NOT surfaced to the UI as "no account" —
+    // callers show the same success message either way, so the form can't be
+    // used to probe which emails have accounts.
+    const code = data.error?.message ?? 'RESET_FAILED';
+    const failure = new Error(code) as Error & { code: string };
+    failure.code = code;
+    throw failure;
+  }
+}
+
 export async function signOut(): Promise<void> {
   setSession(null);
 }
