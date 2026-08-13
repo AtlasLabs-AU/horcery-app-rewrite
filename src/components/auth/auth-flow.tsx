@@ -139,7 +139,10 @@ function previewNote(provider: string) {
   );
 }
 
-/** Apple/Google entry buttons, styled per each brand's guidelines. */
+/**
+ * Apple/Google entry points as quiet matching cards, so the one loud button
+ * on the page is Sign in with Email — quiet, quiet, loud.
+ */
 function SocialButton({
   provider,
   onPress,
@@ -147,11 +150,8 @@ function SocialButton({
   provider: 'apple' | 'google';
   onPress: () => void;
 }) {
-  const { colors, scheme } = useTokens();
+  const { colors } = useTokens();
   const isApple = provider === 'apple';
-  // Apple's button flips with the scheme; Google's stays a white card.
-  const background = isApple ? colors.inverse : '#FFFFFF';
-  const foreground = isApple ? colors.onInverse : '#1F1F1F';
 
   return (
     <Pressable
@@ -161,16 +161,17 @@ function SocialButton({
       testID={`auth-selection-${provider}`}
       style={({ pressed }) => [
         styles.socialButton,
-        { backgroundColor: background },
-        !isApple && scheme === 'light' && { borderColor: colors.divider, borderWidth: StyleSheet.hairlineWidth },
+        { backgroundColor: colors.card, borderColor: colors.divider },
         pressed && styles.socialPressed,
       ]}>
-      {isApple ? (
-        <SymbolView name="apple.logo" size={19} tintColor={foreground} />
-      ) : (
-        <Text style={styles.googleGlyph}>G</Text>
-      )}
-      <Text style={[type.headline, { color: foreground }]}>
+      <View style={styles.socialIconSlot}>
+        {isApple ? (
+          <SymbolView name="apple.logo" size={19} tintColor={colors.foreground} />
+        ) : (
+          <Text style={[styles.googleGlyph, { color: '#4285F4' }]}>G</Text>
+        )}
+      </View>
+      <Text style={[type.body, { color: colors.foreground }]}>
         {isApple ? 'Continue with Apple' : 'Continue with Google'}
       </Text>
     </Pressable>
@@ -180,33 +181,43 @@ function SocialButton({
 function Landing({ onSignIn }: { onSignIn: () => void }) {
   const { colors } = useTokens();
   return (
-    <AuthPage>
-      <View style={styles.landing}>
-        <Image
-          source={require('@/assets/images/horcery-logo-large.svg')}
-          style={styles.logo}
-          contentFit="contain"
-          accessibilityLabel="Horcery logo and tagline"
-        />
-        <View style={styles.landingButtons}>
+    <View style={[styles.page, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={styles.page}>
+        <View style={styles.landingBrand}>
+          <Image
+            source={require('@/assets/images/horcery-mark.svg')}
+            style={styles.mark}
+            contentFit="contain"
+            accessibilityLabel="Horcery logo"
+          />
+          <Text style={[type.largeTitle, styles.wordmark, { color: colors.foreground }]}>
+            Horcery
+          </Text>
+          <Text style={[type.subhead, { color: colors.tertiary }]}>
+            Know More. Care Smarter.
+          </Text>
+        </View>
+        <View style={styles.landingActions}>
           <SocialButton provider="apple" onPress={() => previewNote('Apple')} />
           <SocialButton provider="google" onPress={() => previewNote('Google')} />
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: colors.divider }]} />
-            <Text style={[type.footnote, { color: colors.tertiary }]}>or</Text>
-            <View style={[styles.dividerLine, { backgroundColor: colors.divider }]} />
-          </View>
           <PrimaryButton
             label="Sign in with Email"
             onPress={onSignIn}
             testID="auth-selection-sign-in"
           />
-          <Text style={[type.footnote, styles.signUpNote, { color: colors.tertiary }]}>
-            New to Horcery? Sign-up joins the prototype later.
-          </Text>
+          <Pressable
+            onPress={() => previewNote('Sign-up')}
+            accessibilityRole="button"
+            style={styles.centerLink}
+            testID="auth-selection-sign-up">
+            <Text style={[type.subhead, { color: colors.tertiary }]}>
+              {'New to Horcery? '}
+              <Text style={{ color: colors.accent }}>Create an account</Text>
+            </Text>
+          </Pressable>
         </View>
-      </View>
-    </AuthPage>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -616,47 +627,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: space.edge,
   },
-  landing: {
+  landingBrand: {
+    flex: 1,
     alignItems: 'center',
-    gap: space.xl,
+    justifyContent: 'center',
+    gap: space.sm,
   },
-  logo: {
-    width: 220,
-    height: 200,
+  mark: {
+    width: 118,
+    height: 86,
+    marginBottom: space.md,
   },
-  landingButtons: {
-    alignSelf: 'stretch',
+  wordmark: {
+    letterSpacing: -1,
+  },
+  landingActions: {
+    paddingHorizontal: space.edge,
+    paddingBottom: space.lg,
     gap: space.md,
   },
   socialButton: {
     minHeight: 54,
     borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.sm,
     paddingHorizontal: space.lg,
   },
+  socialIconSlot: {
+    width: 24,
+    alignItems: 'center',
+  },
   socialPressed: {
-    opacity: 0.85,
+    opacity: 0.7,
   },
   googleGlyph: {
     fontSize: 19,
     fontWeight: '700',
-    color: '#4285F4',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.xs,
-  },
-  dividerLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-  },
-  signUpNote: {
-    textAlign: 'center',
   },
   form: {
     gap: space.edge,
