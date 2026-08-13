@@ -27,7 +27,8 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
   { id: 'lying-down', label: 'Lying Down', symbol: 'moon.zzz.fill' },
   { id: 'people-in-stall', label: 'People in Stall', symbol: 'figure.stand' },
   { id: 'in-stall', label: 'In Stall', symbol: 'house.fill' },
-  { id: 'feed', label: 'Feed', symbol: 'bucket.fill' },
+  // 'bucket.fill' is not a real SF Symbol — it rendered as an empty tile.
+  { id: 'feed', label: 'Feed', symbol: 'fork.knife' },
 ];
 
 /**

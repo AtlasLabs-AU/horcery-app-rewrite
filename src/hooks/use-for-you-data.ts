@@ -41,6 +41,33 @@ export function useForYouData() {
     enabled,
   });
 
+  /**
+   * Every organization the user belongs to, for the Switch menu.
+   *
+   * `useSession` picks the newest one at sign-in, which is not necessarily the
+   * one the customer works in — a fresh session landed on an empty "Org 150"
+   * rather than "Mobile Dev Testing". The current app persists the chosen
+   * organization; so does this, through the same auth store.
+   */
+  const { data: organizationList } = useQuery({
+    ...queries.organization.list({ ordering: '-created_at' }),
+  });
+
+  const setOrganization = useAuthStore((s) => s.setOrganization);
+
+  const organizations = useMemo(
+    () => organizationList?.data ?? [],
+    [organizationList],
+  );
+
+  const selectOrganization = useCallback(
+    (id: string) => {
+      const next = organizations.find((org) => org.id === id);
+      if (next) setOrganization(next.id, next.name ?? null);
+    },
+    [organizations, setOrganization],
+  );
+
   const { data: locationData } = useQuery({
     ...queries.location.list(undefined, [
       { key: 'organization', value: organizationID ?? '' },
@@ -129,6 +156,8 @@ export function useForYouData() {
     timezone: organization?.data?.timezone,
     localTime,
     devices,
+    organizations,
+    selectOrganization,
     isRefreshing,
     refresh,
   };

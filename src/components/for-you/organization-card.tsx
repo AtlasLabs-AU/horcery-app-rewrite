@@ -3,10 +3,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard } from '@/components/for-you/card';
 import { LinkButton } from '@/components/for-you/link-button';
+import { OrganizationMenu } from '@/components/for-you/organization-menu';
 import { Brand, Fyp, Radius, Spacing } from '@/constants/theme';
 
 export interface OrganizationCardProps {
   organizationName: string;
+  /** Organizations available in the Switch menu. */
+  organizations: { id: string; name: string }[];
+  organizationID?: string | null;
+  onSelectOrganization: (id: string) => void;
   /** Local time in the organization's timezone, pre-formatted ("10:29 am"). */
   localTime: string;
   temperature?: string;
@@ -15,7 +20,6 @@ export interface OrganizationCardProps {
   statusText: string;
   /** How many metrics the AI is watching; hides the banner when undefined. */
   metricsWatched?: number;
-  onSwitchOrganization?: () => void;
   onManageOrganization?: () => void;
   onSeeHistory?: () => void;
   onManageAlerts?: () => void;
@@ -28,12 +32,14 @@ export interface OrganizationCardProps {
  */
 export function OrganizationCard({
   organizationName,
+  organizations,
+  organizationID,
+  onSelectOrganization,
   localTime,
   temperature,
   humidity,
   statusText,
   metricsWatched,
-  onSwitchOrganization,
   onManageOrganization,
   onSeeHistory,
   onManageAlerts,
@@ -57,10 +63,10 @@ export function OrganizationCard({
             />
           </Pressable>
         </View>
-        <LinkButton
-          label="Switch"
-          width={72}
-          onPress={onSwitchOrganization}
+        <OrganizationMenu
+          organizations={organizations}
+          selectedId={organizationID}
+          onSelect={onSelectOrganization}
           testID="for-you-switch-organization"
         />
       </View>

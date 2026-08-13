@@ -20,6 +20,15 @@
         "simulator": true
       },
       "environment": "development"
+    },
+    "preview": {
+      "extends": "base",
+      "developmentClient": false,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "environment": "development"
     }
   },
   "submit": {}

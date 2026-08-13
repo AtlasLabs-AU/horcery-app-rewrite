@@ -28,8 +28,16 @@ import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constant
 export default function ForYouScreen() {
   const [scrollY, setScrollY] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
-  const { organizationName, localTime, devices, isRefreshing, refresh } =
-    useForYouData();
+  const {
+    organizationID,
+    organizationName,
+    localTime,
+    devices,
+    organizations,
+    selectOrganization,
+    isRefreshing,
+    refresh,
+  } = useForYouData();
   const { snapshots } = useSnapshots();
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -57,6 +65,9 @@ export default function ForYouScreen() {
           }>
           <OrganizationCard
             organizationName={organizationName}
+            organizations={organizations}
+            organizationID={organizationID}
+            onSelectOrganization={selectOrganization}
             localTime={localTime}
             statusText="Everything looks normal"
           />

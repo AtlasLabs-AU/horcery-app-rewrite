@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { OverflowMenu } from '@/components/for-you/overflow-menu';
@@ -26,6 +26,19 @@ export interface Snapshot {
  * still image by default, and only the tile the user is actually looking at is
  * handed a player (`isPlaying`). The visual result is the same; the work is not.
  */
+/**
+ * Tiles per row, by width.
+ *
+ * The current app computes this from a measured layout; the breakpoints here
+ * match what it produces — two tiles on a phone, more on a tablet, so an iPad
+ * does not render two enormous tiles with empty space beside them.
+ */
+function columnsForWidth(width: number): number {
+  if (width >= 1000) return 4;
+  if (width >= 700) return 3;
+  return 2;
+}
+
 export function SnapshotsCard({
   snapshots,
   playbackSpeedLabel = '10x',
@@ -39,6 +52,9 @@ export function SnapshotsCard({
   pageCount?: number;
   activePage?: number;
 }) {
+  const { width } = useWindowDimensions();
+  const columns = columnsForWidth(width);
+
   return (
     <SectionCard testID="for-you-snapshots">
       <SectionHeader
@@ -62,7 +78,7 @@ export function SnapshotsCard({
       <Text style={styles.subtitle}>{subtitle}</Text>
 
       <View style={styles.tileRow}>
-        {snapshots.slice(0, 2).map((snapshot) => (
+        {snapshots.slice(0, columns).map((snapshot) => (
           <SnapshotTile key={snapshot.id} snapshot={snapshot} />
         ))}
       </View>

@@ -39,6 +39,32 @@ import { user } from './query/user-management/user';
 import { userForgotPassword } from './query/user-management/user-forgot-password';
 import { weather } from './query/weather-data-ingress/weather';
 
+/**
+ * Is the device online?
+ *
+ * The current app writes this as:
+ *
+ *   setOnline(!!(state.isConnected && state.isInternetReachable));
+ *
+ * which collapses "we don't know yet" into "offline". On Android, the OS runs
+ * captive-portal validation when joining Wi-Fi, and `isInternetReachable` is
+ * `null` throughout that window even though the network is fine.
+ * `!!(true && null)` is `false`, so the whole app concludes it is offline on a
+ * working network — the mechanism behind the Android tablet "Internet
+ * unavailable" customer escalation of 2026-08-11 (see
+ * Horcery/Android_Tablet_Issues_Investigation.md).
+ *
+ * Here `null` means unknown and we stay optimistic: only an explicit `false`
+ * counts as offline. A request that actually fails is a better signal than a
+ * guess made before the OS has decided, and React Query already handles
+ * request failure.
+ */
+function isOnline(state: NetworkState): boolean {
+  if (state.isConnected === false) return false;
+  if (state.isInternetReachable === false) return false;
+  return true;
+}
+
 // Resume Queries that were triggered while offline on internet reconnection
 onlineManager.setEventListener((setOnline) => {
   let isActive = true;
@@ -48,7 +74,7 @@ onlineManager.setEventListener((setOnline) => {
     .then((state) => {
       if (!isActive) return;
 
-      setOnline(!!(state.isConnected && state.isInternetReachable));
+      setOnline(isOnline(state));
     })
     .catch((err) => {
       debug('Failed to get network state:', err);
@@ -57,7 +83,7 @@ onlineManager.setEventListener((setOnline) => {
   // Keep online status in sync with native network events
   const eventSubscription = Network.addNetworkStateListener(
     (state: NetworkState) => {
-      setOnline(!!(state.isConnected && state.isInternetReachable));
+      setOnline(isOnline(state));
     },
   );
 
