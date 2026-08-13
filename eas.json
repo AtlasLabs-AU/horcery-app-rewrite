@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "node": "24.18.0",
+      "env": {
+        "EXPO_PUBLIC_BASE_SERVICE_URL": "https://api.magichoof.com/",
+        "EXPO_PUBLIC_ACCOUNT_MANAGEMENT_URL": "https://account.horcery.atlaslabs.network",
+        "EXPO_PUBLIC_FEDERATED_PROMETHEUS_BASE_URL": "https://metrics.magichoof.com/api/v1"
+      }
+    },
+    "simulator": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "rewrite-dev",
+      "ios": {
+        "simulator": true
+      }
+    }
+  },
+  "submit": {}
+}

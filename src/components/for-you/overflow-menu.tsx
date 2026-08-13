@@ -1,6 +1,10 @@
 import { Host } from '@expo/ui';
 import { Button, Menu } from '@expo/ui/swift-ui';
-import { accessibilityLabel, tint } from '@expo/ui/swift-ui/modifiers';
+import {
+  accessibilityLabel,
+  rotationEffect,
+  tint,
+} from '@expo/ui/swift-ui/modifiers';
 
 import { Brand } from '@/constants/theme';
 
@@ -34,7 +38,13 @@ export function OverflowMenu({
       <Menu
         label=""
         systemImage="ellipsis"
-        modifiers={[tint(Brand.primary), accessibilityLabel(label)]}>
+        modifiers={[
+          tint(Brand.primary),
+          // SF Symbols has no plain vertical ellipsis, so rotate the horizontal
+          // one to match the current app's vertical ⋮ affordance.
+          rotationEffect(90),
+          accessibilityLabel(label),
+        ]}>
         {actions.map((action) => (
           <Button
             key={action.label}

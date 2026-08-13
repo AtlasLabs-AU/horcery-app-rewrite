@@ -1,5 +1,5 @@
 import { Button, Host } from '@expo/ui';
-import { tint } from '@expo/ui/swift-ui/modifiers';
+import { foregroundStyle, tint } from '@expo/ui/swift-ui/modifiers';
 
 import { Brand } from '@/constants/theme';
 
@@ -37,7 +37,7 @@ export function LinkButton({
         variant="text"
         label={label}
         onPress={onPress}
-        modifiers={[tint(Brand.primary)]}
+        modifiers={[tint(Brand.primary), foregroundStyle(Brand.primary)]}
         testID={testID}
       />
     </Host>

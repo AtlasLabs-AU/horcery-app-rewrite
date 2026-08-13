@@ -41,3 +41,9 @@ example
 # generated native folders
 /ios
 /android
+
+# Firebase config — real values, never commit.
+# The current app leaked these into git history once (commit 92cda318e, removed
+# in fb17a7d5d but still recoverable). Not repeating that here.
+GoogleService-Info.plist
+google-services.json

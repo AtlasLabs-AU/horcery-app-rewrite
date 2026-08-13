@@ -94,13 +94,13 @@ export function OrganizationCard({
         <View style={styles.banner}>
           <View style={styles.bannerLeft}>
             <SymbolView name="sparkles" size={16} tintColor={Brand.primary} />
-            <Text style={styles.bannerText}>
+            <Text style={styles.bannerText} numberOfLines={1}>
               {`AI watching ${metricsWatched} metrics`}
             </Text>
           </View>
           <LinkButton
             label="Manage Alerts"
-            width={128}
+            width={122}
             onPress={onManageAlerts}
             testID="for-you-manage-alerts"
           />
