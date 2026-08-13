@@ -16,10 +16,10 @@
       "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "rewrite-dev",
       "ios": {
         "simulator": true
-      }
+      },
+      "environment": "development"
     }
   },
   "submit": {}

@@ -46,6 +46,7 @@
     "zustand-computed-state": "^0.2.0"
   },
   "devDependencies": {
+    "@types/luxon": "^3.7.4",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },

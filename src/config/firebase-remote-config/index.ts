@@ -1,5 +1,12 @@
 import { getApp } from '@react-native-firebase/app';
-import { getRemoteConfig } from '@react-native-firebase/remote-config';
+import {
+  ensureInitialized,
+  fetchAndActivate,
+  getBoolean,
+  getNumber,
+  getRemoteConfig,
+  getString,
+} from '@react-native-firebase/remote-config';
 
 import { DEFAULT_FRC_VALUES } from '@acme/config/constants/default-frc-values';
 
@@ -35,17 +42,15 @@ export async function initRemoteConfig(): Promise<void> {
     const app = getApp();
     const remoteConfig = getRemoteConfig(app);
 
-    await remoteConfig
-      .setConfigSettings({
-        minimumFetchIntervalMillis: 300 * 1000, // 5 mins
-        fetchTimeMillis: 30 * 1000, // 30 s timeout
-      })
-      .catch((e) => {
-        debug('Failed to set config settings for Firebase remote config:', e);
-      });
+    remoteConfig.settings = {
+      minimumFetchIntervalMillis: 300 * 1000, // 5 mins
+      // The current app writes `fetchTimeMillis` here, which is not a real
+      // setting — so its intended 30s timeout never applied and fetches used
+      // the 60s default. Corrected to the actual key.
+      fetchTimeoutMillis: 30 * 1000,
+    };
 
-    await remoteConfig
-      .setDefaults({
+    remoteConfig.defaultConfig = {
         IN_STALL_DETECTION_QUERY: DEFAULT_FRC_VALUES.string,
         STALL_OCCUPANCY_QUERY: DEFAULT_FRC_VALUES.string,
         STALL_OCCUPANCY_V2_QUERY: DEFAULT_FRC_VALUES.string,
@@ -113,18 +118,15 @@ export async function initRemoteConfig(): Promise<void> {
         DISPLAY_DEVIATION_TAG_FOR_STALL_OCCUPANCY: DEFAULT_FRC_VALUES.boolean,
         DISPLAY_DEVIATION_TAG_FOR_CONSUMPTION: DEFAULT_FRC_VALUES.boolean,
         DISPLAY_DEVIATION_TAG_FOR_SLEEPING: DEFAULT_FRC_VALUES.boolean,
-      })
-      .catch((e) => {
-        debug('Failed to set default values for Firebase remote config:', e);
-      });
+    };
 
-    await remoteConfig.ensureInitialized().catch((e) => {
+    await ensureInitialized(remoteConfig).catch((e: unknown) => {
       debug('Failed to initialize Firebase remote config:', e);
     });
 
     let updated = false;
     try {
-      updated = await remoteConfig.fetchAndActivate();
+      updated = await fetchAndActivate(remoteConfig);
     } catch (e) {
       debug('Failed to fetch and activate Firebase remote config:', e);
     }
@@ -147,7 +149,7 @@ export async function initRemoteConfig(): Promise<void> {
 export async function refreshRemoteConfig(): Promise<boolean> {
   try {
     const remoteConfig = getRemoteConfig(getApp());
-    const updated = await remoteConfig.fetchAndActivate();
+    const updated = await fetchAndActivate(remoteConfig);
     debug(
       `Firebase remote config refresh ${updated ? 'updated' : 'not updated'}`,
     );
@@ -165,7 +167,7 @@ export async function refreshRemoteConfig(): Promise<boolean> {
 export function getRemoteString(key: string): string {
   try {
     return (
-      getRemoteConfig(getApp()).getString(key) ?? DEFAULT_FRC_VALUES.string
+      getString(getRemoteConfig(getApp()), key) ?? DEFAULT_FRC_VALUES.string
     );
   } catch {
     return DEFAULT_FRC_VALUES.string;
@@ -175,7 +177,7 @@ export function getRemoteString(key: string): string {
 export function getRemoteBoolean(key: string): boolean {
   try {
     return (
-      getRemoteConfig(getApp()).getBoolean(key) ?? DEFAULT_FRC_VALUES.boolean
+      getBoolean(getRemoteConfig(getApp()), key) ?? DEFAULT_FRC_VALUES.boolean
     );
   } catch {
     return DEFAULT_FRC_VALUES.boolean;
@@ -185,7 +187,7 @@ export function getRemoteBoolean(key: string): boolean {
 export function getRemoteNumber(key: string): number {
   try {
     return (
-      getRemoteConfig(getApp()).getNumber(key) ?? DEFAULT_FRC_VALUES.number
+      getNumber(getRemoteConfig(getApp()), key) ?? DEFAULT_FRC_VALUES.number
     );
   } catch {
     return DEFAULT_FRC_VALUES.number;

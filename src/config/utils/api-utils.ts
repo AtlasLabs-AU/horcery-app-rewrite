@@ -10,7 +10,7 @@ export const apiWithTimeout = <T>(
   promise: Promise<T>,
   ms: number = DEFAULT_TIMEOUT_TIME,
 ): Promise<T> => {
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(
