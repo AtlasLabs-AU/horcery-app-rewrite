@@ -1,16 +1,44 @@
-import { getApp } from '@react-native-firebase/app';
-import {
-  ensureInitialized,
-  fetchAndActivate,
-  getBoolean,
-  getNumber,
-  getRemoteConfig,
-  getString,
-} from '@react-native-firebase/remote-config';
-
 import { DEFAULT_FRC_VALUES } from '@acme/config/constants/default-frc-values';
 
 import { debug } from '../utils/logger';
+
+/**
+ * Firebase Remote Config, with a graceful absence.
+ *
+ * Remote Config has no usable client-side REST API (its REST surface needs a
+ * service account), so unlike auth it cannot follow the native module out of
+ * the build. While the app runs in Expo Go, the native module is simply not
+ * there.
+ *
+ * That turns out to be survivable by design: the current app's getters already
+ * fall back to `DEFAULT_FRC_VALUES` on any error, precisely so a failed fetch
+ * at cold start cannot break the app. Here that path is simply always taken.
+ *
+ * **The caveat is real though:** feature flags run on defaults, not on what
+ * production is actually serving. Any flag-dependent behaviour must be checked
+ * on a development build before it is trusted.
+ */
+
+type RemoteConfigModule = typeof import('@react-native-firebase/remote-config');
+type AppModule = typeof import('@react-native-firebase/app');
+
+let native: { rc: RemoteConfigModule; app: AppModule } | null | undefined;
+
+/** Resolves the native module once, or records that it is unavailable. */
+function getNative() {
+  if (native !== undefined) return native;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const rc = require('@react-native-firebase/remote-config') as RemoteConfigModule;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const app = require('@react-native-firebase/app') as AppModule;
+    native = { rc, app };
+  } catch {
+    debug('Remote Config native module unavailable — using default values.');
+    native = null;
+  }
+  return native;
+}
 
 let remoteConfigReady = false;
 const listeners: (() => void)[] = [];
@@ -18,118 +46,39 @@ const listeners: (() => void)[] = [];
 export function onRemoteConfigReady(callback: () => void): () => void {
   if (remoteConfigReady) {
     callback();
-    return () => {
-      // No-op unsubscribe since callback was called immediately
-    };
+    return () => {};
   }
-
   listeners.push(callback);
-
-  // return unsubscribe function
   return () => {
     const index = listeners.indexOf(callback);
     if (index > -1) listeners.splice(index, 1);
   };
 }
 
-/**
- * Initializes Firebase Remote Config. Wrapped in try/catch so native crashes
- * (e.g. URLSession/CFNetwork around cold start) don't take down the app;
- * we handle failures silently and continue with defaults.
- */
 export async function initRemoteConfig(): Promise<void> {
+  const mod = getNative();
   try {
-    const app = getApp();
-    const remoteConfig = getRemoteConfig(app);
+    if (!mod) return;
 
+    const remoteConfig = mod.rc.getRemoteConfig(mod.app.getApp());
     remoteConfig.settings = {
       minimumFetchIntervalMillis: 300 * 1000, // 5 mins
       // The current app writes `fetchTimeMillis` here, which is not a real
-      // setting — so its intended 30s timeout never applied and fetches used
-      // the 60s default. Corrected to the actual key.
+      // setting — its intended 30s timeout never applied and fetches used the
+      // 60s default. Corrected to the actual key.
       fetchTimeoutMillis: 30 * 1000,
     };
 
-    remoteConfig.defaultConfig = {
-        IN_STALL_DETECTION_QUERY: DEFAULT_FRC_VALUES.string,
-        STALL_OCCUPANCY_QUERY: DEFAULT_FRC_VALUES.string,
-        STALL_OCCUPANCY_V2_QUERY: DEFAULT_FRC_VALUES.string,
-        ANIMAL_IN_STALL_STATUS_QUERY: DEFAULT_FRC_VALUES.string,
-        HUMAN_OUT_OF_STALL_DETECTION_QUERY: DEFAULT_FRC_VALUES.string,
-        HUMAN_OUT_OF_STALL_DETECTION_QUERY_OPTIMIZED: DEFAULT_FRC_VALUES.string,
-        HUMAN_IN_STALL_DETECTION_QUERY: DEFAULT_FRC_VALUES.string,
-        HUMAN_IN_STALL_DETECTION_QUERY_OPTIMIZED: DEFAULT_FRC_VALUES.string,
-        HUMAN_IN_SPACE_DETECTION_QUERY: DEFAULT_FRC_VALUES.string,
-        ANIMAL_SITTING_DOWN_DETECTION_QUERY: DEFAULT_FRC_VALUES.string,
-        ANIMAL_SITTING_DOWN_DETECTION_QUERY_OPTIMIZED:
-          DEFAULT_FRC_VALUES.string,
-        ACCOUNT_DELETION_TIME_PERIOD: DEFAULT_FRC_VALUES.number,
-        RADIAL_LAST_24_HOURS_QUERY: DEFAULT_FRC_VALUES.string,
-        TREND_LAST_24_HOURS_QUERY: DEFAULT_FRC_VALUES.string,
-        THRESHOLD_24_HOURS_OUT_OF_STALL: DEFAULT_FRC_VALUES.number,
-        THRESHOLD_24_HOURS_AWAKE: DEFAULT_FRC_VALUES.number,
-        THRESHOLD_24_HOURS_RESTING: DEFAULT_FRC_VALUES.number,
-        EXCLUDE_IN_STALL_LOWER_THRESHOLD: DEFAULT_FRC_VALUES.number,
-        EXCLUDE_IN_STALL_UPPER_THRESHOLD: DEFAULT_FRC_VALUES.number,
-        AVG_FEDERATED_PROM_QUERY_HOURLY: DEFAULT_FRC_VALUES.string,
-        AVG_HUMAN_PRESENCE_FEDERATED_PROM_QUERY_HOURLY:
-          DEFAULT_FRC_VALUES.string,
-        AVG_LYING_DOWN_FEDERATED_PROM_QUERY_HOURLY: DEFAULT_FRC_VALUES.string,
-        AVG_OCCUPANCY_FEDERATED_PROM_QUERY_HOURLY: DEFAULT_FRC_VALUES.string,
-        AVG_HUMAN_PRESENCE_FEDERATED_PROM_QUERY_HOURLY_SORTED_DESC:
-          DEFAULT_FRC_VALUES.string,
-        AVG_LYING_DOWN_FEDERATED_PROM_QUERY_HOURLY_SORTED_DESC:
-          DEFAULT_FRC_VALUES.string,
-        AVG_OCCUPANCY_FEDERATED_PROM_QUERY_HOURLY_SORTED_DESC:
-          DEFAULT_FRC_VALUES.string,
-        AVG_WEEKLY_OCCUPANCY_FEDERATED_PROM_QUERY: DEFAULT_FRC_VALUES.string,
-        AVG_WEEKLY_HUMAN_PRESENCE_FEDERATED_PROM_QUERY:
-          DEFAULT_FRC_VALUES.string,
-        AVG_WEEKLY_LYING_DOWN_FEDERATED_PROM_QUERY: DEFAULT_FRC_VALUES.string,
-        OCCUPANCY_DATA_BACKEND_SWITCH: DEFAULT_FRC_VALUES.boolean,
-        LAST_CHECKED_AT_HOURS_DIFFERENCE: DEFAULT_FRC_VALUES.number,
-        MIN_RN_APP_VERSION: DEFAULT_FRC_VALUES.string,
-        RN_APP_VERSION: DEFAULT_FRC_VALUES.string,
-        INTAKE_SCALE_USER_IDS: DEFAULT_FRC_VALUES.string,
-        EXPORT_CHART_ORG_IDS: DEFAULT_FRC_VALUES.string,
-        EXPORT_ALL_DATA_ORG_IDS: DEFAULT_FRC_VALUES.string,
-        HIDE_LAST_24_HOURS: DEFAULT_FRC_VALUES.boolean,
-        HIDE_TRENDS_ACTIVENESS: DEFAULT_FRC_VALUES.boolean,
-        HIDE_TRENDS_ROLLING: DEFAULT_FRC_VALUES.boolean,
-        HIDE_STALL_OCCUPANCY: DEFAULT_FRC_VALUES.boolean,
-        HIDE_HUMAN_IN_STALL: DEFAULT_FRC_VALUES.boolean,
-        HIDE_HUMAN_NEAR_STALL: DEFAULT_FRC_VALUES.boolean,
-        HIDE_LYING_DOWN: DEFAULT_FRC_VALUES.boolean,
-        HIDE_ACTIVENESS: DEFAULT_FRC_VALUES.boolean,
-        HIDE_ENVIRONMENT_CLIMATE: DEFAULT_FRC_VALUES.boolean,
-        HIDE_ENVIRONMENT_AMBIENT: DEFAULT_FRC_VALUES.boolean,
-        SPACES_ORG_IDS: DEFAULT_FRC_VALUES.string,
-        MANAGE_ALERTS_ORG_IDS: DEFAULT_FRC_VALUES.string,
-        WIFI_SIGNAL_EXCELLENT_THRESHOLD: DEFAULT_FRC_VALUES.number,
-        WIFI_SIGNAL_GOOD_THRESHOLD: DEFAULT_FRC_VALUES.number,
-        WIFI_SIGNAL_FAIR_THRESHOLD: DEFAULT_FRC_VALUES.number,
-        WIFI_SIGNAL_POOR_THRESHOLD: DEFAULT_FRC_VALUES.number,
-        ALERTS_ORG_ENABLED: DEFAULT_FRC_VALUES.boolean,
-        ALERTS_ORG_IDS: DEFAULT_FRC_VALUES.string,
-        FYP_CHARTS_ORG_ENABLED: DEFAULT_FRC_VALUES.boolean,
-        FYP_CHARTS_ORG_IDS: DEFAULT_FRC_VALUES.string,
-        DISPLAY_DEVIATION_TAG_FOR_LYING_DOWN: DEFAULT_FRC_VALUES.boolean,
-        DISPLAY_DEVIATION_TAG_FOR_HUMAN_IN_STALL: DEFAULT_FRC_VALUES.boolean,
-        DISPLAY_DEVIATION_TAG_FOR_STALL_OCCUPANCY: DEFAULT_FRC_VALUES.boolean,
-        DISPLAY_DEVIATION_TAG_FOR_CONSUMPTION: DEFAULT_FRC_VALUES.boolean,
-        DISPLAY_DEVIATION_TAG_FOR_SLEEPING: DEFAULT_FRC_VALUES.boolean,
-    };
-
-    await ensureInitialized(remoteConfig).catch((e: unknown) => {
+    await mod.rc.ensureInitialized(remoteConfig).catch((e: unknown) => {
       debug('Failed to initialize Firebase remote config:', e);
     });
 
-    let updated = false;
-    try {
-      updated = await fetchAndActivate(remoteConfig);
-    } catch (e) {
-      debug('Failed to fetch and activate Firebase remote config:', e);
-    }
+    const updated = await mod.rc
+      .fetchAndActivate(remoteConfig)
+      .catch((e: unknown) => {
+        debug('Failed to fetch and activate Firebase remote config:', e);
+        return false;
+      });
 
     debug(`Firebase remote config was ${updated ? 'updated' : 'not updated'}`);
   } catch (e) {
@@ -141,33 +90,26 @@ export async function initRemoteConfig(): Promise<void> {
   }
 }
 
-/**
- * Re-fetches and activates Remote Config. Safe to call on app resume.
- * Honors minimumFetchIntervalMillis (currently 5 min) — returns false when
- * throttled or on failure, but activated values remain readable either way.
- */
 export async function refreshRemoteConfig(): Promise<boolean> {
+  const mod = getNative();
+  if (!mod) return false;
   try {
-    const remoteConfig = getRemoteConfig(getApp());
-    const updated = await fetchAndActivate(remoteConfig);
-    debug(
-      `Firebase remote config refresh ${updated ? 'updated' : 'not updated'}`,
+    return await mod.rc.fetchAndActivate(
+      mod.rc.getRemoteConfig(mod.app.getApp()),
     );
-    return updated;
   } catch (e) {
     debug('Firebase remote config refresh failed (handled silently):', e);
     return false;
   }
 }
 
-/**
- * Safe getters: return defaults on any error (e.g. native bridge or uninitialized).
- * Prevents crashes from propagating when Remote Config is used after cold start.
- */
 export function getRemoteString(key: string): string {
+  const mod = getNative();
+  if (!mod) return DEFAULT_FRC_VALUES.string;
   try {
     return (
-      getString(getRemoteConfig(getApp()), key) ?? DEFAULT_FRC_VALUES.string
+      mod.rc.getString(mod.rc.getRemoteConfig(mod.app.getApp()), key) ??
+      DEFAULT_FRC_VALUES.string
     );
   } catch {
     return DEFAULT_FRC_VALUES.string;
@@ -175,9 +117,12 @@ export function getRemoteString(key: string): string {
 }
 
 export function getRemoteBoolean(key: string): boolean {
+  const mod = getNative();
+  if (!mod) return DEFAULT_FRC_VALUES.boolean;
   try {
     return (
-      getBoolean(getRemoteConfig(getApp()), key) ?? DEFAULT_FRC_VALUES.boolean
+      mod.rc.getBoolean(mod.rc.getRemoteConfig(mod.app.getApp()), key) ??
+      DEFAULT_FRC_VALUES.boolean
     );
   } catch {
     return DEFAULT_FRC_VALUES.boolean;
@@ -185,9 +130,12 @@ export function getRemoteBoolean(key: string): boolean {
 }
 
 export function getRemoteNumber(key: string): number {
+  const mod = getNative();
+  if (!mod) return DEFAULT_FRC_VALUES.number;
   try {
     return (
-      getNumber(getRemoteConfig(getApp()), key) ?? DEFAULT_FRC_VALUES.number
+      mod.rc.getNumber(mod.rc.getRemoteConfig(mod.app.getApp()), key) ??
+      DEFAULT_FRC_VALUES.number
     );
   } catch {
     return DEFAULT_FRC_VALUES.number;

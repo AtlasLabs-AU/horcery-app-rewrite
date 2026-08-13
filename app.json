@@ -36,18 +36,7 @@
           "imageWidth": 76
         }
       ],
-      "expo-dev-client",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static",
-            "buildReactNativeFromSource": true
-          }
-        }
-      ]
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true,

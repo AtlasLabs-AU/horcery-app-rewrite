@@ -1,8 +1,10 @@
-import { onAuthStateChanged } from '@react-native-firebase/auth';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import { authRn } from '@acme/config/firebase-rn';
+import {
+  onAuthStateChanged,
+  restoreSession,
+} from '@acme/config/firebase-rn';
 import { queries } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 
@@ -26,10 +28,14 @@ export function useSession() {
     useAuthStore();
 
   useEffect(() => {
-    return onAuthStateChanged(authRn, (user) => {
+    const unsubscribe = onAuthStateChanged((user) => {
       setEmail(user?.email ?? null);
       setStatus(user ? 'signed-in' : 'signed-out');
     });
+    // Silent sign-in from the stored refresh token, so a returning user is not
+    // asked for credentials the app already holds.
+    void restoreSession();
+    return unsubscribe;
   }, []);
 
   const signedIn = status === 'signed-in' && !!email;

@@ -1,7 +1,3 @@
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-} from '@react-native-firebase/auth';
 import { Button, Host } from '@expo/ui';
 import { useState } from 'react';
 import {
@@ -15,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { signInWithEmailAndPassword } from '@acme/config/firebase-rn';
 import { Brand, Fyp, Radius, Spacing } from '@/constants/theme';
 
 /**
@@ -35,12 +32,14 @@ export default function SignInScreen() {
     setBusy(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(getAuth(), email.trim(), password);
+      await signInWithEmailAndPassword(email.trim(), password);
       // The root layout switches to For You when auth state changes.
     } catch (e) {
       const code = (e as { code?: string })?.code ?? '';
       setError(
-        code.includes('invalid-credential') || code.includes('wrong-password')
+        code.includes('INVALID_LOGIN_CREDENTIALS') ||
+          code.includes('INVALID_PASSWORD') ||
+          code.includes('EMAIL_NOT_FOUND')
           ? 'That email and password did not match.'
           : 'Could not sign in. Check the connection and try again.',
       );
