@@ -3,6 +3,7 @@ import { Picker, Text as SwiftUIText } from '@expo/ui/swift-ui';
 import { frame, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { GlassView } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
 import {
@@ -95,6 +96,13 @@ export default function CarouselPrototypes() {
   return (
     <View style={styles.page}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <Text
+          style={styles.stallsLink}
+          onPress={() => router.push('/proto-stalls')}
+          accessibilityRole="button"
+          testID="proto-stalls-link">
+          Stalls page options →
+        </Text>
         <Text style={styles.title}>Snapshot carousel</Text>
         <Text style={styles.subtitle}>Prototype — text style: {variant}</Text>
 
@@ -350,6 +358,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  stallsLink: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#615FFF',
+    paddingHorizontal: PAGE_MARGIN,
+    paddingTop: Spacing.two,
   },
   title: {
     fontSize: 26,
