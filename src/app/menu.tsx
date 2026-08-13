@@ -21,9 +21,6 @@ import { useAuthStore } from '@acme/stores/authorization-states';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
-/** Sidebar takes most of a phone but never the whole screen; capped on tablet. */
-const PANEL_WIDTH_FRACTION = 0.84;
-const PANEL_MAX_WIDTH = 400;
 const OVERLAY_OPACITY = 0.45;
 const SLIDE_MS = 250; // motion token `base`
 
@@ -40,7 +37,8 @@ export default function MenuScreen() {
   const { colors } = useTokens();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const panelWidth = Math.min(width * PANEL_WIDTH_FRACTION, PANEL_MAX_WIDTH);
+  // Full-screen, like the current app — the slide direction still says "sidebar".
+  const panelWidth = width;
 
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -300,9 +298,6 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     bottom: 0,
-    borderTopLeftRadius: radius.xl,
-    borderBottomLeftRadius: radius.xl,
-    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   content: {
