@@ -11,6 +11,7 @@ import { OrganizationCard } from '@/components/for-you/organization-card';
 import { ReviewCard } from '@/components/for-you/review-card';
 import { SnapshotsCard } from '@/components/for-you/snapshots-card';
 import { useForYouData } from '@/hooks/use-for-you-data';
+import { useSnapshots } from '@/hooks/use-snapshots';
 import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constants/theme';
 
 /**
@@ -29,6 +30,7 @@ export default function ForYouScreen() {
   const [viewportHeight, setViewportHeight] = useState(0);
   const { organizationName, localTime, devices, isRefreshing, refresh } =
     useForYouData();
+  const { snapshots } = useSnapshots();
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setScrollY(event.nativeEvent.contentOffset.y);
@@ -60,11 +62,8 @@ export default function ForYouScreen() {
           />
 
           <SnapshotsCard
-            snapshots={[
-              { id: 'a', name: 'new horse 16 dec' },
-              { id: 'b', name: 'Claire Murphy' },
-            ]}
-            pageCount={3}
+            snapshots={snapshots}
+            pageCount={Math.max(1, Math.ceil(snapshots.length / 2))}
             activePage={0}
           />
 
