@@ -20,12 +20,12 @@ export interface IQueryRange {
     instance?: string;
     job?: string;
   };
-  values: Array<[number, string]>;
+  values: [number, string][];
 }
 
 export interface IPrometheus {
   resultType: string;
-  result: Array<IQuery | IQueryRange>;
+  result: (IQuery | IQueryRange)[];
 }
 
 class PrometheusService {

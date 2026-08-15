@@ -1,0 +1,48 @@
+import type { SFSymbol } from 'sf-symbols-typescript';
+
+import type { IconName } from '@/components/ui/icon-names';
+
+/** iOS glyphs — SF Symbols. */
+const IOS: Record<IconName, SFSymbol> = {
+  menu: 'line.3.horizontal',
+  back: 'chevron.left',
+  close: 'xmark',
+  chevronRight: 'chevron.right',
+  external: 'arrow.up.right',
+  search: 'magnifyingglass',
+  customize: 'slider.horizontal.3',
+  overflow: 'ellipsis',
+  check: 'checkmark',
+  checkFilled: 'checkmark.circle.fill',
+  circleEmpty: 'circle',
+  filter: 'line.3.horizontal.decrease',
+  info: 'info.circle',
+  ai: 'sparkles',
+  settings: 'gearshape.fill',
+  clock: 'clock',
+  temperature: 'thermometer.medium',
+  humidity: 'drop',
+  account: 'person.crop.circle',
+  organization: 'building.2',
+  devices: 'sensor.tag.radiowaves.forward',
+  spaces: 'video',
+  clips: 'film',
+  alerts: 'bell.badge',
+  support: 'questionmark.circle',
+  logOut: 'rectangle.portrait.and.arrow.right',
+  feedback: 'bubble.left.and.bubble.right',
+  mail: 'envelope.badge',
+  verified: 'checkmark.seal.fill',
+  faceId: 'faceid',
+  showPassword: 'eye',
+  hidePassword: 'eye.slash',
+  lyingDown: 'moon.zzz.fill',
+  peopleInStall: 'figure.stand',
+  inStall: 'house.fill',
+  feed: 'fork.knife',
+  horse: 'figure.equestrian.sports',
+};
+
+export function iosSymbolFor(name: IconName): SFSymbol {
+  return IOS[name];
+}

@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
 import { AuthFlow } from '@/components/auth/auth-flow';
-import { FACE_ID_UNLOCK_PREVIEW, LockScreen } from '@/components/auth/lock-screen';
+import { LockScreen } from '@/components/auth/lock-screen';
+import { PREVIEWS } from '@/config/previews';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
 import { initRemoteConfig } from '@acme/config/firebase-remote-config';
@@ -43,7 +44,7 @@ function SessionGate() {
   const sawSignedOut = useRef(false);
   useEffect(() => {
     if (status === 'signed-out') sawSignedOut.current = true;
-    if (status === 'signed-in' && !sawSignedOut.current && FACE_ID_UNLOCK_PREVIEW) {
+    if (status === 'signed-in' && !sawSignedOut.current && PREVIEWS.faceIdUnlock) {
       setLocked(true);
     }
   }, [status]);

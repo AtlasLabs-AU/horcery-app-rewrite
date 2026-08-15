@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -11,9 +11,9 @@ import { radius, space, type } from '@/constants/tokens';
  *
  * FRONT-END PREVIEW ONLY (Inakshi, 2026-08-14): tapping the button unlocks
  * unconditionally — real biometrics need `expo-local-authentication` and a
- * settings toggle in My Account. Flip the flag below to remove the gate.
+ * settings toggle in My Account. Gated by PREVIEWS.faceIdUnlock, which is
+ * compiled out of release builds (src/config/previews.ts).
  */
-export const FACE_ID_UNLOCK_PREVIEW = true;
 
 export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const { colors } = useTokens();
@@ -39,7 +39,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
                 { backgroundColor: colors.fillTonal },
                 pressed && styles.pressed,
               ]}>
-              <SymbolView name="faceid" size={44} tintColor={colors.accent} />
+              <Icon name="faceId" size={44} color={colors.accent} />
             </Pressable>
             <Text style={[type.headline, { color: colors.foreground }]}>
               Unlock with Face ID

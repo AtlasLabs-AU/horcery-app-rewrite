@@ -1,8 +1,8 @@
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { LinkButton } from '@/components/for-you/link-button';
+import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -26,20 +26,20 @@ export function ReviewCard({
       <SectionHeader
         title="Review"
         adornment={
-          <Pressable
-            onPress={onFilter}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Filter behaviors">
-            <SymbolView
-              name="line.3.horizontal.decrease"
-              size={18}
-              tintColor={colors.accent}
-            />
-          </Pressable>
+          onFilter ? (
+            <Pressable
+              onPress={onFilter}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Filter behaviors">
+              <Icon name="filter" size={18} color={colors.accent} />
+            </Pressable>
+          ) : undefined
         }
         action={
-          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
+          onSeeHistory ? (
+            <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
+          ) : undefined
         }
       />
       {children ?? <ReviewEmptyState />}
@@ -51,7 +51,7 @@ function ReviewEmptyState() {
   const { colors } = useTokens();
   return (
     <View style={[styles.info, { backgroundColor: colors.bed }]} testID="for-you-review-empty">
-      <SymbolView name="info.circle" size={18} tintColor={colors.accent} />
+      <Icon name="info" size={18} color={colors.accent} />
       <Text style={[type.subhead, styles.infoText, { color: colors.secondary }]}>
         Your Stall Monitor will feature recent events that may be of interest to
         you here.

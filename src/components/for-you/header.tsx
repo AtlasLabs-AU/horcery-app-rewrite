@@ -1,6 +1,6 @@
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Icon, type IconName } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { space, type } from '@/constants/tokens';
 
@@ -34,21 +34,25 @@ export function ForYouHeader({
         {greeting}
       </Text>
       <View style={styles.actions}>
+        {onSearch ? (
+          <HeaderIcon
+            name="search"
+            label="Search"
+            hint="Opens search"
+            onPress={onSearch}
+            testID="for-you-search-button"
+          />
+        ) : null}
+        {onCustomize ? (
+          <HeaderIcon
+            name="customize"
+            label="Customize for you page"
+            onPress={onCustomize}
+            testID="for-you-customize-button"
+          />
+        ) : null}
         <HeaderIcon
-          name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
-          label="Search"
-          hint="Opens search"
-          onPress={onSearch}
-          testID="for-you-search-button"
-        />
-        <HeaderIcon
-          name={{ ios: 'slider.horizontal.3', android: 'tune', web: 'tune' }}
-          label="Customize for you page"
-          onPress={onCustomize}
-          testID="for-you-customize-button"
-        />
-        <HeaderIcon
-          name={{ ios: 'line.3.horizontal', android: 'menu', web: 'menu' }}
+          name="menu"
           label="Open menu"
           onPress={onMenu}
           testID="for-you-menu-button"
@@ -65,7 +69,7 @@ function HeaderIcon({
   onPress,
   testID,
 }: {
-  name: SymbolViewProps['name'];
+  name: IconName;
   label: string;
   hint?: string;
   onPress?: () => void;
@@ -81,12 +85,7 @@ function HeaderIcon({
       accessibilityHint={hint}
       testID={testID}
       style={({ pressed }) => (pressed ? styles.pressed : undefined)}>
-      <SymbolView
-        name={name}
-        size={24}
-        tintColor={colors.foreground}
-        resizeMode="scaleAspectFit"
-      />
+      <Icon name={name} size={24} color={colors.foreground} />
     </Pressable>
   );
 }

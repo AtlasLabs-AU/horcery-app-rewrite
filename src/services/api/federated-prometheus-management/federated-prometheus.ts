@@ -23,12 +23,12 @@ export interface IQueryRange {
     instance?: string;
     job?: string;
   };
-  values: Array<[number, string]>;
+  values: [number, string][];
 }
 
 export interface IFederatedPrometheus {
   resultType: string;
-  result: Array<IQuery | IQueryRange>;
+  result: (IQuery | IQueryRange)[];
 }
 
 class FederatedPrometheusService {

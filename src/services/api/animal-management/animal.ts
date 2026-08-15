@@ -10,7 +10,8 @@ export interface IAnimal {
         large: string;
         extra_large: string;
       }
-    | {};
+    // The API sends `{}` when the animal has no image.
+    | Record<string, never>;
   registered_name?: string;
   deleted_at?: string | null;
   deleted_by_cascade?: boolean;

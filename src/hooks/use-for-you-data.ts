@@ -6,6 +6,7 @@ import { deviceSubTypeMap } from '@acme/config/constants/device-sub-types';
 import { deviceTypeMap } from '@acme/config/constants/device-type';
 import { queries } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
+import { useOrganizationNow } from '@/hooks/use-organization-now';
 
 /**
  * Everything the For You page reads, in one place.
@@ -116,12 +117,14 @@ export function useForYouData() {
     };
   }, [deviceData, locationData]);
 
-  /** Local time in the organization's timezone, formatted as the current app does. */
-  const localTime = useMemo(() => {
-    const zone = organization?.data?.timezone;
-    const now = zone ? DateTime.now().setZone(zone) : DateTime.now();
-    return now.toFormat('h:mm a').toLowerCase();
-  }, [organization?.data?.timezone]);
+  /**
+   * Local time in the organization's timezone. Ticks on the minute — it used
+   * to be `useMemo`'d and froze at whatever time the page mounted, so a barn's
+   * clock stopped (review, 2026-08-15).
+   */
+  const timezone = organization?.data?.timezone;
+  const now = useOrganizationNow(timezone);
+  const localTime = useMemo(() => now.toFormat('h:mm a').toLowerCase(), [now]);
 
   /**
    * The prefixes a refresh invalidates. These are real key prefixes, so React
@@ -136,6 +139,8 @@ export function useForYouData() {
       queries.stall.list._def,
       queries.animal.list._def,
       queries.event.list._def,
+      queries.alertRule.list._def,
+      queries.animalStall.list._def,
     ],
     [],
   );
@@ -162,7 +167,7 @@ export function useForYouData() {
   return {
     organizationID,
     organizationName: organizationName ?? organization?.data?.name ?? '',
-    timezone: organization?.data?.timezone,
+    timezone,
     localTime,
     devices,
     organizations,

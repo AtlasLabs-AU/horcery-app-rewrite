@@ -1,9 +1,10 @@
-import { SymbolView } from 'expo-symbols';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard } from '@/components/for-you/card';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { LinkButton } from '@/components/for-you/link-button';
-import { OrganizationMenu } from '@/components/for-you/organization-menu';
+import { Menu } from '@/components/ui/menu';
+import type { AlertStatus } from '@/hooks/use-alert-status';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -17,10 +18,8 @@ export interface OrganizationCardProps {
   localTime: string;
   temperature?: string;
   humidity?: string;
-  /** Headline status from the AI summary. */
-  statusText: string;
-  /** How many metrics the AI is watching; hides the banner when undefined. */
-  metricsWatched?: number;
+  /** Derived health — see useAlertStatus. Never a hardcoded string. */
+  alertStatus: AlertStatus;
   onManageOrganization?: () => void;
   onSeeHistory?: () => void;
   onManageAlerts?: () => void;
@@ -39,8 +38,7 @@ export function OrganizationCard({
   localTime,
   temperature,
   humidity,
-  statusText,
-  metricsWatched,
+  alertStatus,
   onManageOrganization,
   onSeeHistory,
   onManageAlerts,
@@ -55,65 +53,108 @@ export function OrganizationCard({
             numberOfLines={1}>
             {organizationName}
           </Text>
-          <Pressable
-            onPress={onManageOrganization}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Manage organization">
-            <SymbolView name="gearshape.fill" size={16} tintColor={colors.accent} />
-          </Pressable>
+          {onManageOrganization ? (
+            <Pressable
+              onPress={onManageOrganization}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Manage organization">
+              <Icon name="settings" size={16} color={colors.accent} />
+            </Pressable>
+          ) : null}
         </View>
-        <OrganizationMenu
-          organizations={organizations}
-          selectedId={organizationID}
-          onSelect={onSelectOrganization}
+        <Menu
+          label="Switch"
+          accessibilityLabel="Switch organization"
+          width={72}
+          actions={organizations.map((organization) => ({
+            id: organization.id,
+            label: organization.name,
+            selected: organization.id === organizationID,
+            onPress: () => onSelectOrganization(organization.id),
+          }))}
           testID="for-you-switch-organization"
         />
       </View>
 
       <View style={styles.metricRow}>
-        <Metric symbol="clock" value={localTime} />
-        {temperature ? <Metric symbol="thermometer.medium" value={temperature} /> : null}
-        {humidity ? <Metric symbol="drop" value={humidity} /> : null}
+        <Metric icon="clock" value={localTime} />
+        {temperature ? <Metric icon="temperature" value={temperature} /> : null}
+        {humidity ? <Metric icon="humidity" value={humidity} /> : null}
       </View>
 
       <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
       <View style={styles.titleRow}>
         <Text style={[type.headline, { color: colors.foreground }]}>Horcery AI</Text>
-        <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
+        {onSeeHistory ? (
+          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
+        ) : null}
       </View>
 
-      <View style={styles.statusRow}>
-        <View style={[styles.statusDot, { backgroundColor: colors.statusOk }]} />
-        <Text style={[type.body, { color: colors.foreground }]}>{statusText}</Text>
-      </View>
+      <StatusLine status={alertStatus} />
 
-      {metricsWatched === undefined ? null : (
+      {alertStatus.kind === 'normal' || alertStatus.kind === 'today' ? (
         <View style={[styles.banner, { backgroundColor: colors.bed }]}>
           <View style={styles.bannerLeft}>
-            <SymbolView name="sparkles" size={16} tintColor={colors.accent} />
+            <Icon name="ai" size={16} color={colors.accent} />
             <Text style={[type.subhead, styles.bannerText, { color: colors.secondary }]} numberOfLines={1}>
-              {`AI watching ${metricsWatched} metrics`}
+              {`AI watching ${alertStatus.rulesConfigured} ${alertStatus.rulesConfigured === 1 ? 'metric' : 'metrics'}`}
             </Text>
           </View>
-          <LinkButton label="Manage Alerts" onPress={onManageAlerts} testID="for-you-manage-alerts" />
+          {onManageAlerts ? (
+            <LinkButton label="Manage Alerts" onPress={onManageAlerts} testID="for-you-manage-alerts" />
+          ) : null}
         </View>
-      )}
+      ) : null}
     </SectionCard>
   );
 }
 
-function Metric({ symbol, value }: { symbol: string; value: string }) {
+/**
+ * One line, five honest states. Loading shows a spinner, not a guess;
+ * unavailable says so, in the alert colour, because in a monitoring app
+ * "we can't tell" is itself something to notice.
+ */
+function StatusLine({ status }: { status: AlertStatus }) {
+  const { colors } = useTokens();
+  const dot = {
+    loading: colors.dimmed,
+    unavailable: colors.statusAlert,
+    not_set: colors.dimmed,
+    normal: colors.statusOk,
+    today: colors.statusAlert,
+  }[status.kind];
+  const text = {
+    loading: 'Checking alerts\u2026',
+    unavailable: 'Alert status unavailable',
+    not_set: 'No alerts set',
+    normal: 'Everything looks normal',
+    today:
+      status.kind === 'today'
+        ? `${status.count} ${status.count === 1 ? 'alert' : 'alerts'} today`
+        : '',
+  }[status.kind];
+
+  return (
+    <View style={styles.statusRow} testID={`for-you-alert-status-${status.kind}`}>
+      {status.kind === 'loading' ? (
+        <ActivityIndicator size="small" color={colors.tertiary} style={styles.statusSpinner} />
+      ) : (
+        <View style={[styles.statusDot, { backgroundColor: dot }]} />
+      )}
+      <Text style={[type.body, { color: status.kind === 'loading' ? colors.tertiary : colors.foreground }]}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function Metric({ icon, value }: { icon: IconName; value: string }) {
   const { colors } = useTokens();
   return (
     <View style={styles.metric}>
-      <SymbolView
-        name={symbol as never}
-        size={15}
-        tintColor={colors.tertiary}
-        resizeMode="scaleAspectFit"
-      />
+      <Icon name={icon} size={15} color={colors.tertiary} />
       <Text style={[type.subhead, { color: colors.secondary }]}>{value}</Text>
     </View>
   );
@@ -161,6 +202,10 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: radius.full,
+  },
+  statusSpinner: {
+    width: 12,
+    height: 12,
   },
   banner: {
     flexDirection: 'row',

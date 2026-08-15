@@ -2,9 +2,19 @@ import { Image } from 'expo-image';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
-import { OverflowMenu } from '@/components/for-you/overflow-menu';
+import { snapshotPage, snapshotPageCount } from '@/components/for-you/snapshot-paging';
+import { Menu } from '@/components/ui/menu';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
+
+/**
+ * Snapshot menu actions. Declared here, without handlers, because the
+ * destinations do not exist yet — see the note on `Menu` below.
+ */
+const SNAPSHOT_MENU_ACTIONS = [
+  { id: 'playback-speed', label: 'Playback speed', disabled: true },
+  { id: 'go-live', label: 'Go live', disabled: true },
+];
 
 export interface Snapshot {
   id: string;
@@ -46,7 +56,8 @@ export function SnapshotsCard({
   const { colors } = useTokens();
   const { width } = useWindowDimensions();
   const columns = columnsForWidth(width);
-  const pageCount = Math.max(1, Math.ceil(snapshots.length / columns));
+  const pageCount = snapshotPageCount(snapshots.length, columns);
+  const visible = snapshotPage(snapshots, columns, activePage);
 
   return (
     <SectionCard testID="for-you-snapshots">
@@ -60,24 +71,28 @@ export function SnapshotsCard({
           </View>
         }
         action={
-          <OverflowMenu
-            label="Snapshot options"
+          <Menu
+            icon="overflow"
+            accessibilityLabel="Snapshot options"
             testID="for-you-snapshot-menu"
-            actions={[
-              { label: 'Playback speed', systemImage: 'gauge.with.needle' },
-              { label: 'Go live', systemImage: 'dot.radiowaves.left.and.right' },
-            ]}
+            actions={SNAPSHOT_MENU_ACTIONS}
           />
         }
       />
       <Text style={[type.subhead, styles.subtitle, { color: colors.tertiary }]}>{subtitle}</Text>
 
       <View style={styles.tileRow}>
-        {snapshots.slice(0, columns).map((snapshot) => (
+        {visible.map((snapshot) => (
           <SnapshotTile key={snapshot.id} snapshot={snapshot} />
         ))}
       </View>
 
+      {/*
+        The dots reflect real pages now that the row is paged rather than
+        truncated (§6b finding 6). Changing page still needs a swipe gesture —
+        that, foreground refresh and fullscreen belong to the Snapshots
+        vertical slice, and `activePage` is controlled by the caller until then.
+      */}
       {pageCount > 1 ? (
         <View style={styles.dots}>
           {Array.from({ length: pageCount }).map((_, index) => (

@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon, type IconName } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 import { BottomTabInset } from '@/constants/theme';
@@ -35,36 +35,32 @@ export default function MoreScreen() {
             accessibilityRole="button"
             accessibilityLabel="Open menu"
             testID="more-menu-button">
-            <SymbolView
-              name="line.3.horizontal"
-              size={24}
-              tintColor={colors.foreground}
-            />
+            <Icon name="menu" size={24} color={colors.foreground} />
           </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={[styles.group, { backgroundColor: colors.card }]}>
             <MoreRow
-              symbol="video"
+              icon="spaces"
               title="Spaces"
               description="Video feeds from all your connected cameras in one place."
               testID="more-spaces"
             />
             <MoreRow
-              symbol="film"
+              icon="clips"
               title="Clips"
               description="Clips you created, received, or shared across your organization."
               testID="more-clips"
             />
             <MoreRow
-              symbol="sensor.tag.radiowaves.forward"
+              icon="devices"
               title="Devices"
               description="Keep track of all connected devices."
               testID="more-devices"
             />
             <MoreRow
-              symbol="bell.badge"
+              icon="alerts"
               title="Manage Alerts"
               description="Global and horse-specific alerts, so you never miss anything."
               last
@@ -89,11 +85,7 @@ export default function MoreScreen() {
                 { backgroundColor: colors.card },
                 pressed && styles.pressed,
               ]}>
-              <SymbolView
-                name="bubble.left.and.bubble.right"
-                size={16}
-                tintColor={colors.accent}
-              />
+              <Icon name="feedback" size={16} color={colors.accent} />
               <Text style={[type.headline, { color: colors.accent }]}>
                 Give Feedback
               </Text>
@@ -105,49 +97,52 @@ export default function MoreScreen() {
   );
 }
 
-/** Icon well + title + one-line description + chevron. */
+/**
+ * Icon well + title + one-line description + chevron.
+ *
+ * A row with no destination renders as PLAIN TEXT, dimmed, with no button
+ * role and no chevron — never as a control that looks tappable and isn't
+ * (requirements §6b item 3). The rows light up as their screens are built.
+ */
 function MoreRow({
-  symbol,
+  icon,
   title,
   description,
   last,
+  onPress,
   testID,
 }: {
-  symbol: string;
+  icon: IconName;
   title: string;
   description: string;
   last?: boolean;
+  onPress?: () => void;
   testID?: string;
 }) {
   const { colors } = useTokens();
+  const wired = !!onPress;
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
+      onPress={onPress}
+      disabled={!wired}
+      accessibilityRole={wired ? 'button' : undefined}
+      accessibilityLabel={wired ? title : undefined}
       testID={testID}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
+      style={({ pressed }) => [styles.row, pressed && wired && { backgroundColor: colors.bed }]}>
       <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-        <SymbolView
-          name={symbol as never}
-          size={18}
-          tintColor={colors.accent}
-          resizeMode="scaleAspectFit"
-        />
+        <Icon name={icon} size={18} color={wired ? colors.accent : colors.dimmed} />
       </View>
       <View style={styles.rowText}>
-        <Text style={[type.body, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[type.body, { color: wired ? colors.foreground : colors.tertiary }]}>
+          {title}
+        </Text>
         <Text
-          style={[type.footnote, { color: colors.secondary }]}
+          style={[type.footnote, { color: wired ? colors.secondary : colors.dimmed }]}
           numberOfLines={2}>
-          {description}
+          {wired ? description : `${description} (coming soon)`}
         </Text>
       </View>
-      <SymbolView
-        name="chevron.right"
-        size={13}
-        tintColor={colors.dimmed}
-        weight="semibold"
-      />
+      {wired ? <Icon name="chevronRight" size={13} color={colors.dimmed} /> : null}
       {last ? null : (
         <View style={[styles.separator, { backgroundColor: colors.divider }]} />
       )}

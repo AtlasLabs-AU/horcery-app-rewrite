@@ -290,8 +290,7 @@ function getFlagByKey(flags: FeatureFlags, key: FlagKey): boolean {
 }
 
 function evaluateFypFlags(context: FypContext): FeatureFlags['fyp'] {
-  const { hasLocations, hasWaterDevices, hasFeedDevices, userPreferences } =
-    context;
+  const { hasWaterDevices, hasFeedDevices, userPreferences } = context;
   const prefs = getFypWidgetPreferences(userPreferences);
 
   return {

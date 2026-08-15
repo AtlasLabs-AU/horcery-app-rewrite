@@ -14,6 +14,7 @@ import { IntakeCard } from '@/components/for-you/intake-card';
 import { OrganizationCard } from '@/components/for-you/organization-card';
 import { ReviewCard } from '@/components/for-you/review-card';
 import { SnapshotsCard } from '@/components/for-you/snapshots-card';
+import { useAlertStatus } from '@/hooks/use-alert-status';
 import { useForYouData } from '@/hooks/use-for-you-data';
 import { useSnapshots } from '@/hooks/use-snapshots';
 import { BottomTabInset, MaxContentWidth } from '@/constants/theme';
@@ -44,8 +45,10 @@ export default function ForYouScreen() {
     selectOrganization,
     isRefreshing,
     refresh,
+    timezone,
   } = useForYouData();
   const { snapshots } = useSnapshots();
+  const alertStatus = useAlertStatus(organizationID, timezone);
   const { colors } = useTokens();
 
   const openMenu = useCallback(() => router.push('/menu'), []);
@@ -76,7 +79,7 @@ export default function ForYouScreen() {
             organizationID={organizationID}
             onSelectOrganization={selectOrganization}
             localTime={localTime}
-            statusText="Everything looks normal"
+            alertStatus={alertStatus}
           />
 
           <SnapshotsCard snapshots={snapshots} />

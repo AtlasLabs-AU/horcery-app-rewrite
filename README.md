@@ -11,8 +11,27 @@ here traces back to it.
 
 ## Status
 
-**Stage A — foundation.** Scaffold running; universal `@expo/ui` verified rendering
-native controls. No feature screens ported yet.
+**HOLD SCOPE — foundation hardening (from 2026-08-15).** `main` is a visual and
+structural prototype, **not a production replacement**. An adversarial review
+(requirements §6b) found: iOS-only controls in production screens, dead
+controls, no localization, no tests, and Snapshots losing data. No further
+screens are promoted to `main` until the hardening slice is complete —
+universal adapters + import-rule CI → i18next + no-literal lint → test/lint
+infrastructure → honest loading/unavailable/preview/error states → Snapshots
+as the first complete vertical slice → parity ledger → iOS **and** Android
+device validation. R&D continues on `rnd`.
+
+Rules that apply to every change on `main` now:
+- A visible interactive element must navigate, act, be visibly disabled with
+  a reason, or not render.
+- Preview features (fake reset flow, tap-to-unlock Face ID, Apple/Google
+  buttons) are behind `PREVIEWS` in `src/config/previews.ts` — `__DEV__` AND
+  `EXPO_PUBLIC_ENABLE_PREVIEWS=true`. They are **unreachable** in release
+  builds (asserted by test). Their strings do still ship: verified against a
+  real export, Metro does not strip the branch. Do not describe them as
+  "compiled out".
+- No new `@expo/ui/swift-ui` / `jetpack-compose` imports outside
+  `src/components/ui`.
 
 ## Stack
 
