@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { RENDERERS, type RendererId } from './src/renderer';
@@ -87,7 +87,7 @@ export default function App() {
           testIDPrefix="renderer"
         />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips}>
+        <View style={styles.chips}>
           {scenarios.map((s, i) => (
             <Pressable
               key={s.name}
@@ -99,7 +99,7 @@ export default function App() {
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
 
         <View style={styles.chartCard} testID="chart-card">
           <View key={`${rendererId}-${scenario.name}-${mountKey}`} testID={`chart-${rendererId}`}>
@@ -203,11 +203,12 @@ const styles = StyleSheet.create({
   segmentOn: { backgroundColor: '#ffffff' },
   segmentText: { fontSize: 13, color: '#475569' },
   segmentTextOn: { color: '#0f172a', fontWeight: '600' },
-  chipRow: { flexGrow: 0 },
-  chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 8, alignItems: 'center' },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#f1f5f9' },
+  // Wrapping rows, not a horizontal scroller: every fixture is one tap away,
+  // for a human and for argent alike.
+  chips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 6, paddingBottom: 8 },
+  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, backgroundColor: '#f1f5f9' },
   chipOn: { backgroundColor: '#0369A1' },
-  chipText: { fontSize: 12, color: '#334155' },
+  chipText: { fontSize: 11, color: '#334155' },
   chipTextOn: { color: '#ffffff', fontWeight: '600' },
   chartCard: { marginHorizontal: 16, borderRadius: 12, backgroundColor: '#ffffff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   stats: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 12, paddingHorizontal: 16 },

@@ -281,7 +281,7 @@ export const overnight: Fixture = {
 
 export const daylightSaving: Fixture = {
   name: 'daylight-saving',
-  purpose: 'The week containing the US spring-forward (2026-03-08, a 23-hour day). Bars after 2 AM that day must land at the right clock hour.',
+  purpose: 'The week containing the US spring-forward (2026-03-08, a 23-hour day). 2 AM never happens; a bar across the gap draws two clock hours wide for one real hour, and 7 AM still lines up with every other row.',
   zone: PEOPLE_IN_STALL.zone,
   selectedDate: '2026-03-10',
   now: '2026-03-11T09:00:00',
@@ -295,7 +295,7 @@ export const daylightSaving: Fixture = {
 
 export const daylightSavingFallBack: Fixture = {
   name: 'daylight-saving-fall-back',
-  purpose: 'The week containing the US fall-back (2026-11-01, a 25-hour day). Two different "1 AM" hours: the row must be 25/24 as long in time, bars must sit at the right instant, and the hour labels expose an ambiguity the renderer has to live with.',
+  purpose: 'The week containing the US fall-back (2026-11-01, a 25-hour day). 1 AM happens twice; with clock-aligned rows the repeated hour folds onto itself, so bars in it overlap and a bar spanning it draws at minimum width. 7 AM must still line up with every other row.',
   zone: PEOPLE_IN_STALL.zone,
   selectedDate: '2026-11-03',
   now: '2026-11-04T09:00:00',
