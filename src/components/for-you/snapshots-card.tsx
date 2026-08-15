@@ -2,9 +2,18 @@ import { Image } from 'expo-image';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
-import { OverflowMenu } from '@/components/for-you/overflow-menu';
+import { Menu } from '@/components/ui/menu';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
+
+/**
+ * Snapshot menu actions. Declared here, without handlers, because the
+ * destinations do not exist yet — see the note on `Menu` below.
+ */
+const SNAPSHOT_MENU_ACTIONS = [
+  { id: 'playback-speed', label: 'Playback speed', disabled: true },
+  { id: 'go-live', label: 'Go live', disabled: true },
+];
 
 export interface Snapshot {
   id: string;
@@ -60,13 +69,11 @@ export function SnapshotsCard({
           </View>
         }
         action={
-          <OverflowMenu
-            label="Snapshot options"
+          <Menu
+            icon="overflow"
+            accessibilityLabel="Snapshot options"
             testID="for-you-snapshot-menu"
-            actions={[
-              { label: 'Playback speed', systemImage: 'gauge.with.needle' },
-              { label: 'Go live', systemImage: 'dot.radiowaves.left.and.right' },
-            ]}
+            actions={SNAPSHOT_MENU_ACTIONS}
           />
         }
       />

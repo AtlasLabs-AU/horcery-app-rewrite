@@ -2,6 +2,8 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // Node + Jest globals for tests and tooling; expo/types keeps Expo's own.
+    "types": ["jest", "node", "expo/types"],
     "paths": {
       "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"],

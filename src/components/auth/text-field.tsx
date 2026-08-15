@@ -1,4 +1,3 @@
-import { SymbolView } from 'expo-symbols';
 import { forwardRef, useState } from 'react';
 import {
   Pressable,
@@ -9,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -57,11 +57,7 @@ export const TextField = forwardRef<
             accessibilityRole="button"
             accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
             testID={testID ? `${testID}-toggle` : undefined}>
-            <SymbolView
-              name={hidden ? 'eye' : 'eye.slash'}
-              size={18}
-              tintColor={colors.tertiary}
-            />
+            <Icon name={hidden ? 'showPassword' : 'hidePassword'} size={18} color={colors.tertiary} />
           </Pressable>
         ) : null}
       </View>

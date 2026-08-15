@@ -167,10 +167,62 @@ module.exports = defineConfig([
 
   // ---- Tests -------------------------------------------------------------
   // The boundary test deliberately references forbidden module names as data.
+  // Flat config does not honour `/* eslint-env jest */`, so test globals are
+  // declared here instead.
   {
-    files: ['**/*.test.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}'],
+    files: [
+      '**/*.test.{ts,tsx}',
+      '**/__tests__/**/*.{ts,tsx}',
+      'jest.setup.js',
+      'jest.env.js',
+      'jest.config.js',
+    ],
+    languageOptions: {
+      globals: {
+        jest: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        beforeEach: 'readonly',
+        afterAll: 'readonly',
+        afterEach: 'readonly',
+        global: 'writable',
+      },
+    },
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+
+  // ========================================================================
+  // BASELINE — known violations that predate these rules.
+  //
+  // These are NOT approvals. Each entry is debt with a named owner-task. The
+  // rules above are errors for all new and changed code; this block only stops
+  // pre-existing violations from blocking CI on day one.
+  //
+  // THIS LIST MUST ONLY EVER SHRINK. Adding a file here requires the same
+  // logged decision as widening a boundary. Delete each entry as its task lands.
+  // ========================================================================
+
+  // (Requirements §6b finding #1 — the three For You components that imported
+  // @expo/ui/swift-ui directly — was CLEARED on 2026-08-15 by the universal
+  // adapter task. They are now src/components/ui/{menu,segmented-control,icon},
+  // which fork by platform inside the surface layer. No exemption remains;
+  // the boundary is enforced with no holes. Keep it that way.)
+
+  // Pre-existing React Compiler findings. Genuine correctness rules, but the
+  // fixes change animation and hydration behaviour, which is out of scope for a
+  // guardrails change on a HOLD SCOPE branch. Scheduled with the hardening slice.
+  //   menu.tsx            — Animated.Value read from a ref during render
+  //   use-color-scheme.web.ts — setState inside an effect (web hydration shim)
+  {
+    files: ['src/app/menu.tsx', 'src/hooks/use-color-scheme.web.ts'],
+    rules: {
+      'react-hooks/refs': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ]);

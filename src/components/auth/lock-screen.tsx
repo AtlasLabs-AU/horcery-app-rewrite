@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -39,7 +39,7 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
                 { backgroundColor: colors.fillTonal },
                 pressed && styles.pressed,
               ]}>
-              <SymbolView name="faceid" size={44} tintColor={colors.accent} />
+              <Icon name="faceId" size={44} color={colors.accent} />
             </Pressable>
             <Text style={[type.headline, { color: colors.foreground }]}>
               Unlock with Face ID

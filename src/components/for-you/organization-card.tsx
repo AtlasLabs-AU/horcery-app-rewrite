@@ -1,9 +1,9 @@
-import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard } from '@/components/for-you/card';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { LinkButton } from '@/components/for-you/link-button';
-import { OrganizationMenu } from '@/components/for-you/organization-menu';
+import { Menu } from '@/components/ui/menu';
 import type { AlertStatus } from '@/hooks/use-alert-status';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
@@ -58,21 +58,27 @@ export function OrganizationCard({
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Manage organization">
-            <SymbolView name="gearshape.fill" size={16} tintColor={colors.accent} />
+            <Icon name="settings" size={16} color={colors.accent} />
           </Pressable>
         </View>
-        <OrganizationMenu
-          organizations={organizations}
-          selectedId={organizationID}
-          onSelect={onSelectOrganization}
+        <Menu
+          label="Switch"
+          accessibilityLabel="Switch organization"
+          width={72}
+          actions={organizations.map((organization) => ({
+            id: organization.id,
+            label: organization.name,
+            selected: organization.id === organizationID,
+            onPress: () => onSelectOrganization(organization.id),
+          }))}
           testID="for-you-switch-organization"
         />
       </View>
 
       <View style={styles.metricRow}>
-        <Metric symbol="clock" value={localTime} />
-        {temperature ? <Metric symbol="thermometer.medium" value={temperature} /> : null}
-        {humidity ? <Metric symbol="drop" value={humidity} /> : null}
+        <Metric icon="clock" value={localTime} />
+        {temperature ? <Metric icon="temperature" value={temperature} /> : null}
+        {humidity ? <Metric icon="humidity" value={humidity} /> : null}
       </View>
 
       <View style={[styles.divider, { backgroundColor: colors.divider }]} />
@@ -87,7 +93,7 @@ export function OrganizationCard({
       {alertStatus.kind === 'normal' || alertStatus.kind === 'active' ? (
         <View style={[styles.banner, { backgroundColor: colors.bed }]}>
           <View style={styles.bannerLeft}>
-            <SymbolView name="sparkles" size={16} tintColor={colors.accent} />
+            <Icon name="ai" size={16} color={colors.accent} />
             <Text style={[type.subhead, styles.bannerText, { color: colors.secondary }]} numberOfLines={1}>
               {`AI watching ${alertStatus.rulesConfigured} ${alertStatus.rulesConfigured === 1 ? 'metric' : 'metrics'}`}
             </Text>
@@ -140,16 +146,11 @@ function StatusLine({ status }: { status: AlertStatus }) {
   );
 }
 
-function Metric({ symbol, value }: { symbol: string; value: string }) {
+function Metric({ icon, value }: { icon: IconName; value: string }) {
   const { colors } = useTokens();
   return (
     <View style={styles.metric}>
-      <SymbolView
-        name={symbol as never}
-        size={15}
-        tintColor={colors.tertiary}
-        resizeMode="scaleAspectFit"
-      />
+      <Icon name={icon} size={15} color={colors.tertiary} />
       <Text style={[type.subhead, { color: colors.secondary }]}>{value}</Text>
     </View>
   );

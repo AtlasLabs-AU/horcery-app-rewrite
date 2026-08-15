@@ -4,7 +4,7 @@ import { useTokens } from '@/hooks/use-tokens';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
-import { SegmentedControl } from '@/components/for-you/segmented-control';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 
 export type IntakeScope = 'stall' | 'horse';
 

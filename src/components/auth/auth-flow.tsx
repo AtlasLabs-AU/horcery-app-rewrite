@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -21,6 +20,9 @@ import {
 import { PREVIEWS } from '@/config/previews';
 import { PrimaryButton } from '@/components/auth/primary-button';
 import { TextField } from '@/components/auth/text-field';
+import { SymbolView } from 'expo-symbols';
+
+import { Icon } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -119,12 +121,7 @@ function AuthPage({
                 accessibilityLabel="Back"
                 testID="auth-back-button"
                 style={styles.backButton}>
-                <SymbolView
-                  name="chevron.left"
-                  size={20}
-                  tintColor={colors.foreground}
-                  weight="semibold"
-                />
+                <Icon name="back" size={20} color={colors.foreground} />
               </Pressable>
               {title ? (
                 <Text style={[type.headline, { color: colors.foreground }]}>
@@ -156,6 +153,17 @@ function previewNote(provider: string) {
  * Apple/Google entry points as quiet matching cards, so the one loud button
  * on the page is Sign in with Email — quiet, quiet, loud.
  */
+/**
+ * Apple's mark is a trademark with no Material counterpart; Apple's own
+ * guidelines require their glyph on their button. It is therefore drawn from
+ * SF Symbols on iOS only — and the button itself is iOS-only anyway, since
+ * "Sign in with Apple" does not exist on Android.
+ */
+function AppleGlyph({ color }: { color: string }) {
+  if (Platform.OS !== 'ios') return null;
+  return <SymbolView name="apple.logo" size={19} tintColor={color} />;
+}
+
 function SocialButton({
   provider,
   onPress,
@@ -179,7 +187,7 @@ function SocialButton({
       ]}>
       <View style={styles.socialIconSlot}>
         {isApple ? (
-          <SymbolView name="apple.logo" size={19} tintColor={colors.foreground} />
+          <AppleGlyph color={colors.foreground} />
         ) : (
           <Text style={[styles.googleGlyph, { color: '#4285F4' }]}>G</Text>
         )}
@@ -608,10 +616,10 @@ function NewPassword({ onDone }: { onDone: () => void }) {
           testID="auth-confirm-password-input"
         />
         <View style={styles.ruleRow}>
-          <SymbolView
-            name={longEnough ? 'checkmark.circle.fill' : 'circle'}
+          <Icon
+            name={longEnough ? 'checkFilled' : 'circleEmpty'}
             size={15}
-            tintColor={longEnough ? colors.statusOk : colors.dimmed}
+            color={longEnough ? colors.statusOk : colors.dimmed}
           />
           <Text style={[type.footnote, { color: colors.secondary }]}>
             {`At least ${MIN_PASSWORD_LENGTH} characters`}
@@ -634,7 +642,7 @@ function Done({ onSignIn }: { onSignIn: () => void }) {
     <AuthPage>
       <View style={styles.form} testID="auth-reset-done-screen">
         <View style={[styles.sentBadge, { backgroundColor: colors.fillTonal }]}>
-          <SymbolView name="checkmark.seal.fill" size={36} tintColor={colors.accent} />
+          <Icon name="verified" size={36} color={colors.accent} />
         </View>
         <Text style={[type.title, styles.sentTitle, { color: colors.foreground }]}>
           Password updated
@@ -690,7 +698,7 @@ function LinkSent({ email, onSignIn }: { email: string; onSignIn: () => void }) 
     <AuthPage>
       <View style={styles.form} testID="auth-password-reset-screen">
         <View style={[styles.sentBadge, { backgroundColor: colors.fillTonal }]}>
-          <SymbolView name="envelope.badge" size={34} tintColor={colors.accent} />
+          <Icon name="mail" size={34} color={colors.accent} />
         </View>
         <Text style={[type.title, styles.sentTitle, { color: colors.foreground }]}>
           Check your inbox

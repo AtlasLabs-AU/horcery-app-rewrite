@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Alert,
@@ -18,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { authRn } from '@acme/config/firebase-rn';
 import { queries, queryClient } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -146,14 +146,14 @@ export default function MenuScreen() {
               accessibilityLabel="Close menu"
               testID="menu-close"
               style={[styles.closeButton, { backgroundColor: colors.fillTonal }]}>
-              <SymbolView name="xmark" size={14} tintColor={colors.secondary} weight="semibold" />
+              <Icon name="close" size={14} color={colors.secondary} />
             </Pressable>
           </View>
 
           <MenuGroup>
-            <MenuRow symbol="person.crop.circle" label="My Account" />
-            <MenuRow symbol="building.2" label="Manage Organization" external />
-            <MenuRow symbol="sensor.tag.radiowaves.forward" label="Devices" last />
+            <MenuRow icon="account" label="My Account" />
+            <MenuRow icon="organization" label="Manage Organization" external />
+            <MenuRow icon="devices" label="Devices" last />
           </MenuGroup>
 
           <Text style={[type.eyebrow, styles.eyebrow, { color: colors.tertiary }]}>
@@ -172,10 +172,10 @@ export default function MenuScreen() {
           </MenuGroup>
 
           <MenuGroup style={styles.footerGroup}>
-            <MenuRow symbol="info.circle" label="About Us" />
-            <MenuRow symbol="questionmark.circle" label="Support" external />
+            <MenuRow icon="info" label="About Us" />
+            <MenuRow icon="support" label="Support" external />
             <MenuRow
-              symbol="rectangle.portrait.and.arrow.right"
+              icon="logOut"
               label="Log Out"
               last
               onPress={confirmLogOut}
@@ -205,14 +205,14 @@ function MenuGroup({
 
 /** One action row: tonal icon well, label, chevron (↗ for external links). */
 function MenuRow({
-  symbol,
+  icon,
   label,
   external,
   last,
   onPress,
   testID,
 }: {
-  symbol: string;
+  icon: IconName;
   label: string;
   external?: boolean;
   last?: boolean;
@@ -228,22 +228,12 @@ function MenuRow({
       testID={testID}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
       <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-        <SymbolView
-          name={symbol as never}
-          size={17}
-          tintColor={colors.accent}
-          resizeMode="scaleAspectFit"
-        />
+        <Icon name={icon} size={17} color={colors.accent} />
       </View>
       <Text style={[type.body, styles.rowLabel, { color: colors.foreground }]} numberOfLines={1}>
         {label}
       </Text>
-      <SymbolView
-        name={external ? 'arrow.up.right' : 'chevron.right'}
-        size={13}
-        tintColor={colors.dimmed}
-        weight="semibold"
-      />
+      <Icon name={external ? 'external' : 'chevronRight'} size={13} color={colors.dimmed} />
       {last ? null : (
         <View style={[styles.separator, { backgroundColor: colors.divider }]} />
       )}
@@ -284,7 +274,7 @@ function OrganizationRow({
         {name}
       </Text>
       {active ? (
-        <SymbolView name="checkmark.circle.fill" size={20} tintColor={colors.accent} />
+        <Icon name="checkFilled" size={20} color={colors.accent} />
       ) : null}
       {last ? null : (
         <View style={[styles.separator, { backgroundColor: colors.divider }]} />

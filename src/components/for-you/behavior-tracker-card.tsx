@@ -1,12 +1,12 @@
-import { SymbolView } from 'expo-symbols';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LinkButton } from '@/components/for-you/link-button';
-import { OverflowMenu } from '@/components/for-you/overflow-menu';
-import { SegmentedControl } from '@/components/for-you/segmented-control';
+import { Icon, type IconName } from '@/components/ui/icon';
+import { Menu } from '@/components/ui/menu';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -17,18 +17,23 @@ const PERIOD_OPTIONS: { label: string; value: TrackerPeriod }[] = [
   { label: 'Weekly', value: 'weekly' },
 ];
 
+const TRACKER_MENU_ACTIONS = [
+  { id: 'customize', label: 'Customize', icon: 'customize' as const, disabled: true },
+  { id: 'history', label: 'See History', icon: 'clock' as const, disabled: true },
+];
+
 export interface Behavior {
   id: string;
   label: string;
-  /** SF Symbol standing in for the current app's custom behaviour artwork. */
-  symbol: string;
+  /** Surface-layer icon standing in for the current app's custom artwork. */
+  icon: IconName;
 }
 
 const DEFAULT_BEHAVIORS: Behavior[] = [
-  { id: 'lying-down', label: 'Lying Down', symbol: 'moon.zzz.fill' },
-  { id: 'people-in-stall', label: 'People in Stall', symbol: 'figure.stand' },
-  { id: 'in-stall', label: 'In Stall', symbol: 'house.fill' },
-  { id: 'feed', label: 'Feed', symbol: 'fork.knife' },
+  { id: 'lying-down', label: 'Lying Down', icon: 'lyingDown' },
+  { id: 'people-in-stall', label: 'People in Stall', icon: 'peopleInStall' },
+  { id: 'in-stall', label: 'In Stall', icon: 'inStall' },
+  { id: 'feed', label: 'Feed', icon: 'feed' },
 ];
 
 /**
@@ -55,13 +60,11 @@ export function BehaviorTrackerCard({
       <SectionHeader
         title="Behavior Tracker"
         adornment={
-          <OverflowMenu
-            label="Behavior tracker options"
+          <Menu
+            icon="overflow"
+            accessibilityLabel="Behavior tracker options"
             testID="for-you-tracker-menu"
-            actions={[
-              { label: 'Customize', systemImage: 'slider.horizontal.3' },
-              { label: 'See History', systemImage: 'clock.arrow.circlepath' },
-            ]}
+            actions={TRACKER_MENU_ACTIONS}
           />
         }
         action={
@@ -90,11 +93,10 @@ export function BehaviorTrackerCard({
                 styles.behaviorTile,
                 { backgroundColor: isSelected ? colors.accent : colors.fillTonal },
               ]}>
-              <SymbolView
-                name={behavior.symbol as never}
+              <Icon
+                name={behavior.icon}
                 size={26}
-                tintColor={isSelected ? colors.onInverse : colors.secondary}
-                resizeMode="scaleAspectFit"
+                color={isSelected ? colors.onInverse : colors.secondary}
               />
             </Pressable>
           );
