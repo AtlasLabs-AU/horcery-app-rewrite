@@ -247,48 +247,49 @@ describe('presentation', () => {
     expect(positionInDay(secs('2026-08-15T00:00:00'), day, ZONE)).toBe(1);
   });
 
-  it('labels hours "h a", 12 AM through 12 AM', () => {
-    const ticks = hourTicks(day, ZONE);
+  it('labels hours "h a", 12 AM through 12 AM — one shared axis for every row', () => {
+    const ticks = hourTicks();
 
     expect(ticks).toHaveLength(25);
     expect(ticks[0]).toEqual({ label: '12 AM', position: 0 });
-    expect(ticks[12]!.label).toBe('12 PM');
+    expect(ticks[12]).toEqual({ label: '12 PM', position: 0.5 });
     expect(ticks[24]).toEqual({ label: '12 AM', position: 1 });
   });
 
-  it('keeps clock time honest on the 23-hour spring-forward day', () => {
-    // 2026-03-08 in Chicago: 2 AM does not exist. 3 AM is two hours after
-    // midnight, not three, and must sit at 2/23 across the row.
-    const dst = build([], { selectedDate: '2026-03-08', now: T('2026-03-09T09:00:00') }).days[6]!;
+  it('positions by CLOCK time, so 7 AM lines up down every row — as the current app does', () => {
+    // A daylight-saving week: the same clock hour must sit at the same x on
+    // the 23-hour day, the 25-hour day and an ordinary day. That vertical
+    // alignment is the chart's whole reading grammar.
+    const spring = build([], { selectedDate: '2026-03-08', now: T('2026-03-09T09:00:00') }).days[6]!;
+    const fall = build([], { selectedDate: '2026-11-01', now: T('2026-11-02T09:00:00') }).days[6]!;
 
-    expect(positionInDay(secs('2026-03-08T03:00:00'), dst, ZONE)).toBeCloseTo(2 / 23);
-    const labels = hourTicks(dst, ZONE).map((t) => t.label);
-    expect(labels).toHaveLength(24); // 23 hours + the closing midnight
-    expect(labels).not.toContain('2 AM');
-    expect(labels.slice(0, 4)).toEqual(['12 AM', '1 AM', '3 AM', '4 AM']);
+    expect(spring.end - spring.start).toBe(23 * 3600);
+    expect(fall.end - fall.start).toBe(25 * 3600);
+    expect(positionInDay(secs('2026-03-08T07:00:00'), spring, ZONE)).toBeCloseTo(7 / 24);
+    expect(positionInDay(secs('2026-11-01T07:00:00'), fall, ZONE)).toBeCloseTo(7 / 24);
+    expect(positionInDay(secs('2026-08-14T07:00:00'), day, ZONE)).toBeCloseTo(7 / 24);
+    // The closing midnight is 1 on every row, however long the day was.
+    expect(positionInDay(spring.end, spring, ZONE)).toBe(1);
+    expect(positionInDay(fall.end, fall, ZONE)).toBe(1);
   });
 
-  it('keeps clock time honest on the 25-hour fall-back day — and exposes the double 1 AM', () => {
-    // 2026-11-01 in Chicago: 1:00–1:59 AM happens twice (CDT, then CST).
-    const dst = build([], { selectedDate: '2026-11-01', now: T('2026-11-02T09:00:00') }).days[6]!;
+  it('pays for clock alignment twice a year, and the tests say exactly how', () => {
+    // SPRING FORWARD — 2 AM never happens. One real hour spans two clock hours.
+    const spring = build([], { selectedDate: '2026-03-08', now: T('2026-03-09T09:00:00') }).days[6]!;
+    const oneThirty = secs('2026-03-08T01:30:00'); // CST
+    const threeThirty = secs('2026-03-08T03:30:00'); // CDT — one real hour later
+    expect(threeThirty - oneThirty).toBe(3600);
+    expect(positionInDay(threeThirty, spring, ZONE) - positionInDay(oneThirty, spring, ZONE)).toBeCloseTo(2 / 24);
 
-    expect(dst.end - dst.start).toBe(25 * 3600);
-
-    // The two 1:30 AMs are different instants an hour apart, and land an hour
-    // apart across the row.
+    // FALL BACK — 1 AM happens twice. Both land in the same slot; a bar
+    // spanning the repeated hour has zero width and relies on the renderer's
+    // 1 px minimum to be seen at all.
+    const fall = build([], { selectedDate: '2026-11-01', now: T('2026-11-02T09:00:00') }).days[6]!;
     const firstOneThirty = DateTime.fromISO('2026-11-01T01:30:00-05:00').toSeconds();
     const secondOneThirty = DateTime.fromISO('2026-11-01T01:30:00-06:00').toSeconds();
     expect(secondOneThirty - firstOneThirty).toBe(3600);
-    expect(positionInDay(firstOneThirty, dst, ZONE)).toBeCloseTo(1.5 / 25);
-    expect(positionInDay(secondOneThirty, dst, ZONE)).toBeCloseTo(2.5 / 25);
-
-    // 25 hours + the closing midnight; "1 AM" appears twice. That is a real
-    // labelling ambiguity, recorded in PEOPLE_IN_STALL.md — a renderer must
-    // at least not merge or drop one of them.
-    const labels = hourTicks(dst, ZONE).map((t) => t.label);
-    expect(labels).toHaveLength(26);
-    expect(labels.filter((l) => l === '1 AM')).toHaveLength(2);
-    expect(labels.slice(0, 4)).toEqual(['12 AM', '1 AM', '1 AM', '2 AM']);
+    expect(positionInDay(firstOneThirty, fall, ZONE)).toBeCloseTo(1.5 / 24);
+    expect(positionInDay(secondOneThirty, fall, ZONE)).toBeCloseTo(1.5 / 24);
   });
 
   it('formats the tooltip word for word as the current app', () => {

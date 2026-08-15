@@ -90,6 +90,8 @@ module.exports = defineConfig([
       'ios/*',
       'android/*',
       'expo-env.d.ts',
+      // Throwaway spike apps with their own dependencies (see jest.config.js).
+      'spikes/**',
     ],
   },
 

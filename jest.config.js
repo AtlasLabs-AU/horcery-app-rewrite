@@ -11,6 +11,12 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.env.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '**/*.test.{ts,tsx}'],
+  // spikes/ holds throwaway measurement apps with their OWN package.json and
+  // node_modules (the §6a chart harness). They are not part of the app: keep
+  // their modules out of the haste map (duplicate-package collisions) and
+  // their tests, if any, out of this run.
+  modulePathIgnorePatterns: ['<rootDir>/spikes/'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/spikes/'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',

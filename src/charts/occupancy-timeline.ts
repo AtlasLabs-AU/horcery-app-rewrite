@@ -229,33 +229,45 @@ export function dayLabel(day: OccupancyDay, zone: string): string {
 }
 
 /**
- * Where a moment sits across the row, 0 = local midnight, 1 = next midnight.
+ * Where a moment sits across the row: 0 = midnight, 1 = the next midnight,
+ * by LOCAL CLOCK TIME — 7:00 AM is 7/24 on every row.
  *
- * Computed against the day's REAL start and end, so a 23- or 25-hour daylight
- * saving day still spans the row exactly. (The current app projects clock time
- * onto a fixed 1970 date, which slides bars by up to an hour on those days.)
+ * Clock alignment is the point of the chart: seven rows share one hour axis so
+ * the eye can scan "what happens around 7 AM" straight down. The current app
+ * does the same (it projects clock time onto a fixed 1970 date) and we keep it
+ * deliberately. The price is paid twice a year, between 1 and 3 AM:
+ *
+ *   - Spring forward (23 h day): the 2 AM hour never happens. A bar spanning
+ *     1:30→3:30 local is one real hour but draws two clock hours wide.
+ *   - Fall back (25 h day): 1:00–1:59 AM happens twice. Both land in the same
+ *     slot, so a bar in the repeated hour OVERLAPS the first one, and a bar
+ *     spanning 1:30 CDT→1:30 CST (one real hour) draws with zero width — the
+ *     renderer's 1 px minimum is what keeps it visible.
+ *
+ * Positioning by real elapsed time instead would fix both and break the
+ * vertical scan on that day for every hour after 2 AM. Barns are quiet at
+ * 2 AM; the scan matters all day. See PEOPLE_IN_STALL.md §9.
  */
 export function positionInDay(t: EpochSeconds, day: OccupancyDay, zone: string): number {
-  const dayStart = DateTime.fromSeconds(day.start, { zone });
-  const dayEnd = dayStart.plus({ days: 1 });
-  const span = dayEnd.toSeconds() - day.start;
-  return Math.min(1, Math.max(0, (t - day.start) / span));
+  if (t <= day.start) return 0;
+  // The closing midnight is clock 00:00 of the NEXT day; it must read as 1.
+  const nextMidnight = DateTime.fromSeconds(day.start, { zone }).plus({ days: 1 }).toSeconds();
+  if (t >= nextMidnight) return 1;
+  const local = DateTime.fromSeconds(t, { zone });
+  return (local.hour * 3600 + local.minute * 60 + local.second) / 86400;
 }
 
 /**
- * Hourly x-axis ticks: label + position. Labels are `h a` ("12 AM", "3 PM"),
- * as in the current app. Walks real local hours, so a daylight-saving day
- * yields 23 or 25 of them and the axis still ends at the next midnight.
+ * The shared hour axis: 25 ticks, "12 AM" … "11 PM", "12 AM", at i/24.
+ * Identical on every row, every day — including daylight-saving days, where
+ * "2 AM" is drawn once even though the hour happened zero or two times.
  */
-export function hourTicks(day: OccupancyDay, zone: string): { label: string; position: number }[] {
-  const start = DateTime.fromSeconds(day.start, { zone });
-  const end = start.plus({ days: 1 });
-  const ticks: { label: string; position: number }[] = [];
-  for (let at = start; at < end; at = at.plus({ hours: 1 })) {
-    ticks.push({ label: at.toFormat('h a'), position: positionInDay(at.toSeconds(), day, zone) });
-  }
-  ticks.push({ label: end.toFormat('h a'), position: 1 });
-  return ticks;
+export function hourTicks(): { label: string; position: number }[] {
+  const midnight = DateTime.fromObject({ year: 2000, month: 1, day: 1 }, { zone: 'UTC' });
+  return Array.from({ length: 25 }, (_, hour) => ({
+    label: midnight.plus({ hours: hour }).toFormat('h a'),
+    position: hour / 24,
+  }));
 }
 
 /**
