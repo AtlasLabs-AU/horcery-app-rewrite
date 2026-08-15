@@ -61,7 +61,7 @@ export const deviceStallAssignment = createQueryKeys('deviceStallAssignment', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       deviceStallAssignmentService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

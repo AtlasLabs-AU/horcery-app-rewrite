@@ -55,7 +55,7 @@ export const spaceGroup = createQueryKeys('spaceGroup', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       spaceGroupService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

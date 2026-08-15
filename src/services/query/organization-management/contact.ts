@@ -55,7 +55,7 @@ export const contact = createQueryKeys('contact', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       contactService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

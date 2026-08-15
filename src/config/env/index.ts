@@ -41,11 +41,39 @@ const ACCOUNT_MANAGEMENT_URL = requiredEndpoint(
   process.env.EXPO_PUBLIC_ACCOUNT_MANAGEMENT_URL,
 );
 
+/** Host of a URL, lowercased, without userinfo or port. */
+function hostOf(url: string): string | null {
+  const match = /^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i.exec(url.trim());
+  if (!match?.[1]) return null;
+  const hostPort = match[1].split('@').pop() ?? '';
+  return hostPort.replace(/:\d+$/, '').toLowerCase() || null;
+}
+
 /**
  * True when we are pointed at the production backend. Used to gate anything
  * that writes, so a development session cannot mutate live customer data.
+ *
+ * This **fails closed**: any host we cannot confidently classify as
+ * non-production counts as production. A guard that silently switches itself
+ * off is worse than no guard, and the previous check — a case-sensitive
+ * substring match on `api.magichoof.com` — did exactly that for an uppercased
+ * host (DNS is case-insensitive, so it still resolved to production), for a
+ * `www.`-prefixed form, and for any alias pointing at the same backend.
  */
-const IS_PRODUCTION_API = /(^|\/\/)api\.magichoof\.com/.test(BASE_SERVICE_URL);
+function isProductionHost(url: string): boolean {
+  const host = hostOf(url);
+  if (!host) return true;
+  return host === 'magichoof.com' || host.endsWith('.magichoof.com');
+}
+
+const IS_PRODUCTION_API = isProductionHost(BASE_SERVICE_URL);
+
+/**
+ * Deliberate, supervised exception to the production write guard.
+ * @see GenericService.assertWriteAllowed
+ */
+const ALLOW_PRODUCTION_WRITES =
+  process.env.EXPO_PUBLIC_ALLOW_PRODUCTION_WRITES === 'true';
 
 const config = {
   web: {
@@ -88,6 +116,8 @@ const config = {
   },
   /** @see IS_PRODUCTION_API */
   IS_PRODUCTION_API,
+  /** @see ALLOW_PRODUCTION_WRITES */
+  ALLOW_PRODUCTION_WRITES,
 };
 
-export { config, IS_PRODUCTION_API };
+export { ALLOW_PRODUCTION_WRITES, config, IS_PRODUCTION_API };

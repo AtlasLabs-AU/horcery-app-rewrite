@@ -61,7 +61,7 @@ export const suggestedAlert = createQueryKeys('suggestedAlert', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       suggestedAlertService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

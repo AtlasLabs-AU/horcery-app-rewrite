@@ -61,7 +61,7 @@ export const stallAdjustmentCheck = createQueryKeys('stallAdjustmentCheck', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       stallAdjustmentCheckService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

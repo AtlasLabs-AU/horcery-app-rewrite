@@ -6,7 +6,7 @@ import type { FypWidgetPreferences } from '@acme/config/constants/fyp-widget-opt
 import { MemberType } from '@acme/config/enums/member-type';
 import { UnitType } from '@acme/config/enums/unit-types';
 import { error } from '@acme/config/utils/logger';
-import { IUser, userService } from '@acme/services/api/user-management/user';
+import { IUser } from '@acme/services/api/user-management/user';
 
 import { zustandMmkvStorage } from '../storage';
 
@@ -102,7 +102,12 @@ const setUserPreferences = (state?: IAuthState & IAuthActions) => {
         ...updates,
       };
 
-      userService.updatePatch(state.uid!, { UserMetaData: updated });
+      // Local backfill only. The current app PATCHes these defaults back to the
+      // user here, but this phase is read-only against the production API, so
+      // that write is blocked by `assertWriteAllowed` and — fired from store
+      // rehydration, unawaited — surfaced as an unhandled rejection on every
+      // cold start. Restore it with the write when there is a backend to
+      // write to; `useSession` documents the same deferral.
       state.setUserPreferences(updated);
     }
   }
@@ -178,6 +183,7 @@ export const useAuthStore = create<IAuthState & IAuthActions>()(
           userPreferences: null,
           user: null,
           memberType: null,
+          behaviorTrackerViewMode: null,
           tempEmail: '',
         }),
 

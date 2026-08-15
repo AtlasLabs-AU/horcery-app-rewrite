@@ -1,4 +1,4 @@
-import { SymbolView } from 'expo-symbols';
+import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Fyp, Spacing } from '@/constants/theme';
@@ -10,6 +10,10 @@ import { Fyp, Spacing } from '@/constants/theme';
  * `expo-symbols`, so they inherit the system weight and scale automatically.
  * Accessibility labels match the current app's so existing QA selectors and
  * screen-reader behaviour carry over.
+ *
+ * Each icon names its symbol per platform. A bare SF Symbol string renders as
+ * nothing off iOS, which left the menu button — the only route to organization
+ * switching and log out on web — as an invisible, zero-size pressable.
  */
 export function ForYouHeader({
   greeting = 'Hello Horcery',
@@ -29,20 +33,20 @@ export function ForYouHeader({
       </Text>
       <View style={styles.actions}>
         <HeaderIcon
-          name="magnifyingglass"
+          name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
           label="Search"
           hint="Opens search"
           onPress={onSearch}
           testID="for-you-search-button"
         />
         <HeaderIcon
-          name="slider.horizontal.3"
+          name={{ ios: 'slider.horizontal.3', android: 'tune', web: 'tune' }}
           label="Customize for you page"
           onPress={onCustomize}
           testID="for-you-customize-button"
         />
         <HeaderIcon
-          name="line.3.horizontal"
+          name={{ ios: 'line.3.horizontal', android: 'menu', web: 'menu' }}
           label="Open menu"
           onPress={onMenu}
           testID="for-you-menu-button"
@@ -59,7 +63,7 @@ function HeaderIcon({
   onPress,
   testID,
 }: {
-  name: string;
+  name: SymbolViewProps['name'];
   label: string;
   hint?: string;
   onPress?: () => void;
@@ -75,7 +79,7 @@ function HeaderIcon({
       testID={testID}
       style={({ pressed }) => (pressed ? styles.pressed : undefined)}>
       <SymbolView
-        name={name as never}
+        name={name}
         size={24}
         tintColor={Fyp.headerTitle}
         resizeMode="scaleAspectFit"

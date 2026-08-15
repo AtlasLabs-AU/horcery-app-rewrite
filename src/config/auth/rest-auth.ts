@@ -34,7 +34,12 @@ const EXPIRY_MARGIN_MS = 60_000;
 export interface AuthUser {
   uid: string;
   email: string | null;
-  getIdToken: () => Promise<string | undefined>;
+  /**
+   * `forceRefresh` mirrors the native SDK: it skips the local expiry check and
+   * exchanges the refresh token now. Callers use it when the backend rejects a
+   * token the clock said was still good.
+   */
+  getIdToken: (forceRefresh?: boolean) => Promise<string | undefined>;
 }
 
 type Listener = (user: AuthUser | null) => void;
@@ -49,7 +54,22 @@ interface Session {
 
 let session: Session | null = null;
 let restoring: Promise<void> | null = null;
+let refreshing: Promise<string | undefined> | null = null;
 const listeners = new Set<Listener>();
+
+/**
+ * True once the stored refresh token has been checked. Until then the module
+ * has no answer, and reporting `null` would be reporting "signed out" — which
+ * shows the sign-in screen to someone who is signed in.
+ */
+let bootstrapped = false;
+
+/**
+ * Incremented on every session change. An async token exchange captures this
+ * before it awaits and re-checks it after, so a sign-in or sign-out that lands
+ * mid-flight is never overwritten by the older request's result.
+ */
+let generation = 0;
 
 function requireApiKey(): string {
   if (!API_KEY) {
@@ -74,7 +94,7 @@ function toUser(current: Session | null): AuthUser | null {
   return {
     uid: current.uid,
     email: current.email,
-    getIdToken: () => getIdToken(),
+    getIdToken: (forceRefresh?: boolean) => getIdToken(forceRefresh),
   };
 }
 
@@ -85,12 +105,40 @@ function emit() {
 
 function setSession(next: Session | null) {
   session = next;
+  generation += 1;
   if (next) {
     void SecureStore.setItemAsync(REFRESH_KEY, next.refreshToken);
   } else {
     void SecureStore.deleteItemAsync(REFRESH_KEY);
   }
   emit();
+}
+
+/**
+ * Reads the `email` claim out of a Firebase ID token.
+ *
+ * The refresh endpoint returns only ids and tokens — no email — so a session
+ * restored at startup has no email to carry over from a previous session in
+ * memory. The ID token it returns does carry the claim, and the app needs it:
+ * the user record is looked up by email. Returns null rather than throwing;
+ * a session with an unreadable token is still a valid session.
+ */
+function emailFromIdToken(idToken: string): string | null {
+  try {
+    const payload = idToken.split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { email?: unknown };
+    return typeof claims.email === 'string' && claims.email
+      ? claims.email
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 async function exchangeRefreshToken(refreshToken: string): Promise<Session> {
@@ -116,7 +164,7 @@ async function exchangeRefreshToken(refreshToken: string): Promise<Session> {
 
   return {
     uid: data.user_id,
-    email: session?.email ?? null,
+    email: emailFromIdToken(data.id_token) ?? session?.email ?? null,
     idToken: data.id_token,
     refreshToken: data.refresh_token,
     expiresAt: Date.now() + Number(data.expires_in) * 1000,
@@ -132,38 +180,71 @@ export async function restoreSession(): Promise<void> {
   if (restoring) return restoring;
 
   restoring = (async () => {
+    const startGeneration = generation;
     try {
       const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
-      if (!refreshToken) {
-        emit();
-        return;
+      if (refreshToken && generation === startGeneration) {
+        const restored = await exchangeRefreshToken(refreshToken);
+        // A password sign-in that completed while this was in flight wins.
+        if (generation === startGeneration) {
+          bootstrapped = true;
+          setSession(restored);
+          return;
+        }
       }
-      setSession(await exchangeRefreshToken(refreshToken));
     } catch {
       // A refresh token that no longer works means signed out, not broken.
-      setSession(null);
+      if (generation === startGeneration) {
+        session = null;
+        void SecureStore.deleteItemAsync(REFRESH_KEY);
+      }
     }
+    // Falls through when there was no stored token, the exchange failed, or a
+    // newer session replaced this one — emit whatever the truth now is.
+    bootstrapped = true;
+    emit();
   })();
 
   return restoring;
 }
 
-export async function getIdToken(): Promise<string | undefined> {
+export async function getIdToken(
+  forceRefresh = false,
+): Promise<string | undefined> {
   if (!session) return undefined;
 
-  if (Date.now() < session.expiresAt - EXPIRY_MARGIN_MS) {
+  // The expiry check trusts the device clock. A clock running behind the
+  // issuer makes an expired token look fresh, so callers that get a 401 can
+  // pass `forceRefresh` to bypass this and settle it against the server.
+  if (!forceRefresh && Date.now() < session.expiresAt - EXPIRY_MARGIN_MS) {
     return session.idToken;
   }
 
-  try {
-    const refreshed = await exchangeRefreshToken(session.refreshToken);
-    session = { ...refreshed, email: session.email };
-    void SecureStore.setItemAsync(REFRESH_KEY, session.refreshToken);
-    return session.idToken;
-  } catch {
-    setSession(null);
-    return undefined;
-  }
+  // A screen mounts several queries at once and each asks for a token. Without
+  // this, every one of them fires its own refresh and rewrites the keychain.
+  if (refreshing) return refreshing;
+
+  const startGeneration = generation;
+  const expired = session;
+
+  refreshing = (async () => {
+    try {
+      const refreshed = await exchangeRefreshToken(expired.refreshToken);
+      if (generation !== startGeneration) {
+        // Signed out, or signed in as someone else, while this was in flight.
+        return session?.idToken;
+      }
+      setSession({ ...refreshed, email: refreshed.email ?? expired.email });
+      return refreshed.idToken;
+    } catch {
+      if (generation === startGeneration) setSession(null);
+      return undefined;
+    } finally {
+      refreshing = null;
+    }
+  })();
+
+  return refreshing;
 }
 
 export async function signInWithEmailAndPassword(
@@ -207,14 +288,48 @@ export async function signInWithEmailAndPassword(
   return toUser(session)!;
 }
 
+/**
+ * Emails a password-reset link, the same call the native SDK makes
+ * (`accounts:sendOobCode`, requestType PASSWORD_RESET). Firebase's own email
+ * template and hosted reset page handle the rest — nothing to build app-side.
+ */
+export async function sendPasswordResetEmail(email: string): Promise<void> {
+  const response = await fetch(
+    `${IDENTITY_HOST}/accounts:sendOobCode?key=${requireApiKey()}`,
+    {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ requestType: 'PASSWORD_RESET', email }),
+    },
+  );
+
+  const data = (await response.json()) as { error?: { message?: string } };
+  if (!response.ok) {
+    // EMAIL_NOT_FOUND is deliberately NOT surfaced to the UI as "no account" —
+    // callers show the same success message either way, so the form can't be
+    // used to probe which emails have accounts.
+    const code = data.error?.message ?? 'RESET_FAILED';
+    const failure = new Error(code) as Error & { code: string };
+    failure.code = code;
+    throw failure;
+  }
+}
+
 export async function signOut(): Promise<void> {
   setSession(null);
 }
 
 export function onAuthStateChanged(listener: Listener): () => void {
   listeners.add(listener);
-  // Report the current state immediately, matching the native SDK's behaviour.
-  listener(toUser(session));
+  if (bootstrapped) {
+    // Report the current state immediately, matching the native SDK's behaviour.
+    listener(toUser(session));
+  } else {
+    // Before the stored refresh token has been checked there is no state to
+    // report: emitting null here would say "signed out" to a returning user and
+    // flash the sign-in screen. Restoring settles first, then emits the truth.
+    void restoreSession();
+  }
   return () => listeners.delete(listener);
 }
 

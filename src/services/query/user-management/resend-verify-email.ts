@@ -61,7 +61,7 @@ export const resendVerifyEmail = createQueryKeys('resendVerifyEmail', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       resendVerifyEmailService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

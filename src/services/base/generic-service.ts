@@ -1,4 +1,8 @@
-import { config, IS_PRODUCTION_API } from '@acme/config/env';
+import {
+  ALLOW_PRODUCTION_WRITES,
+  config,
+  IS_PRODUCTION_API,
+} from '@acme/config/env';
 import { authRn } from '@acme/config/firebase-rn';
 
 import {
@@ -18,9 +22,10 @@ export default abstract class GenericService<T> {
 
   private async getHeaders(
     options?: IRequestOptions,
+    forceFreshToken = false,
   ): Promise<Record<string, string>> {
     const user = authRn.currentUser;
-    const token = await user?.getIdToken();
+    const token = await user?.getIdToken(forceFreshToken);
     const contentType = options?.contentType || 'application/json';
 
     return {
@@ -29,6 +34,33 @@ export default abstract class GenericService<T> {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options?.additionalHeaders || {}),
     };
+  }
+
+  /**
+   * Sends a request, and retries it exactly once with a freshly minted token if
+   * the backend answers 401.
+   *
+   * Expiry is otherwise judged from the device clock, so a clock running behind
+   * the issuer makes every request go out with a token the server has already
+   * rejected — and nothing here used to notice, leaving every screen stuck on a
+   * cached error while the app still looked signed in. A 401 is the server's
+   * verdict on the token, so it is worth one forced refresh. If the refresh
+   * itself fails the auth layer clears the session and the app signs out; if
+   * the retry still 401s the error surfaces to the caller rather than looping.
+   */
+  private async request(
+    url: string,
+    init: { method: string; body?: string | FormData },
+    options?: IRequestOptions,
+  ): Promise<Response> {
+    const send = async (forceFreshToken: boolean) =>
+      fetch(url, {
+        ...init,
+        headers: await this.getHeaders(options, forceFreshToken),
+      });
+
+    const response = await send(false);
+    return response.status === 401 ? send(true) : response;
   }
 
   private formatRequestBody<B>(
@@ -56,8 +88,7 @@ export default abstract class GenericService<T> {
    * exception.
    */
   private assertWriteAllowed(method: string) {
-    const override = process.env.EXPO_PUBLIC_ALLOW_PRODUCTION_WRITES === 'true';
-    if (IS_PRODUCTION_API && !override) {
+    if (IS_PRODUCTION_API && !ALLOW_PRODUCTION_WRITES) {
       throw new Error(
         `Blocked ${method} ${this.endPointURL}: the rewrite is pointed at the ` +
           `production API and is read-only for now. See generic-service.ts.`,
@@ -70,12 +101,11 @@ export default abstract class GenericService<T> {
     options?: IRequestOptions,
   ): Promise<IGenericResponse<T>> {
     this.assertWriteAllowed('POST');
-    const requestBody = this.formatRequestBody(body, options);
-    const response = await fetch(`${this.baseURL}${this.endPointURL}`, {
-      method: 'POST',
-      headers: await this.getHeaders(options),
-      body: requestBody,
-    });
+    const response = await this.request(
+      `${this.baseURL}${this.endPointURL}`,
+      { method: 'POST', body: this.formatRequestBody(body, options) },
+      options,
+    );
     return this.handleResponse<T>(response);
   }
 
@@ -85,12 +115,11 @@ export default abstract class GenericService<T> {
     options?: IRequestOptions,
   ): Promise<IGenericResponse<T>> {
     this.assertWriteAllowed('PUT');
-    const requestBody = this.formatRequestBody(body, options);
-    const response = await fetch(`${this.baseURL}${this.endPointURL}/${id}/`, {
-      method: 'PUT',
-      headers: await this.getHeaders(options),
-      body: requestBody,
-    });
+    const response = await this.request(
+      `${this.baseURL}${this.endPointURL}/${id}/`,
+      { method: 'PUT', body: this.formatRequestBody(body, options) },
+      options,
+    );
     return this.handleResponse<T>(response);
   }
 
@@ -100,21 +129,21 @@ export default abstract class GenericService<T> {
     options?: IRequestOptions,
   ): Promise<IGenericResponse<T>> {
     this.assertWriteAllowed('PATCH');
-    const requestBody = this.formatRequestBody(body, options);
-    const response = await fetch(`${this.baseURL}${this.endPointURL}/${id}/`, {
-      method: 'PATCH',
-      headers: await this.getHeaders(options),
-      body: requestBody,
-    });
+    const response = await this.request(
+      `${this.baseURL}${this.endPointURL}/${id}/`,
+      { method: 'PATCH', body: this.formatRequestBody(body, options) },
+      options,
+    );
     return this.handleResponse<T>(response);
   }
 
   async delete(id: string, options?: IRequestOptions) {
     this.assertWriteAllowed('DELETE');
-    const response = await fetch(`${this.baseURL}${this.endPointURL}/${id}/`, {
-      method: 'DELETE',
-      headers: await this.getHeaders(options),
-    });
+    const response = await this.request(
+      `${this.baseURL}${this.endPointURL}/${id}/`,
+      { method: 'DELETE' },
+      options,
+    );
     if (response.ok && response.status === 204) {
       return {};
     }
@@ -134,10 +163,7 @@ export default abstract class GenericService<T> {
       query,
     );
     const url = `${this.baseURL}${this.endPointURL}/${id}/${queryParams}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: await this.getHeaders(options),
-    });
+    const response = await this.request(url, { method: 'GET' }, options);
     return this.handleResponse<T>(response);
   }
 
@@ -153,10 +179,7 @@ export default abstract class GenericService<T> {
       query,
     );
     const url = `${this.baseURL}${this.endPointURL}/${queryParams}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: await this.getHeaders(options),
-    });
+    const response = await this.request(url, { method: 'GET' }, options);
     return this.handleResponse<T[]>(response);
   }
 

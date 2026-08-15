@@ -61,7 +61,7 @@ export const animalDeviceInstance = createQueryKeys('animalDeviceInstance', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       animalDeviceInstanceService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

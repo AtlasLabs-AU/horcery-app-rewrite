@@ -61,7 +61,7 @@ export const provisioningRequest = createQueryKeys('provisioningRequest', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       provisioningRequestService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -87,7 +87,7 @@ export const provisioningRequest = createQueryKeys('provisioningRequest', {
       do {
         // fetch current page data
         const result = await provisioningRequestService.fetchAll(
-          { page: currentPage, ...filters },
+          { ...filters, page: currentPage },
           additionalParams,
           query,
         );

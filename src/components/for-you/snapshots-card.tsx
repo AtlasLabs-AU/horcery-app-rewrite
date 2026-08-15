@@ -43,17 +43,18 @@ export function SnapshotsCard({
   snapshots,
   playbackSpeedLabel = '10x',
   subtitle = 'Last 2 hours at a glance',
-  pageCount = 1,
   activePage = 0,
 }: {
   snapshots: Snapshot[];
   playbackSpeedLabel?: string;
   subtitle?: string;
-  pageCount?: number;
   activePage?: number;
 }) {
   const { width } = useWindowDimensions();
   const columns = columnsForWidth(width);
+  // Derived here, not passed in: the caller does not know how many tiles fit,
+  // and assuming two produced four dots for four tiles on an iPad.
+  const pageCount = Math.max(1, Math.ceil(snapshots.length / columns));
 
   return (
     <SectionCard testID="for-you-snapshots">

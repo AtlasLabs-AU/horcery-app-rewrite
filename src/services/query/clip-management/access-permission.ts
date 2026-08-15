@@ -61,7 +61,7 @@ export const accessPermission = createQueryKeys('accessPermission', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       accessPermissionService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

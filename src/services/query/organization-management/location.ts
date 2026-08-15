@@ -55,7 +55,7 @@ export const location = createQueryKeys('location', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       locationService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

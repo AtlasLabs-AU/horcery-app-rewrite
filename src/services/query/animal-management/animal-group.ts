@@ -56,7 +56,7 @@ export const animalGroup = createQueryKeys('animalGroup', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       animalGroupService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

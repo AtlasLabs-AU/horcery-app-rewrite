@@ -1,10 +1,14 @@
-import { useCallback, useState } from 'react';
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { router } from 'expo-router';
+import { useCallback } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BehaviorTrackerCard } from '@/components/for-you/behavior-tracker-card';
-import { Deferred } from '@/components/for-you/deferred';
+import {
+  Deferred,
+  RevealProvider,
+  useRevealSource,
+} from '@/components/for-you/deferred';
 import { ForYouHeader } from '@/components/for-you/header';
 import { IntakeCard } from '@/components/for-you/intake-card';
 import { OrganizationCard } from '@/components/for-you/organization-card';
@@ -26,8 +30,9 @@ import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constant
  * a change of source, not of structure.
  */
 export default function ForYouScreen() {
-  const [scrollY, setScrollY] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(0);
+  // Scroll geometry is published through a ref + subscription rather than
+  // state: `Deferred` is its only consumer and each section reads it once.
+  const { source, onScroll, onLayout } = useRevealSource();
   const {
     organizationID,
     organizationName,
@@ -40,21 +45,20 @@ export default function ForYouScreen() {
   } = useForYouData();
   const { snapshots } = useSnapshots();
 
-  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setScrollY(event.nativeEvent.contentOffset.y);
-  }, []);
+  const openMenu = useCallback(() => router.push('/menu'), []);
 
   return (
     <View style={styles.page}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ForYouHeader />
+        <ForYouHeader onMenu={openMenu} />
+        <RevealProvider source={source}>
         <ScrollView
           testID="for-you-scroll-view"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
           scrollEventThrottle={64}
           onScroll={onScroll}
-          onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+          onLayout={onLayout}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -72,26 +76,16 @@ export default function ForYouScreen() {
             statusText="Everything looks normal"
           />
 
-          <SnapshotsCard
-            snapshots={snapshots}
-            pageCount={Math.max(1, Math.ceil(snapshots.length / 2))}
-            activePage={0}
-          />
+          <SnapshotsCard snapshots={snapshots} />
 
           <ReviewCard />
 
-          <Deferred
-            reserve={380}
-            scrollY={scrollY}
-            viewportHeight={viewportHeight}>
+          <Deferred reserve={380}>
             <BehaviorTrackerCard />
           </Deferred>
 
           {devices.hasWaterDevices ? (
-            <Deferred
-              reserve={230}
-              scrollY={scrollY}
-              viewportHeight={viewportHeight}>
+            <Deferred reserve={230}>
               <IntakeCard
                 title="Water Intake"
                 todayColor="#00B8DB"
@@ -101,10 +95,7 @@ export default function ForYouScreen() {
           ) : null}
 
           {devices.hasFeedDevices ? (
-            <Deferred
-              reserve={230}
-              scrollY={scrollY}
-              viewportHeight={viewportHeight}>
+            <Deferred reserve={230}>
               <IntakeCard
                 title="Feed Intake"
                 todayColor="#F0B100"
@@ -113,6 +104,7 @@ export default function ForYouScreen() {
             </Deferred>
           ) : null}
         </ScrollView>
+        </RevealProvider>
       </SafeAreaView>
     </View>
   );

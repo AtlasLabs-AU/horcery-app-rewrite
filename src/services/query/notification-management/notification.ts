@@ -61,7 +61,7 @@ export const notification = createQueryKeys('notification', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       notificationService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

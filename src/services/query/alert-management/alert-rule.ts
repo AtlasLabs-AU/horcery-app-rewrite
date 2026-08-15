@@ -55,7 +55,7 @@ export const alertRule = createQueryKeys('alertRule', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       alertRuleService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

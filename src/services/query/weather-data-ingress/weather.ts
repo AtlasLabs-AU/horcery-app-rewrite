@@ -55,7 +55,7 @@ export const weather = createQueryKeys('Weather', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       weatherService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

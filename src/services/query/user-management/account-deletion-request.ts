@@ -67,7 +67,7 @@ export const accountDeletionRequest = createQueryKeys(
       ],
       queryFn: ({ pageParam }: { pageParam: number }) =>
         accountDeletionRequestService.fetchAll(
-          { page: pageParam, ...filters },
+          { ...filters, page: pageParam },
           additionalParams,
           query,
         ),
