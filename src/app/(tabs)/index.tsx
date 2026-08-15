@@ -52,6 +52,7 @@ export default function ForYouScreen() {
   const { colors } = useTokens();
 
   const openMenu = useCallback(() => router.push('/menu'), []);
+  const openHistory = useCallback(() => router.push('/review-history'), []);
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
@@ -80,11 +81,12 @@ export default function ForYouScreen() {
             onSelectOrganization={selectOrganization}
             localTime={localTime}
             alertStatus={alertStatus}
+            onSeeHistory={openHistory}
           />
 
           <SnapshotsCard snapshots={snapshots} />
 
-          <ReviewCard />
+          <ReviewCard onSeeHistory={openHistory} />
 
           <Deferred reserve={380}>
             <BehaviorTrackerCard />
