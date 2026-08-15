@@ -56,11 +56,20 @@ const BASELINE = [
   },
 ];
 
-/** The baseline as ESLint flat-config blocks. */
+/**
+ * The baseline as ESLint flat-config blocks.
+ *
+ * `HORCERY_IGNORE_LINT_BASELINE=1` drops the exceptions so the tree can be
+ * linted as if none existed. That is how `lint-baseline.test.ts` checks the
+ * list against reality. It can only ever make linting STRICTER, so it is not a
+ * way to slip past CI.
+ */
 const baselineBlocks = () =>
-  BASELINE.map(({ files, rules }) => ({
-    files,
-    rules: Object.fromEntries(rules.map((rule) => [rule, 'off'])),
-  }));
+  process.env.HORCERY_IGNORE_LINT_BASELINE
+    ? []
+    : BASELINE.map(({ files, rules }) => ({
+        files,
+        rules: Object.fromEntries(rules.map((rule) => [rule, 'off'])),
+      }));
 
 module.exports = { BASELINE, baselineBlocks };

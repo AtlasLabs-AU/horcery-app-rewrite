@@ -158,6 +158,8 @@ module.exports = defineConfig([
         afterAll: 'readonly',
         afterEach: 'readonly',
         global: 'writable',
+        // Installed by jest.setup.js — see test-globals.d.ts.
+        expectConsole: 'readonly',
       },
     },
     rules: {
