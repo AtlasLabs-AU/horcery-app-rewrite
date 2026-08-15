@@ -3,7 +3,8 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { OverflowMenu } from '@/components/for-you/overflow-menu';
-import { Brand, Fyp, Radius, Spacing } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { radius, space, type } from '@/constants/tokens';
 
 export interface Snapshot {
   id: string;
@@ -23,15 +24,7 @@ export interface Snapshot {
  * **The performance change lives here.** In the current app every tile mounts a
  * looping `expo-video` player streaming an HLS timelapse, so N tiles decode N
  * video streams at once — the single largest cost on the page. Here a tile is a
- * still image by default, and only the tile the user is actually looking at is
- * handed a player (`isPlaying`). The visual result is the same; the work is not.
- */
-/**
- * Tiles per row, by width.
- *
- * The current app computes this from a measured layout; the breakpoints here
- * match what it produces — two tiles on a phone, more on a tablet, so an iPad
- * does not render two enormous tiles with empty space beside them.
+ * still image; the visual result is the same, the work is not.
  */
 function columnsForWidth(width: number): number {
   if (width >= 1000) return 4;
@@ -50,10 +43,9 @@ export function SnapshotsCard({
   subtitle?: string;
   activePage?: number;
 }) {
+  const { colors } = useTokens();
   const { width } = useWindowDimensions();
   const columns = columnsForWidth(width);
-  // Derived here, not passed in: the caller does not know how many tiles fit,
-  // and assuming two produced four dots for four tiles on an iPad.
   const pageCount = Math.max(1, Math.ceil(snapshots.length / columns));
 
   return (
@@ -61,8 +53,10 @@ export function SnapshotsCard({
       <SectionHeader
         title="Snapshots"
         adornment={
-          <View style={styles.speedPill}>
-            <Text style={styles.speedText}>{`▶ ${playbackSpeedLabel}`}</Text>
+          <View style={[styles.speedPill, { backgroundColor: colors.fillTonal }]}>
+            <Text style={[type.caption, styles.speedText, { color: colors.accent }]}>
+              {`▶ ${playbackSpeedLabel}`}
+            </Text>
           </View>
         }
         action={
@@ -76,7 +70,7 @@ export function SnapshotsCard({
           />
         }
       />
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[type.subhead, styles.subtitle, { color: colors.tertiary }]}>{subtitle}</Text>
 
       <View style={styles.tileRow}>
         {snapshots.slice(0, columns).map((snapshot) => (
@@ -89,7 +83,10 @@ export function SnapshotsCard({
           {Array.from({ length: pageCount }).map((_, index) => (
             <View
               key={index}
-              style={[styles.dot, index === activePage && styles.dotActive]}
+              style={[
+                styles.dot,
+                { backgroundColor: index === activePage ? colors.accent : colors.dimmed },
+              ]}
             />
           ))}
         </View>
@@ -99,10 +96,11 @@ export function SnapshotsCard({
 }
 
 function SnapshotTile({ snapshot }: { snapshot: Snapshot }) {
+  const { colors } = useTokens();
   return (
-    <View style={styles.tile} testID={`for-you-snapshot-${snapshot.id}`}>
+    <View style={[styles.tile, { backgroundColor: colors.bed }]} testID={`for-you-snapshot-${snapshot.id}`}>
       <Image
-        style={styles.poster}
+        style={[styles.poster, { backgroundColor: colors.fillTonal }]}
         source={snapshot.posterUri}
         placeholder={snapshot.blurhash ? { blurhash: snapshot.blurhash } : undefined}
         contentFit="cover"
@@ -114,11 +112,11 @@ function SnapshotTile({ snapshot }: { snapshot: Snapshot }) {
         {snapshot.avatarUri ? (
           <Image source={snapshot.avatarUri} style={styles.avatar} />
         ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Text style={styles.avatarInitials}>{initials(snapshot.name)}</Text>
+          <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
+            <Text style={[type.caption, styles.avatarInitials]}>{initials(snapshot.name)}</Text>
           </View>
         )}
-        <Text style={styles.tileName} numberOfLines={1}>
+        <Text style={[type.subhead, styles.tileName, { color: colors.foreground }]} numberOfLines={1}>
           {snapshot.name}
         </Text>
       </View>
@@ -137,78 +135,62 @@ function initials(name: string) {
 
 const styles = StyleSheet.create({
   speedPill: {
-    backgroundColor: Fyp.pill,
-    borderRadius: Radius.pill,
-    paddingHorizontal: Spacing.two,
+    borderRadius: radius.full,
+    paddingHorizontal: space.sm,
     paddingVertical: 3,
   },
   speedText: {
-    fontSize: 12,
     fontWeight: '600',
-    color: Fyp.body,
   },
   subtitle: {
-    fontSize: 14,
-    color: Fyp.muted,
-    marginTop: Spacing.half,
+    marginTop: space.xxs,
   },
   tileRow: {
     flexDirection: 'row',
-    gap: Spacing.two + 2,
-    marginTop: Spacing.three,
+    gap: space.md,
+    marginTop: space.edge,
   },
   tile: {
     flex: 1,
-    borderRadius: Radius.inner,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
     overflow: 'hidden',
-    backgroundColor: Fyp.pill,
   },
   poster: {
     width: '100%',
-    aspectRatio: 1.35,
-    backgroundColor: '#D9DDE3',
+    aspectRatio: 4 / 3,
   },
   tileFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two,
+    gap: space.sm,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.sm,
   },
   avatar: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-  },
-  avatarFallback: {
-    backgroundColor: Brand.primary,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
     color: '#FFFFFF',
-    fontSize: 11,
     fontWeight: '700',
   },
   tileName: {
     flex: 1,
-    fontSize: 15,
     fontWeight: '600',
-    color: Fyp.title,
   },
   dots: {
     flexDirection: 'row',
     alignSelf: 'center',
-    gap: Spacing.two,
-    marginTop: Spacing.three,
+    gap: space.sm,
+    marginTop: space.edge,
   },
   dot: {
     width: 7,
     height: 7,
-    borderRadius: 4,
-    backgroundColor: '#D2D6DB',
-  },
-  dotActive: {
-    backgroundColor: Brand.primary,
+    borderRadius: radius.full,
   },
 });

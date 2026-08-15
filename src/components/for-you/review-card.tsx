@@ -3,12 +3,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { LinkButton } from '@/components/for-you/link-button';
-import { Brand, Fyp, Radius, Spacing } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { radius, space, type } from '@/constants/tokens';
 
 /**
  * Review section. On the QA organization this shows its empty state, which is
- * exactly what we need for parity — an empty state is a first-class layout, not
- * a placeholder.
+ * exactly what we need for parity — an empty state is a first-class layout.
  */
 export function ReviewCard({
   onFilter,
@@ -20,6 +20,7 @@ export function ReviewCard({
   /** Review cards when there are any; the empty state renders otherwise. */
   children?: React.ReactNode;
 }) {
+  const { colors } = useTokens();
   return (
     <SectionCard testID="for-you-review-card">
       <SectionHeader
@@ -33,17 +34,12 @@ export function ReviewCard({
             <SymbolView
               name="line.3.horizontal.decrease"
               size={18}
-              tintColor={Brand.primary}
+              tintColor={colors.accent}
             />
           </Pressable>
         }
         action={
-          <LinkButton
-            label="See History"
-            width={110}
-            onPress={onSeeHistory}
-            testID="for-you-review-history"
-          />
+          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
         }
       />
       {children ?? <ReviewEmptyState />}
@@ -52,10 +48,11 @@ export function ReviewCard({
 }
 
 function ReviewEmptyState() {
+  const { colors } = useTokens();
   return (
-    <View style={styles.info} testID="for-you-review-empty">
-      <SymbolView name="info.circle" size={18} tintColor={Brand.primary} />
-      <Text style={styles.infoText}>
+    <View style={[styles.info, { backgroundColor: colors.bed }]} testID="for-you-review-empty">
+      <SymbolView name="info.circle" size={18} tintColor={colors.accent} />
+      <Text style={[type.subhead, styles.infoText, { color: colors.secondary }]}>
         Your Stall Monitor will feature recent events that may be of interest to
         you here.
       </Text>
@@ -67,18 +64,14 @@ const styles = StyleSheet.create({
   info: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.two,
-    backgroundColor: Fyp.infoBackground,
-    borderColor: Fyp.infoBorder,
-    borderWidth: 1,
-    borderRadius: Radius.inner,
-    padding: Spacing.three,
-    marginTop: Spacing.three,
+    gap: space.sm,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    padding: space.edge,
+    marginTop: space.edge,
   },
   infoText: {
     flex: 1,
-    fontSize: 15,
     lineHeight: 21,
-    color: Fyp.body,
   },
 });

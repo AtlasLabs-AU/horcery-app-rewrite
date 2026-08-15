@@ -1,15 +1,18 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Fyp, Radius, Spacing } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { radius, space, type } from '@/constants/tokens';
 
 /**
- * The white rounded container every For You section sits in, plus the header
- * row shared by all of them (title on the left, optional adornment beside it,
- * optional action on the right).
+ * The raised container every For You section sits in, plus the header row
+ * shared by all of them (title on the left, optional adornment beside it,
+ * optional action flush right — on the SAME line, always).
  *
- * Matching the current app: 12pt radius, 16pt horizontal page margin,
- * 16pt internal padding.
+ * The header row is the fix for the misalignment Inakshi flagged 2026-08-15:
+ * the action slot no longer accepts a self-sized native Host; the title group
+ * shrinks and the action keeps its intrinsic width, so "See History" sits on
+ * the title line at every text size.
  */
 export function SectionCard({
   children,
@@ -18,8 +21,9 @@ export function SectionCard({
   children: ReactNode;
   testID?: string;
 }) {
+  const { colors } = useTokens();
   return (
-    <View style={styles.card} testID={testID}>
+    <View style={[styles.card, { backgroundColor: colors.card }]} testID={testID}>
       {children}
     </View>
   );
@@ -33,42 +37,49 @@ export function SectionHeader({
   title: string;
   /** Rendered immediately after the title — the "10x" chip, a filter icon. */
   adornment?: ReactNode;
-  /** Rendered flush right — "See History", a ⋮ menu. */
+  /** Rendered flush right — "See History", a ⋮ menu, a segmented control. */
   action?: ReactNode;
 }) {
+  const { colors } = useTokens();
   return (
     <View style={styles.headerRow}>
       <View style={styles.titleGroup}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[type.title3, styles.title, { color: colors.foreground }]} numberOfLines={1}>
+          {title}
+        </Text>
         {adornment}
       </View>
-      {action}
+      {action ? <View style={styles.action}>{action}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Fyp.card,
-    borderRadius: Radius.card,
-    marginHorizontal: Spacing.three,
-    padding: Spacing.three,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    marginHorizontal: space.edge,
+    padding: space.edge,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.two,
+    gap: space.sm,
+    minHeight: 32,
   },
   titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: space.sm,
     flexShrink: 1,
   },
   title: {
-    fontSize: 21,
-    fontWeight: '700',
-    color: Fyp.title,
+    flexShrink: 1,
+  },
+  action: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
 });

@@ -1,45 +1,56 @@
-import { Button, Host } from '@expo/ui';
-import { foregroundStyle, tint } from '@expo/ui/swift-ui/modifiers';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
-import { Brand } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { space, type } from '@/constants/tokens';
 
 /**
- * The purple text actions on For You — "Switch", "See History",
+ * The accent text actions on For You — "Switch", "See History",
  * "Manage Alerts", "Switch to Stalls".
  *
- * In the current app these are gluestack `Button`s styled to look like links.
- * Here they are real native buttons (`@expo/ui` `Button variant="text"`), which
- * brings platform press feedback, correct hit targets, and accessibility
- * traits for free.
- *
- * Two notes carried over from the alerts demo:
- * - `<Host>` does not size itself to its native child, so the caller passes an
- *   explicit width and we fix the height here.
- * - The universal `Button` has no colour prop; tint arrives through the
- *   SwiftUI `tint()` modifier. The Jetpack Compose equivalent belongs in the
- *   shared surface layer when Android comes online.
+ * Previously a native `@expo/ui` Button inside a fixed-width `Host`. `Host`
+ * does not size itself, so every label needed a hand-tuned width — and when
+ * the label outgrew it, the row wrapped and the link dropped below its title
+ * (the misalignment Inakshi flagged 2026-08-15). A text link is the one case
+ * where the native control buys nothing the platform's own text-button
+ * behaviour doesn't already give a Pressable: it lays out with the row, hits
+ * 44pt through hitSlop, and reads its colour from tokens.
+ * Principles: native-over-custom applies to *controls*; a link is text.
  */
 export function LinkButton({
   label,
   onPress,
-  width,
   testID,
 }: {
   label: string;
   onPress?: () => void;
-  /** Explicit width; without it the native button collapses to nothing. */
-  width: number;
   testID?: string;
 }) {
+  const { colors } = useTokens();
   return (
-    <Host style={{ width, height: 28 }}>
-      <Button
-        variant="text"
-        label={label}
-        onPress={onPress}
-        modifiers={[tint(Brand.primary), foregroundStyle(Brand.primary)]}
-        testID={testID}
-      />
-    </Host>
+    <Pressable
+      onPress={onPress}
+      hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+      style={({ pressed }) => [styles.link, pressed && styles.pressed]}>
+      <Text style={[type.subhead, styles.label, { color: colors.accent }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  link: {
+    paddingVertical: space.xs,
+    paddingHorizontal: space.xs,
+    marginRight: -space.xs,
+  },
+  label: {
+    fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.5,
+  },
+});
