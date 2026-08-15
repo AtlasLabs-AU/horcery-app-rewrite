@@ -101,6 +101,17 @@ describe('architecture boundaries', () => {
     expect(renderers).toEqual([]);
   });
 
+  it('never reaches into spikes/ — throwaway measurement code stays outside the app', () => {
+    // spikes/charts-harness has its OWN package.json with both chart renderers.
+    // It imports the app's domain layer; the app must never import it back,
+    // or the "no renderer installed" assertion above would be true in name only.
+    const offenders = files
+      .filter(({ body }) => /from ['"][^'"]*\bspikes\//.test(body))
+      .map(({ rel }) => rel);
+
+    expect(offenders).toEqual([]);
+  });
+
   it('keeps PromQL and Prometheus out of everything but the data layer', () => {
     // DEFAULT-DENY, matching eslint.config.js. Checking only `app/` and
     // `components/` would exempt src/hooks, src/stores, and every directory

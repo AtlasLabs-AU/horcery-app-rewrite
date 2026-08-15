@@ -1,0 +1,11 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/charts/*": ["../../src/charts/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "../../src/charts/**/*.ts"],
+  "exclude": ["node_modules", "../../src/charts/__tests__"]
+}
