@@ -4,7 +4,6 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   SectionList,
   StyleSheet,
   Text,

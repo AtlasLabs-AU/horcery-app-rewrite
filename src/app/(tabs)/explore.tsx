@@ -1,6 +1,3 @@
-import { Host } from '@expo/ui';
-import { Picker, Text as SwiftUIText } from '@expo/ui/swift-ui';
-import { frame, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { GlassView } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -14,6 +11,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { SegmentedControl } from '@/components/ui/segmented-control';
 
 import { Fyp, Spacing } from '@/constants/theme';
 
@@ -114,40 +113,22 @@ export default function CarouselPrototypes() {
         <Text style={styles.subtitle}>Prototype — text style: {variant}</Text>
 
         {/* Prototype scaffolding: flips the top row's text treatment. */}
-        <Host style={styles.variantPicker}>
-          <Picker
-            selection={variant}
-            onSelectionChange={(v) => setVariant(v as Variant)}
-            modifiers={[
-              pickerStyle('segmented'),
-              frame({ width: width - PAGE_MARGIN * 2, height: 28 }),
-            ]}>
-            {VARIANTS.map((v) => (
-              <SwiftUIText key={v.value} modifiers={[tag(v.value)]}>
-                {v.label}
-              </SwiftUIText>
-            ))}
-          </Picker>
-        </Host>
+        <SegmentedControl
+            options={VARIANTS}
+            value={variant}
+            onChange={setVariant}
+            width={width - PAGE_MARGIN * 2}
+          />
 
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* ——— TOP ROW: filter + 1.6-cards-visible carousel ——— */}
           <Text style={styles.sectionTitle}>Events</Text>
-          <Host style={styles.filterPicker}>
-            <Picker
-              selection={filter}
-              onSelectionChange={(v) => setFilter(v as Filter)}
-              modifiers={[
-                pickerStyle('segmented'),
-                frame({ width: width - PAGE_MARGIN * 2, height: 32 }),
-              ]}>
-              {FILTERS.map((f) => (
-                <SwiftUIText key={f.value} modifiers={[tag(f.value)]}>
-                  {f.label}
-                </SwiftUIText>
-              ))}
-            </Picker>
-          </Host>
+          <SegmentedControl
+            options={FILTERS}
+            value={filter}
+            onChange={setFilter}
+            width={width - PAGE_MARGIN * 2}
+          />
 
           <Carousel
             key={`${variant}-${filter}`}

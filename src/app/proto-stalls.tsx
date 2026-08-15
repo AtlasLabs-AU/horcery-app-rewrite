@@ -1,11 +1,8 @@
-import { Host } from '@expo/ui';
-import { Picker, Text as SwiftUIText } from '@expo/ui/swift-ui';
-import { frame, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -17,6 +14,8 @@ import {
   type ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { SegmentedControl } from '@/components/ui/segmented-control';
 
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
@@ -73,11 +72,14 @@ export default function ProtoStallsScreen() {
   const stalls =
     group === 'All Stalls' ? STALLS : STALLS.filter((s) => s.group === group);
 
-  const onViewableItemsChanged = useRef(
+  // FlatList wants a stable identity for this callback; useCallback with no
+  // deps gives one without reading a ref during render.
+  const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       setVisibleIds(new Set(viewableItems.map((v) => String(v.key))));
     },
-  ).current;
+    [],
+  );
 
   const isGrid = variant === 'grid';
   const cardWidth = isGrid
@@ -119,18 +121,12 @@ export default function ProtoStallsScreen() {
         </View>
 
         {/* Prototype scaffolding: layout switcher. */}
-        <Host style={styles.switcher}>
-          <Picker
-            selection={variant}
-            onSelectionChange={(value) => setVariant(value as Variant)}
-            modifiers={[pickerStyle('segmented'), frame({ maxWidth: Infinity, height: 28 })]}>
-            {VARIANTS.map((option) => (
-              <SwiftUIText key={option.value} modifiers={[tag(option.value)]}>
-                {option.label}
-              </SwiftUIText>
-            ))}
-          </Picker>
-        </Host>
+        <SegmentedControl
+            options={VARIANTS}
+            value={variant}
+            onChange={setVariant}
+            width={width - space.edge * 2}
+          />
 
         <ScrollView
           horizontal
