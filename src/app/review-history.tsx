@@ -135,7 +135,7 @@ export default function ReviewHistoryScreen() {
           icon: ICON_FOR_TYPE[typeId] ?? 'info',
         };
       }),
-    [events],
+    [events, timezone],
   );
 
   /**
