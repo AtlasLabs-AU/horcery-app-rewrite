@@ -1,14 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Fyp, Radius, Spacing } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { radius, space, type } from '@/constants/tokens';
 
 /**
  * Stands in for a chart while the charting-library decision is parked.
- *
- * Deliberately the same size and position as the real chart so the page's
- * layout and scroll length are honest — and it reproduces the current app's
- * own "No data available" state, which is what the QA organization shows
- * anyway.
+ * Same size and position as the real chart so the page's layout is honest;
+ * reproduces the current app's own "No data available" state.
  */
 export function ChartPlaceholder({
   height = 148,
@@ -21,15 +19,16 @@ export function ChartPlaceholder({
   legend?: { label: string; color: string }[];
   testID?: string;
 }) {
+  const { colors } = useTokens();
   return (
-    <View style={[styles.surface, { height }]} testID={testID}>
-      <Text style={styles.message}>{message}</Text>
+    <View style={[styles.surface, { height, backgroundColor: colors.background }]} testID={testID}>
+      <Text style={[type.subhead, { color: colors.tertiary }]}>{message}</Text>
       {legend?.length ? (
         <View style={styles.legendRow}>
           {legend.map((entry) => (
             <View key={entry.label} style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: entry.color }]} />
-              <Text style={styles.legendLabel}>{entry.label}</Text>
+              <Text style={[type.footnote, { color: colors.secondary }]}>{entry.label}</Text>
             </View>
           ))}
         </View>
@@ -40,34 +39,26 @@ export function ChartPlaceholder({
 
 const styles = StyleSheet.create({
   surface: {
-    backgroundColor: Fyp.chartPlaceholder,
-    borderRadius: Radius.inner,
-    marginTop: Spacing.three,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    marginTop: space.edge,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.three,
-  },
-  message: {
-    fontSize: 15,
-    color: Fyp.muted,
+    gap: space.edge,
   },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.four,
+    gap: space.lg,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: space.sm,
   },
   legendDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
-  },
-  legendLabel: {
-    fontSize: 13,
-    color: Fyp.body,
+    borderRadius: radius.full,
   },
 });

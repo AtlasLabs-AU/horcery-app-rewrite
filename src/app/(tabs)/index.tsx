@@ -16,7 +16,9 @@ import { ReviewCard } from '@/components/for-you/review-card';
 import { SnapshotsCard } from '@/components/for-you/snapshots-card';
 import { useForYouData } from '@/hooks/use-for-you-data';
 import { useSnapshots } from '@/hooks/use-snapshots';
-import { Brand, BottomTabInset, Fyp, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth } from '@/constants/theme';
+import { space } from '@/constants/tokens';
+import { useTokens } from '@/hooks/use-tokens';
 
 /**
  * For You — the screen customers land on.
@@ -44,11 +46,12 @@ export default function ForYouScreen() {
     refresh,
   } = useForYouData();
   const { snapshots } = useSnapshots();
+  const { colors } = useTokens();
 
   const openMenu = useCallback(() => router.push('/menu'), []);
 
   return (
-    <View style={styles.page}>
+    <View style={[styles.page, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ForYouHeader onMenu={openMenu} />
         <RevealProvider source={source}>
@@ -63,8 +66,8 @@ export default function ForYouScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={refresh}
-              colors={[Brand.primary]}
-              tintColor={Brand.primary}
+              colors={[colors.accent]}
+              tintColor={colors.accent}
             />
           }>
           <OrganizationCard
@@ -115,14 +118,13 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
-    backgroundColor: Fyp.pageBackground,
   },
   safeArea: {
     flex: 1,
     maxWidth: MaxContentWidth,
   },
   content: {
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.six,
+    gap: space.edge,
+    paddingBottom: BottomTabInset + space.xxl,
   },
 });

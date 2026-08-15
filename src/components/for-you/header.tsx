@@ -1,7 +1,8 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Fyp, Spacing } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { space, type } from '@/constants/tokens';
 
 /**
  * "Hello Horcery" plus the three header actions (search, customize, menu).
@@ -26,9 +27,10 @@ export function ForYouHeader({
   onCustomize?: () => void;
   onMenu?: () => void;
 }) {
+  const { colors } = useTokens();
   return (
     <View style={styles.row}>
-      <Text style={styles.greeting} numberOfLines={1}>
+      <Text style={[type.largeTitle, styles.greeting, { color: colors.foreground }]} numberOfLines={1}>
         {greeting}
       </Text>
       <View style={styles.actions}>
@@ -69,6 +71,7 @@ function HeaderIcon({
   onPress?: () => void;
   testID?: string;
 }) {
+  const { colors } = useTokens();
   return (
     <Pressable
       onPress={onPress}
@@ -81,7 +84,7 @@ function HeaderIcon({
       <SymbolView
         name={name}
         size={24}
-        tintColor={Fyp.headerTitle}
+        tintColor={colors.foreground}
         resizeMode="scaleAspectFit"
       />
     </Pressable>
@@ -93,19 +96,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingHorizontal: space.edge,
+    paddingVertical: space.sm,
   },
   greeting: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: Fyp.headerTitle,
     flexShrink: 1,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.four,
+    gap: space.lg,
   },
   pressed: {
     opacity: 0.5,

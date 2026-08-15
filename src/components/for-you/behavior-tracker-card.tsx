@@ -7,7 +7,8 @@ import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LinkButton } from '@/components/for-you/link-button';
 import { OverflowMenu } from '@/components/for-you/overflow-menu';
 import { SegmentedControl } from '@/components/for-you/segmented-control';
-import { Brand, Fyp, Radius, Spacing } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
+import { radius, space, type } from '@/constants/tokens';
 
 export type TrackerPeriod = 'daily' | 'weekly';
 
@@ -27,16 +28,15 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
   { id: 'lying-down', label: 'Lying Down', symbol: 'moon.zzz.fill' },
   { id: 'people-in-stall', label: 'People in Stall', symbol: 'figure.stand' },
   { id: 'in-stall', label: 'In Stall', symbol: 'house.fill' },
-  // 'bucket.fill' is not a real SF Symbol — it rendered as an empty tile.
   { id: 'feed', label: 'Feed', symbol: 'fork.knife' },
 ];
 
 /**
  * Behavior Tracker — period toggle, behaviour selector tiles, and the chart for
- * the selected behaviour.
+ * the selected behaviour. Chart stubbed pending the charting decision.
  *
- * Chart stubbed pending the charting-library decision; everything around it is
- * real, so the card's height and scroll position match the current app.
+ * Header carries the ⋮ menu beside the title (as the current app does) and the
+ * native segmented control flush right, both on the title line.
  */
 export function BehaviorTrackerCard({
   behaviors = DEFAULT_BEHAVIORS,
@@ -45,9 +45,9 @@ export function BehaviorTrackerCard({
   behaviors?: Behavior[];
   onSwitchToStalls?: () => void;
 }) {
+  const { colors } = useTokens();
   const [period, setPeriod] = useState<TrackerPeriod>('daily');
   const [selectedId, setSelectedId] = useState(behaviors[0]?.id);
-
   const selected = behaviors.find((b) => b.id === selectedId) ?? behaviors[0];
 
   return (
@@ -69,7 +69,7 @@ export function BehaviorTrackerCard({
             options={PERIOD_OPTIONS}
             value={period}
             onChange={setPeriod}
-            width={148}
+            width={132}
             testID="for-you-tracker-period"
           />
         }
@@ -86,11 +86,14 @@ export function BehaviorTrackerCard({
               accessibilityLabel={behavior.label}
               accessibilityState={{ selected: isSelected }}
               testID={`for-you-behavior-${behavior.id}`}
-              style={[styles.behaviorTile, isSelected && styles.behaviorTileOn]}>
+              style={[
+                styles.behaviorTile,
+                { backgroundColor: isSelected ? colors.accent : colors.fillTonal },
+              ]}>
               <SymbolView
                 name={behavior.symbol as never}
                 size={26}
-                tintColor={isSelected ? '#FFFFFF' : Fyp.muted}
+                tintColor={isSelected ? colors.onInverse : colors.secondary}
                 resizeMode="scaleAspectFit"
               />
             </Pressable>
@@ -99,10 +102,11 @@ export function BehaviorTrackerCard({
       </View>
 
       <View style={styles.selectedRow}>
-        <Text style={styles.selectedLabel}>{selected?.label}</Text>
+        <Text style={[type.headline, styles.selectedLabel, { color: colors.foreground }]}>
+          {selected?.label}
+        </Text>
         <LinkButton
           label="Switch to Stalls"
-          width={150}
           onPress={onSwitchToStalls}
           testID="for-you-tracker-switch"
         />
@@ -116,31 +120,25 @@ export function BehaviorTrackerCard({
 const styles = StyleSheet.create({
   behaviorRow: {
     flexDirection: 'row',
-    gap: Spacing.two + 2,
-    marginTop: Spacing.three,
+    gap: space.md,
+    marginTop: space.edge,
   },
   behaviorTile: {
     flex: 1,
     height: 62,
-    borderRadius: Radius.card,
-    backgroundColor: Fyp.pill,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  behaviorTileOn: {
-    backgroundColor: Brand.primary,
   },
   selectedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.three,
-    gap: Spacing.two,
+    marginTop: space.edge,
+    gap: space.sm,
   },
   selectedLabel: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: Fyp.title,
     flexShrink: 1,
   },
 });

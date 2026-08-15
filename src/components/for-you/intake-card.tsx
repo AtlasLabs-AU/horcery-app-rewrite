@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { useTokens } from '@/hooks/use-tokens';
+
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { SegmentedControl } from '@/components/for-you/segmented-control';
@@ -28,6 +30,7 @@ export function IntakeCard({
   todayColor: string;
   testID?: string;
 }) {
+  const { colors } = useTokens();
   const [scope, setScope] = useState<IntakeScope>('stall');
 
   return (
@@ -47,7 +50,7 @@ export function IntakeCard({
       <ChartPlaceholder
         height={128}
         legend={[
-          { label: 'Average', color: '#B0B4BA' },
+          { label: 'Average', color: colors.dimmed },
           { label: 'Today', color: todayColor },
         ]}
         testID={`${testID}-chart`}

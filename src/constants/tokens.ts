@@ -66,10 +66,12 @@ const rounded = Platform.select({ ios: 'ui-rounded', default: undefined });
 export const type = {
   largeTitle: { fontSize: 34, fontWeight: '700', fontFamily: rounded, letterSpacing: -0.6 },
   title: { fontSize: 22, fontWeight: '600', fontFamily: rounded, letterSpacing: -0.4 },
+  title3: { fontSize: 20, fontWeight: '600', fontFamily: rounded, letterSpacing: -0.3 },
   headline: { fontSize: 17, fontWeight: '600', fontFamily: rounded, letterSpacing: -0.2 },
   body: { fontSize: 17, fontWeight: '400', fontFamily: rounded },
   subhead: { fontSize: 15, fontWeight: '400', fontFamily: rounded },
   footnote: { fontSize: 13, fontWeight: '400', fontFamily: rounded },
+  caption: { fontSize: 12, fontWeight: '400', fontFamily: rounded },
   eyebrow: {
     fontSize: 12,
     fontWeight: '600',
