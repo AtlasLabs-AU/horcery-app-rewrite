@@ -101,11 +101,15 @@ describe('architecture boundaries', () => {
     expect(renderers).toEqual([]);
   });
 
-  it('keeps PromQL and Prometheus services out of screens and components', () => {
+  it('keeps PromQL and Prometheus out of everything but the data layer', () => {
+    // DEFAULT-DENY, matching eslint.config.js. Checking only `app/` and
+    // `components/` would exempt src/hooks, src/stores, and every directory
+    // nobody has created yet — which is exactly where the next screen's data
+    // fetching would be written.
+    const DATA_LAYER = ['services' + sep, 'config' + sep];
+
     const offenders = files
-      .filter(
-        ({ rel }) => rel.startsWith('app' + sep) || rel.startsWith('components' + sep),
-      )
+      .filter(({ rel }) => !DATA_LAYER.some((dir) => rel.startsWith(dir)))
       .filter(({ body }) =>
         importsFrom(body, [
           /prometheus-management/,
@@ -118,27 +122,61 @@ describe('architecture boundaries', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('still fails a fresh violation — proves the lint rule is live', () => {
-    // Lint a violating snippet via stdin. If this stops erroring, the boundary
-    // config has broken and every other assertion here is a false positive.
-    let failed = false;
-    let output = '';
+  /**
+   * Lints a snippet as if it lived at `asPath`. Returns the report, or '' when
+   * ESLint found nothing to complain about.
+   */
+  function lintSnippet(asPath: string, source: string): string {
+    const eslintBin = join(SRC, '..', 'node_modules', 'eslint', 'bin', 'eslint.js');
     try {
       execFileSync(
-        'npx',
-        ['eslint', '--stdin', '--stdin-filename', 'src/app/probe.tsx'],
-        {
-          input: `import { Button } from '@expo/ui/swift-ui';\nexport default function P() { return Button; }\n`,
-          cwd: join(SRC, '..'),
-          encoding: 'utf8',
-        },
+        process.execPath,
+        [eslintBin, '--stdin', '--stdin-filename', asPath],
+        { input: source, cwd: join(SRC, '..'), encoding: 'utf8' },
       );
-    } catch (e: unknown) {
-      failed = true;
-      output = String((e as { stdout?: string }).stdout ?? '');
+      return '';
+    } catch (error: unknown) {
+      return String((error as { stdout?: string }).stdout ?? '');
     }
+  }
 
-    expect(failed).toBe(true);
-    expect(output).toContain('no-restricted-imports');
+  /**
+   * The rules above assert the tree is clean TODAY. These assert the rule that
+   * keeps it clean tomorrow is still working — a boundary that has silently
+   * stopped enforcing is worse than none, because everyone assumes it holds.
+   *
+   * `src/features/` deliberately does not exist. An allow-list keyed on the
+   * directories that happen to exist now would let the next one straight
+   * through, so default-deny is tested where it actually earns its keep.
+   */
+  it.each([
+    ['src/app/probe.tsx', "import { Button } from '@expo/ui/swift-ui';"],
+    ['src/features/probe.tsx', "import { Button } from '@expo/ui/swift-ui';"],
+    ['src/domain/probe.ts', "import { init } from 'echarts';"],
+    ['src/features/metrics/probe.ts', "import { q } from '../../services/api/prometheus-management/prometheus';"],
+    ['src/stores/probe.ts', "import { Chart } from 'victory-native';"],
+  ])('rejects a forbidden import at %s', (path, statement) => {
+    const report = lintSnippet(path, `${statement}\nexport default 1;\n`);
+
+    expect(report).toContain('no-restricted-imports');
+  }, 60_000);
+
+  it('still allows the adapter directories their own imports', () => {
+    // The mirror image: a boundary that rejects everything is equally broken,
+    // and would be caught here rather than by a confusing failure in the
+    // surface layer.
+    expect(
+      lintSnippet(
+        'src/components/ui/probe.tsx',
+        "import { Button } from '@expo/ui/swift-ui';\nexport default Button;\n",
+      ),
+    ).not.toContain('no-restricted-imports');
+
+    expect(
+      lintSnippet(
+        'src/services/api/probe.ts',
+        "import { q } from './prometheus-management/prometheus';\nexport default q;\n",
+      ),
+    ).not.toContain('no-restricted-imports');
   }, 60_000);
 });

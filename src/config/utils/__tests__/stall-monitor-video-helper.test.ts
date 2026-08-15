@@ -6,10 +6,16 @@ import {
 /**
  * Seed test 1 — pure data transformation.
  *
- * These are the frame-selection rules the Snapshots card depends on. The
- * adversarial review (requirements §6b) found Snapshots dropping data by
- * truncating its results; this locks the URL/frame maths so a future change to
- * the sampling logic fails here rather than silently on someone's stall page.
+ * SCOPE, precisely: the thumbnail URL construction and 10-second frame maths.
+ * Nothing here touches the §6b finding 6 data-loss bugs — page truncation,
+ * omitted paginated stalls, incomplete refresh queries. Those are covered by
+ * `snapshot-paging.test.ts` (truncation) and remain open for the rest (see the
+ * note there). An earlier version of this comment claimed otherwise, which is
+ * worse than no comment: it invites the next person to believe a failure mode
+ * is already guarded (review, 2026-08-15).
+ *
+ * What this does protect is real: a change to the sampling maths that drops a
+ * frame or misplaces a boundary fails here rather than silently on a stall page.
  */
 
 // Real shape: the stall id is the LAST path segment before /dash, and everything

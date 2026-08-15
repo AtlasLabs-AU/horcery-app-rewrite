@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { join, relative } from 'node:path';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -29,25 +30,38 @@ interface LintResult {
   messages: { ruleId: string | null; severity: number; line: number }[];
 }
 
-/** Lints the source tree with the baseline exceptions switched off. */
-async function lintWithoutBaseline(): Promise<LintResult[]> {
-  process.env.HORCERY_IGNORE_LINT_BASELINE = '1';
+/**
+ * Lints the source tree with the baseline exceptions switched off.
+ *
+ * Run as a subprocess rather than through ESLint's Node API: the API resolves
+ * file globs with a dynamic `import()`, which Jest's VM rejects unless the whole
+ * suite runs with `--experimental-vm-modules`. Not worth reconfiguring the
+ * runner over.
+ */
+function lintWithoutBaseline(): LintResult[] {
+  const eslintBin = join(ROOT, 'node_modules', 'eslint', 'bin', 'eslint.js');
+
   try {
-    // Required lazily and in-process: the config is read at construction time,
-    // so the env var above has to be set first, and spawning `npx eslint` would
-    // cost several seconds of startup for the same answer.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ESLint } = require('eslint');
-    const eslint = new ESLint({ cwd: ROOT, cache: false });
-    return await eslint.lintFiles(['src']);
-  } finally {
-    delete process.env.HORCERY_IGNORE_LINT_BASELINE;
+    execFileSync(process.execPath, [eslintBin, 'src', '--format', 'json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, HORCERY_IGNORE_LINT_BASELINE: '1' },
+      maxBuffer: 32 * 1024 * 1024,
+    });
+    return [];
+  } catch (error) {
+    // ESLint exits non-zero whenever anything is reported; the JSON report is
+    // still on stdout. A crash (bad config) produces no parseable JSON, and
+    // rethrowing here is the correct outcome — the guard is broken.
+    const stdout = String((error as { stdout?: string }).stdout ?? '');
+    if (!stdout.trim().startsWith('[')) throw error;
+    return JSON.parse(stdout) as LintResult[];
   }
 }
 
 describe('lint baseline', () => {
-  it('names every file that still violates a rule — no more, no fewer', async () => {
-    const results = await lintWithoutBaseline();
+  it('names every file that still violates a rule — no more, no fewer', () => {
+    const results = lintWithoutBaseline();
 
     const offenders = results
       .filter((result) => result.messages.length > 0)

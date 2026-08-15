@@ -68,6 +68,18 @@ let captured = [];
 /** @type {RegExp[]} */
 let allowed = [];
 
+/**
+ * Echo captured output to the real console. Only `console-guard.test.ts` turns
+ * this off, because it emits fake React complaints on purpose and they would
+ * otherwise fill CI logs with alarming stack traces that mean nothing. It
+ * suppresses the ECHO only — capture, and therefore the guard itself, is
+ * unaffected — so it cannot be used to hide anything.
+ */
+let echo = true;
+global.__setConsoleGuardEcho = (on) => {
+  echo = on;
+};
+
 const format = (args) =>
   args
     .map((arg) => (arg instanceof Error ? (arg.stack ?? arg.message) : String(arg)))
@@ -75,12 +87,12 @@ const format = (args) =>
 
 console.error = (...args) => {
   captured.push({ level: 'error', text: format(args) });
-  REAL_ERROR(...args); // still visible while debugging
+  if (echo) REAL_ERROR(...args); // still visible while debugging
 };
 
 console.warn = (...args) => {
   captured.push({ level: 'warn', text: format(args) });
-  REAL_WARN(...args);
+  if (echo) REAL_WARN(...args);
 };
 
 /**
@@ -131,6 +143,7 @@ function assertConsoleClean(scope) {
 beforeEach(() => {
   captured = [];
   allowed = [];
+  echo = true;
 });
 
 // Runs after the test body. Anything produced during teardown lands in

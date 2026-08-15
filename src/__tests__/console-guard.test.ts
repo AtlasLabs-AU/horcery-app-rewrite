@@ -16,6 +16,13 @@ const drain = (): { level: string; text: string }[] =>
     .__drainUnexpectedConsole();
 
 describe('console guard', () => {
+  // These tests emit fake React complaints deliberately. Echoing them would put
+  // convincing-looking errors in CI output for a suite that is passing.
+  beforeEach(() => {
+    (global as unknown as { __setConsoleGuardEcho: (on: boolean) => void })
+      .__setConsoleGuardEcho(false);
+  });
+
   it('captures console.error that no test opted into', () => {
     console.error('pretend React complaint');
 
