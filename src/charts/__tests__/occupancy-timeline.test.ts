@@ -8,7 +8,19 @@ import {
   positionInDay,
   type PrometheusRangeSeries,
 } from '@/charts/occupancy-timeline';
-import { FIXTURES, PEOPLE_IN_STALL, noData, overnight, partialToday, quietWeek, denseWeek, normalWeek, daylightSaving } from '@/charts/fixtures/people-in-stall';
+import {
+  FIXTURES,
+  PEOPLE_IN_STALL,
+  daylightSaving,
+  daylightSavingFallBack,
+  denseWeek,
+  noData,
+  normalWeek,
+  overnight,
+  partialToday,
+  quietWeek,
+  worstCase,
+} from '@/charts/fixtures/people-in-stall';
 
 /**
  * Characterisation of the People In Stall data behaviour (requirements §6a).
@@ -72,6 +84,22 @@ describe('rows', () => {
     expect(today.isToday).toBe(true);
     expect(today.end).toBe(now.toSeconds());
     expect(days[5]!.isToday).toBe(false);
+  });
+
+  it('takes the selected date as a CALENDAR date, so the week cannot slide with the viewer', () => {
+    // 2026-08-14 is 2026-08-14 in Chicago whether the manager reading it is in
+    // Chicago, Colombo or Sydney. (Accepting an instant here would make
+    // midnight-in-Colombo on the 14th into the 13th in Chicago.)
+    for (const zone of ['America/Chicago', 'Asia/Colombo', 'Australia/Sydney']) {
+      expect(build([], { zone }).days.at(-1)!.key).toBe('2026-08-14');
+    }
+  });
+
+  it('rejects anything that is not a plain yyyy-MM-dd date', () => {
+    expect(() => build([], { selectedDate: '2026-08-14T00:00:00' })).toThrow(/calendar date/);
+    expect(() => build([], { selectedDate: '2026-08-14T00:00:00+05:30' })).toThrow(/calendar date/);
+    expect(() => build([], { selectedDate: '14/08/2026' })).toThrow(/calendar date/);
+    expect(() => build([], { selectedDate: '2026-02-30' })).toThrow(/not a real date/);
   });
 
   it('labels rows "MMM dd" as the current app does', () => {
@@ -240,6 +268,29 @@ describe('presentation', () => {
     expect(labels.slice(0, 4)).toEqual(['12 AM', '1 AM', '3 AM', '4 AM']);
   });
 
+  it('keeps clock time honest on the 25-hour fall-back day — and exposes the double 1 AM', () => {
+    // 2026-11-01 in Chicago: 1:00–1:59 AM happens twice (CDT, then CST).
+    const dst = build([], { selectedDate: '2026-11-01', now: T('2026-11-02T09:00:00') }).days[6]!;
+
+    expect(dst.end - dst.start).toBe(25 * 3600);
+
+    // The two 1:30 AMs are different instants an hour apart, and land an hour
+    // apart across the row.
+    const firstOneThirty = DateTime.fromISO('2026-11-01T01:30:00-05:00').toSeconds();
+    const secondOneThirty = DateTime.fromISO('2026-11-01T01:30:00-06:00').toSeconds();
+    expect(secondOneThirty - firstOneThirty).toBe(3600);
+    expect(positionInDay(firstOneThirty, dst, ZONE)).toBeCloseTo(1.5 / 25);
+    expect(positionInDay(secondOneThirty, dst, ZONE)).toBeCloseTo(2.5 / 25);
+
+    // 25 hours + the closing midnight; "1 AM" appears twice. That is a real
+    // labelling ambiguity, recorded in PEOPLE_IN_STALL.md — a renderer must
+    // at least not merge or drop one of them.
+    const labels = hourTicks(dst, ZONE).map((t) => t.label);
+    expect(labels).toHaveLength(26);
+    expect(labels.filter((l) => l === '1 AM')).toHaveLength(2);
+    expect(labels.slice(0, 4)).toEqual(['12 AM', '1 AM', '1 AM', '2 AM']);
+  });
+
   it('formats the tooltip word for word as the current app', () => {
     const interval = { enter: secs('2026-08-14T07:02:00'), exit: secs('2026-08-14T07:41:00'), count: 2 };
 
@@ -302,6 +353,31 @@ describe('People In Stall fixtures', () => {
     expect(count(denseWeek).intervalCount).toBe(374);
     expect(count(quietWeek).intervalCount).toBe(0);
     expect(count(noData).series).toEqual([]);
+    // The ceiling: every 90 s sample a bar. 7 × 960.
+    expect(count(worstCase).intervalCount).toBe(6720);
+  });
+
+  it('worst case is genuinely the ceiling — no fixture can exceed one bar per sample', () => {
+    const t = count(worstCase);
+    const samples = worstCase.result[0]!.values.length;
+    expect(t.intervalCount).toBe(samples);
+    // Every bar is exactly one step long.
+    for (const s of t.series) {
+      for (const day of Object.values(s.intervalsByDay)) {
+        for (const bar of day) expect(bar.exit - bar.enter).toBe(PEOPLE_IN_STALL.step);
+      }
+    }
+  });
+
+  it('fall-back week contains the 25-hour day', () => {
+    const t = count(daylightSavingFallBack);
+    const dstDay = t.days.find((d) => d.key === '2026-11-01')!;
+    expect(dstDay.end - dstDay.start).toBe(25 * 3600);
+    // The generator sampled the whole 25 hours: 1000 samples that day, not 960.
+    const thatDay = daylightSavingFallBack.result[0]!.values.filter(
+      ([ts]) => ts >= dstDay.start && ts < dstDay.end,
+    );
+    expect(thatDay).toHaveLength(1000);
   });
 
   it('quiet week is seven empty rows, not "No Data" — the distinction is a valid response', () => {

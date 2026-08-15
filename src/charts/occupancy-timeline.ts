@@ -65,8 +65,16 @@ export interface OccupancyTimeline {
 export interface BuildOccupancyTimelineInput {
   /** `response.data.result` from the range query. Empty means "no data". */
   result: PrometheusRangeSeries[];
-  /** The last (bottom) day shown. ISO date or DateTime. */
-  selectedDate: DateTime | string;
+  /**
+   * The last (bottom) day shown, as a CALENDAR DATE: `yyyy-MM-dd`.
+   *
+   * Deliberately not a DateTime. A DateTime is an instant, and the same instant
+   * is a different calendar day in different zones — midnight on the 14th in
+   * Colombo is still the 13th in Chicago — so accepting one invites the chart
+   * to show the wrong week for a travelling manager. A date string has no such
+   * ambiguity: it is interpreted in `zone`, full stop.
+   */
+  selectedDate: string;
   /** How many days to show, ending on `selectedDate`. The current app shows 7. */
   days?: number;
   /** IANA zone the days are cut in — the ORGANIZATION's zone (§6c), not the phone's. */
@@ -82,10 +90,22 @@ export interface BuildOccupancyTimelineInput {
 export const DEFAULT_DAYS = 7;
 const DAY_KEY = 'yyyy-MM-dd';
 
-const toDateTime = (value: DateTime | string, zone: string) =>
-  typeof value === 'string'
-    ? DateTime.fromISO(value, { zone })
-    : value.setZone(zone);
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Parses a `yyyy-MM-dd` calendar date as local midnight in `zone`, or throws. */
+function calendarDate(value: string, zone: string): DateTime {
+  if (!CALENDAR_DATE.test(value)) {
+    throw new Error(
+      `selectedDate must be a calendar date "yyyy-MM-dd", got ${JSON.stringify(value)}. ` +
+        'Pass a date, not an instant: an instant is a different day in a different zone.',
+    );
+  }
+  const parsed = DateTime.fromISO(value, { zone });
+  if (!parsed.isValid) {
+    throw new Error(`selectedDate ${JSON.stringify(value)} is not a real date: ${parsed.invalidExplanation}`);
+  }
+  return parsed.startOf('day');
+}
 
 /**
  * Cuts the interval list for ONE day out of that day's samples.
@@ -148,7 +168,7 @@ export function buildOccupancyTimeline(
 
   const now = input.now.setZone(zone);
   const nowSeconds = now.toSeconds();
-  const selected = toDateTime(input.selectedDate, zone).startOf('day');
+  const selected = calendarDate(input.selectedDate, zone);
 
   // Rows: `dayCount` calendar days ending on the selected date, oldest first.
   const days: OccupancyDay[] = [];

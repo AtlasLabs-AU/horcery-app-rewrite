@@ -170,6 +170,24 @@ const denseDay: DayPlan = (_dayIndex, rand) => {
   return visits;
 };
 
+/**
+ * The theoretical ceiling. With a 90 s step there are 960 samples a day; a
+ * value that flips on every sample yields a one-sample bar at every other one.
+ * Two mutually exclusive series alternating with each other fill EVERY sample:
+ * 960 bars per day, 6 720 across the week. No barn is this noisy — but a flaky
+ * detector could be, and a renderer that is fine at 374 bars can fall apart at
+ * 6 000. This is where that shows.
+ */
+const worstCaseDay: DayPlan = () => {
+  const visits: Visit[] = [];
+  const step = PEOPLE_IN_STALL.step;
+  // Every sample is occupied; series alternates each sample.
+  for (let offset = 0, i = 0; offset < 25 * HOUR; offset += step, i++) {
+    visits.push({ start: offset, duration: step, count: 1, withHorse: i % 2 === 0 });
+  }
+  return visits;
+};
+
 /** A visit that runs across midnight into the next day — one bar becomes two rows. */
 const overnightPair: [DayPlan, DayPlan] = [
   (_i, rand) => [...typicalDay(_i, rand), { start: 23 * HOUR + 20 * MIN, duration: 2 * HOUR, count: 1, withHorse: true }],
@@ -275,6 +293,45 @@ export const daylightSaving: Fixture = {
   }),
 };
 
+export const daylightSavingFallBack: Fixture = {
+  name: 'daylight-saving-fall-back',
+  purpose: 'The week containing the US fall-back (2026-11-01, a 25-hour day). Two different "1 AM" hours: the row must be 25/24 as long in time, bars must sit at the right instant, and the hour labels expose an ambiguity the renderer has to live with.',
+  zone: PEOPLE_IN_STALL.zone,
+  selectedDate: '2026-11-03',
+  now: '2026-11-04T09:00:00',
+  result: sample(Array(7).fill(typicalDay), {
+    zone: PEOPLE_IN_STALL.zone,
+    selectedDate: '2026-11-03',
+    now: '2026-11-04T09:00:00',
+    seed: 7,
+  }),
+};
+
+export const worstCase: Fixture = {
+  name: 'worst-case',
+  purpose: 'The theoretical ceiling — every 90 s sample occupied, series alternating: 6 720 one-sample bars in a week. Not realistic; a flaky detector could approach it. Where a renderer that copes with hundreds of bars breaks at thousands.',
+  zone: PEOPLE_IN_STALL.zone,
+  selectedDate: WEEK_END,
+  now: AFTER_WEEK,
+  result: sample(Array(7).fill(worstCaseDay), {
+    zone: PEOPLE_IN_STALL.zone,
+    selectedDate: WEEK_END,
+    now: AFTER_WEEK,
+    seed: 8,
+  }),
+};
+
+/**
+ * OBSERVED-HEAVY — deliberately absent.
+ *
+ * The third load in the spike plan is a real anonymised QA response from a
+ * busy stall. It cannot be synthesised: it is the only fixture that can reveal
+ * missing or irregular samples, unexpected series or metric labels, and the
+ * bar counts a real barn actually produces. Capturing it does not block
+ * building the two renderers; it DOES block the final renderer decision. See
+ * PEOPLE_IN_STALL.md §11.
+ */
+
 export const FIXTURES: Fixture[] = [
   normalWeek,
   denseWeek,
@@ -283,4 +340,6 @@ export const FIXTURES: Fixture[] = [
   partialToday,
   overnight,
   daylightSaving,
+  daylightSavingFallBack,
+  worstCase,
 ];

@@ -21,7 +21,7 @@ the exact window and headcount.
 | | Current app | Rewrite |
 |---|---|---|
 | Source | Prometheus range query, `HUMAN_IN_STALL_DETECTION_QUERY` from Remote Config, fallback `humanInStall` in `prom-utils` | Same PromQL for now, requested through the data layer only (§6a: query ownership moves server-side) |
-| Window | 7 days ending on the selected date, `start` = day-6 00:00, `end` = day+1 00:00:01 | Same |
+| Window | 7 days ending on the selected date, `start` = day-6 00:00, `end` = day+1 00:00:01 | Same. The selected date is a **calendar date** (`yyyy-MM-dd`), never an instant — see quirk 6 |
 | Step | 90 s | Same |
 | Series | Two, by `Event_Type`: `Human_Interaction` (**With Horse**), `Human_Presence` (**Without Horse**). Mutually exclusive at any instant | Same |
 | Threshold | 0.2 (`humanInStallThreshold`) — samples ≤ 0.2 are "nobody" | Same |
@@ -97,23 +97,30 @@ Each is a deliberate departure, recorded so nobody "fixes" it back.
 4. **The `queryFRC` `useMemo` bug** (People In Stall report to the dev team) — the query is captured before Remote Config resolves. → Not a chart concern; the data layer requests the query and the hook rule (`exhaustive-deps: error`) makes the pattern a build failure.
 5. **`Number(x) > threshold` on strings** — works, but silently; the rewrite parses once and types the count.
 
+6. **The selected date travels as an instant.** The detail stores hold a Luxon `DateTime`; converting it into the barn's zone can move it to the previous or next calendar day (midnight on the 14th in Colombo is the 13th in Chicago), so a travelling manager can be shown the wrong week. → The domain layer accepts a validated `yyyy-MM-dd` string only, interpreted in the organization zone. Tests: *"takes the selected date as a CALENDAR date"*, *"rejects anything that is not a plain yyyy-MM-dd date"*.
+
+**Fall-back day label ambiguity (not a legacy quirk — a fact of clocks):** on the 25-hour day, 1:00–1:59 AM happens twice, so the axis shows **"1 AM" twice**. The domain layer positions each instant correctly (test *"…exposes the double 1 AM"*); how a renderer disambiguates the label — "1 AM (CDT)/(CST)", a subtle tick, or accepting the duplicate as most calendars do — is a design call to make once, in the adapter, and is on the parity checklist so it cannot be dodged.
+
 Not changed, but noted for design: **oldest day at the top**. Newest-at-top may read better on a phone; that is a design decision to raise, not a spike criterion.
 
 ## 10. What the spikes measure against this
 
 Both renderers must produce **all** of §2–§7 from the same `OccupancyTimeline`. Then, per §6a weights, on the same device and build:
 
-- **Smoothness (30 %)** — frame rate during pinch-zoom and pan on `dense-week` (374 bars) and `normal-week` (38); mount time of the seven-row chart.
+- **Smoothness (30 %)** — frame rate during pinch-zoom and pan under **three loads**: `normal-week` (38 bars), **observed-heavy** (the anonymised real response — see §11; not yet captured), and `worst-case` (6 720 one-sample bars, the theoretical ceiling). `dense-week` (374) is a mid-point, not a ceiling. Mount time of the seven-row chart at each load.
 - **Reliability / memory (25 %)** — no leak across 50 mount/unmount cycles; no crash on `no-data` → `normal-week` → `no-data` transitions.
 - **Parity (20 %)** — the checklist above, ticked one by one; screenshots beside the current app.
 - **Accessibility (15 %)** — a bar is reachable and announced ("With Horse, 7:02 AM to 7:41 AM, 2 people") without sight.
 - **Cost (10 %)** — bundle delta, native build friction, licence.
 
-**Rejection gates:** cannot hit 60 fps on pan of `normal-week` on the mid-range Android; cannot render `quiet-week` distinctly from `no-data`; cannot expose bars to the accessibility tree.
+**Rejection gates:** cannot hit 60 fps on pan of `normal-week` on the mid-range Android; falls over (crash, >1 s frame, unbounded memory) on `worst-case`; cannot render `quiet-week` distinctly from `no-data`; cannot expose bars to the accessibility tree.
+
+**Where results count:** simulator and emulator runs establish parity, build compatibility, developer ergonomics and *large* performance differences. **They do not pick the winner.** The final acceptance is a **release build on a physical mid-range Android**; if there is no office device, borrowing or buying one is justified — the cost is trivial beside committing the whole app to the wrong chart stack.
 
 ## 11. Open items
 
-- [ ] Capture **one anonymised real response** (QA org, a busy stall, 7 days) to sit beside the synthetic fixtures. Needs the QA login and a stall's `prometheus_url`; not blocking the spikes.
+- [ ] Capture **one anonymised real response** (QA org, a busy stall, 7 days) as the **observed-heavy** load. Synthetic fixtures cannot reveal missing or irregular samples, unexpected series or metric labels, Prometheus's own quirks, or the bar counts a real barn produces. Needs the QA login and a stall's `prometheus_url`. **Does not block building the renderers; DOES block the final decision.**
 - [ ] Confirm the **mid-range Android** the final measurement runs on. The emulator ranks the two renderers; it cannot certify "no dropped frames on a customer's phone".
 - [ ] Token names for the two series colours (design).
 - [ ] Newest-at-top vs oldest-at-top (design; not a spike criterion).
+- [ ] How the adapter labels the duplicated "1 AM" on the fall-back day (design; on the parity checklist).
