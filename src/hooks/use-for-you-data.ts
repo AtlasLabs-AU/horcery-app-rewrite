@@ -136,6 +136,8 @@ export function useForYouData() {
       queries.stall.list._def,
       queries.animal.list._def,
       queries.event.list._def,
+      queries.alertRule.list._def,
+      queries.animalStall.list._def,
     ],
     [],
   );

@@ -14,13 +14,24 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { signInWithEmailAndPassword } from '@acme/config/firebase-rn';
+import {
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from '@acme/config/firebase-rn';
+import { PREVIEWS } from '@/config/previews';
 import { PrimaryButton } from '@/components/auth/primary-button';
 import { TextField } from '@/components/auth/text-field';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
-type Step = 'landing' | 'sign-in' | 'forgot' | 'code' | 'new-password' | 'done';
+type Step =
+  | 'landing'
+  | 'sign-in'
+  | 'forgot'
+  | 'code'
+  | 'new-password'
+  | 'done'
+  | 'link-sent';
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const RESEND_COOLDOWN_S = 30;
@@ -62,9 +73,11 @@ export function AuthFlow() {
           email={email}
           onChangeEmail={setEmail}
           onBack={() => setStep('sign-in')}
-          onSent={() => setStep('code')}
+          onSent={() => setStep(PREVIEWS.passwordResetCodeFlow ? 'code' : 'link-sent')}
         />
       );
+    case 'link-sent':
+      return <LinkSent email={email} onSignIn={() => setStep('sign-in')} />;
     case 'code':
       return (
         <CodeEntry
@@ -198,23 +211,29 @@ function Landing({ onSignIn }: { onSignIn: () => void }) {
           </Text>
         </View>
         <View style={styles.landingActions}>
-          <SocialButton provider="apple" onPress={() => previewNote('Apple')} />
-          <SocialButton provider="google" onPress={() => previewNote('Google')} />
+          {PREVIEWS.socialSignInButtons ? (
+            <>
+              <SocialButton provider="apple" onPress={() => previewNote('Apple')} />
+              <SocialButton provider="google" onPress={() => previewNote('Google')} />
+            </>
+          ) : null}
           <PrimaryButton
             label="Sign in with Email"
             onPress={onSignIn}
             testID="auth-selection-sign-in"
           />
-          <Pressable
-            onPress={() => previewNote('Sign-up')}
-            accessibilityRole="button"
-            style={styles.centerLink}
-            testID="auth-selection-sign-up">
-            <Text style={[type.subhead, { color: colors.tertiary }]}>
-              {'New to Horcery? '}
-              <Text style={{ color: colors.accent }}>Create an account</Text>
-            </Text>
-          </Pressable>
+          {PREVIEWS.socialSignInButtons ? (
+            <Pressable
+              onPress={() => previewNote('Sign-up')}
+              accessibilityRole="button"
+              style={styles.centerLink}
+              testID="auth-selection-sign-up">
+              <Text style={[type.subhead, { color: colors.tertiary }]}>
+                {'New to Horcery? '}
+                <Text style={{ color: colors.accent }}>Create an account</Text>
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </SafeAreaView>
     </View>
@@ -350,10 +369,16 @@ function Forgot({
 }) {
   const { colors } = useTokens();
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const codeFlow = PREVIEWS.passwordResetCodeFlow;
 
-  // FRONT-END PREVIEW: no email is sent. The real flow needs the backend to
-  // issue a 6-digit code (Firebase alone cannot) — see requirements §7.
-  const submit = () => {
+  /**
+   * Production path: Firebase's own reset email (real, sends today). The
+   * 6-digit in-app code flow Inakshi chose needs a backend endpoint
+   * (requirements §7 item 7) and until then exists only as a preview that
+   * is compiled out of release builds — see src/config/previews.ts.
+   */
+  const submit = async () => {
     const cleaned = email.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(cleaned)) {
       setEmailError(
@@ -362,14 +387,28 @@ function Forgot({
       return;
     }
     setEmailError(null);
-    onSent();
+    if (codeFlow) {
+      onSent();
+      return;
+    }
+    setBusy(true);
+    try {
+      await requestReset(cleaned);
+      onSent();
+    } catch {
+      setEmailError('Could not send the link. Check the connection and try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <AuthPage onBack={onBack} title="Forgot Password">
       <View style={styles.form} testID="auth-forgot-password-screen">
         <Text style={[type.subhead, styles.formIntro, { color: colors.secondary }]}>
-          We&apos;ll email you a 6-digit code to reset your password.
+          {codeFlow
+            ? 'We\u2019ll email you a 6-digit code to reset your password.'
+            : 'A password reset link will be sent to your recovery email address.'}
         </Text>
         <TextField
           label="Email"
@@ -390,8 +429,10 @@ function Forgot({
           testID="auth-forgot-password-email-input"
         />
         <PrimaryButton
-          label="Send Code"
+          label={codeFlow ? 'Send Code' : busy ? 'Sending' : 'Send Password Reset'}
           onPress={submit}
+          loading={busy}
+          disabled={busy}
           testID="auth-forgot-password-submit-button"
         />
         <Pressable
@@ -609,6 +650,82 @@ function Done({ onSignIn }: { onSignIn: () => void }) {
       </View>
     </AuthPage>
   );
+}
+
+/** Production "check your inbox" after Firebase's reset email. */
+function LinkSent({ email, onSignIn }: { email: string; onSignIn: () => void }) {
+  const { colors } = useTokens();
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(
+      () => setCooldown((seconds) => Math.max(0, seconds - 1)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const resend = async () => {
+    setResending(true);
+    try {
+      await requestReset(email.trim().toLowerCase());
+      setCooldown(RESEND_COOLDOWN_S);
+    } catch {
+      setCooldown(0);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const blocked = cooldown > 0 || resending;
+  const resendLabel = resending
+    ? 'Sending...'
+    : cooldown > 0
+      ? `Resend Link (${cooldown}s)`
+      : 'Resend Reset Link';
+
+  return (
+    <AuthPage>
+      <View style={styles.form} testID="auth-password-reset-screen">
+        <View style={[styles.sentBadge, { backgroundColor: colors.fillTonal }]}>
+          <SymbolView name="envelope.badge" size={34} tintColor={colors.accent} />
+        </View>
+        <Text style={[type.title, styles.sentTitle, { color: colors.foreground }]}>
+          Check your inbox
+        </Text>
+        <Text style={[type.subhead, styles.sentBody, { color: colors.secondary }]}>
+          A password reset link has been sent to the assigned recovery email
+          address.
+        </Text>
+        <PrimaryButton label="Sign In" onPress={onSignIn} testID="auth-password-reset-sign-in" />
+        <Pressable
+          onPress={blocked ? undefined : resend}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: blocked }}
+          style={styles.centerLink}
+          testID="auth-password-reset-resend">
+          <Text style={[type.subhead, { color: blocked ? colors.dimmed : colors.accent }]}>
+            {resendLabel}
+          </Text>
+        </Pressable>
+      </View>
+    </AuthPage>
+  );
+}
+
+/**
+ * EMAIL_NOT_FOUND deliberately resolves as success so the form cannot be used
+ * to probe which emails have Horcery accounts.
+ */
+async function requestReset(email: string): Promise<void> {
+  try {
+    await sendPasswordResetEmail(email);
+  } catch (e) {
+    const code = (e as { code?: string })?.code ?? '';
+    if (!code.includes('EMAIL_NOT_FOUND')) throw e;
+  }
 }
 
 const styles = StyleSheet.create({

@@ -11,9 +11,9 @@ import { radius, space, type } from '@/constants/tokens';
  *
  * FRONT-END PREVIEW ONLY (Inakshi, 2026-08-14): tapping the button unlocks
  * unconditionally — real biometrics need `expo-local-authentication` and a
- * settings toggle in My Account. Flip the flag below to remove the gate.
+ * settings toggle in My Account. Gated by PREVIEWS.faceIdUnlock, which is
+ * compiled out of release builds (src/config/previews.ts).
  */
-export const FACE_ID_UNLOCK_PREVIEW = true;
 
 export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const { colors } = useTokens();
