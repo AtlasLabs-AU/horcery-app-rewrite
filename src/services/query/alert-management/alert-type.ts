@@ -55,7 +55,7 @@ export const alertType = createQueryKeys('alertType', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       alertTypeService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -81,7 +81,7 @@ export const alertType = createQueryKeys('alertType', {
       do {
         // fetch current page data
         const result = await alertTypeService.fetchAll(
-          { page: currentPage, ...filters },
+          { ...filters, page: currentPage },
           additionalParams,
           query,
         );

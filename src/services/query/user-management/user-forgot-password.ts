@@ -61,7 +61,7 @@ export const userForgotPassword = createQueryKeys('userForgotPassword', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       userForgotPasswordService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

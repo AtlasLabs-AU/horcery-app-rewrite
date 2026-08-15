@@ -61,7 +61,7 @@ export const deviceInstance = createQueryKeys('deviceInstance', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       deviceInstanceService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -87,7 +87,9 @@ export const deviceInstance = createQueryKeys('deviceInstance', {
       do {
         // fetch current page data
         const result = await deviceInstanceService.fetchAll(
-          { page: currentPage, ...filters },
+          // `page` last: a caller-supplied `filters.page` would otherwise pin
+        // every iteration to the same page and loop over identical rows.
+        { ...filters, page: currentPage },
           additionalParams,
           query,
         );

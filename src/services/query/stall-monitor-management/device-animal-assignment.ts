@@ -67,7 +67,7 @@ export const deviceAnimalAssignment = createQueryKeys(
       ],
       queryFn: ({ pageParam }: { pageParam: number }) =>
         deviceAnimalAssignmentService.fetchAll(
-          { page: pageParam, ...filters },
+          { ...filters, page: pageParam },
           additionalParams,
           query,
         ),

@@ -55,7 +55,7 @@ export const member = createQueryKeys('member', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       memberService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -81,7 +81,7 @@ export const member = createQueryKeys('member', {
       do {
         // fetch current page data
         const result = await memberService.fetchAll(
-          { page: currentPage, ...filters },
+          { ...filters, page: currentPage },
           additionalParams,
           query,
         );

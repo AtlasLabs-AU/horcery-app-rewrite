@@ -86,8 +86,15 @@ export default function MenuScreen() {
         text: 'Log Out',
         style: 'destructive',
         onPress: () => {
+          // All three, in this order. The persisted auth store outlives the
+          // Firebase session, so skipping it leaves the previous account's
+          // organization and user record on the device for whoever signs in
+          // next — on a shared tablet that is another tenant's data on screen.
           queryClient.clear();
-          authRn.signOut();
+          useAuthStore.getState().signOut();
+          authRn.signOut().catch(() => {
+            // Already signed out locally; nothing further to do.
+          });
         },
       },
     ]);

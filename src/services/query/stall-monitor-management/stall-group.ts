@@ -55,7 +55,7 @@ export const stallGroup = createQueryKeys('stallGroup', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       stallGroupService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

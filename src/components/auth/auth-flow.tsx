@@ -422,14 +422,18 @@ function CodeEntry({
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
   const inputRef = useRef<TextInput>(null);
 
+  // Depends on whether the countdown is running, not on its value: keying this
+  // to `cooldown` tore the interval down and re-timed it on every tick, so the
+  // visible countdown ran progressively longer than RESEND_COOLDOWN_S.
+  const counting = cooldown > 0;
   useEffect(() => {
-    if (cooldown <= 0) return;
+    if (!counting) return;
     const timer = setInterval(
       () => setCooldown((seconds) => Math.max(0, seconds - 1)),
       1000,
     );
     return () => clearInterval(timer);
-  }, [cooldown]);
+  }, [counting]);
 
   const digits = code.padEnd(CODE_LENGTH).split('').slice(0, CODE_LENGTH);
   const complete = code.length === CODE_LENGTH;

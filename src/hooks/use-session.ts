@@ -24,8 +24,14 @@ export type SessionStatus = 'loading' | 'signed-out' | 'signed-in';
 export function useSession() {
   const [status, setStatus] = useState<SessionStatus>('loading');
   const [email, setEmail] = useState<string | null>(null);
-  const { setUser, setUid, setUserPreferences, setOrganization } =
-    useAuthStore();
+  // Field selectors, not the whole store: this hook is mounted at the
+  // navigation root, so subscribing to every field re-renders the root shell on
+  // every auth write. Zustand keeps action references stable.
+  const setUser = useAuthStore((s) => s.setUser);
+  const setUid = useAuthStore((s) => s.setUid);
+  const setUserPreferences = useAuthStore((s) => s.setUserPreferences);
+  const setOrganization = useAuthStore((s) => s.setOrganization);
+  const organizationID = useAuthStore((s) => s.organizationID);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged((user) => {
@@ -60,16 +66,34 @@ export function useSession() {
     setUser(user);
   }, [userSuccess, userData, setUid, setUser, setUserPreferences]);
 
+  /**
+   * Seeds a default organization, and only seeds.
+   *
+   * The organization the user picks in the menu is written to this same store
+   * field, and this list is one shared query cache entry — so an unconditional
+   * `setOrganization(data[0])` here overwrites that choice on every sign-in and
+   * on any refetch that changes the payload. Seed when nothing is chosen, or
+   * when the chosen organization is no longer one the user belongs to (a stale
+   * value left by a previous account on this device); otherwise leave it alone.
+   */
   useEffect(() => {
-    const organization = organizationData?.data?.[0];
-    if (organization?.id) {
-      setOrganization(organization.id, organization.name ?? null);
+    const list = organizationData?.data;
+    if (!list?.length) return;
+    if (organizationID && list.some((org) => org.id === organizationID)) return;
+
+    const fallback = list[0];
+    if (fallback?.id) {
+      setOrganization(fallback.id, fallback.name ?? null);
     }
-  }, [organizationData, setOrganization]);
+  }, [organizationData, organizationID, setOrganization]);
+
+  const organizations = organizationData?.data;
 
   return {
     status,
     email,
-    organization: organizationData?.data?.[0],
+    organization:
+      organizations?.find((org) => org.id === organizationID) ??
+      organizations?.[0],
   };
 }

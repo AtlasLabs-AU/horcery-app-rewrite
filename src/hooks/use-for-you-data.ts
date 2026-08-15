@@ -75,9 +75,18 @@ export function useForYouData() {
     enabled,
   });
 
-  // One request for the org's devices; the three "has X" answers are derived.
+  /**
+   * The org's devices, in full; the three "has X" answers are derived from it.
+   *
+   * `listComplete` rather than `list` because these answers decide whether a
+   * whole card renders. `list` returns one server page, so an organization
+   * whose only feed scale sorts onto page 2 loses its Feed Intake card
+   * entirely — a wrong answer, not a partial one. For an org that fits in one
+   * page (most of them) this is still exactly one request; larger orgs page
+   * until `meta.page_count` is satisfied.
+   */
   const { data: deviceData } = useQuery({
-    ...queries.deviceInstance.list({
+    ...queries.deviceInstance.listComplete({
       organization_id: organizationID ?? '',
       deleted_at__isnull: true,
     }),
@@ -85,7 +94,7 @@ export function useForYouData() {
   });
 
   const devices = useMemo(() => {
-    const list = deviceData?.data ?? [];
+    const list = deviceData ?? [];
     const hasType = (type?: number, subType?: number) =>
       list.some(
         (device) =>
@@ -123,7 +132,7 @@ export function useForYouData() {
     () => [
       queries.organization.detail._def,
       queries.location.list._def,
-      queries.deviceInstance.list._def,
+      queries.deviceInstance.listComplete._def,
       queries.stall.list._def,
       queries.animal.list._def,
       queries.event.list._def,

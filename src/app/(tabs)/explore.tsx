@@ -5,7 +5,7 @@ import { GlassView } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -236,12 +236,22 @@ function VideoCard({
   const player = useVideoPlayer(item.uri, (p) => {
     p.muted = true;
     p.loop = true;
-    p.play();
   });
 
-  // Only the snapped card plays; neighbours hold their frame.
-  if (active && !player.playing) player.play();
-  if (!active && player.playing) player.pause();
+  /**
+   * Only the snapped card plays; neighbours hold their frame.
+   *
+   * This has to be an effect. Starting playback in the setup callback and
+   * correcting it here during render meant the correction was gated on
+   * `player.playing`, which is still false while playback is starting — so on
+   * first mount nothing paused and every card decoded at once. Render is also
+   * the wrong place to drive a player: React may run it twice or throw the
+   * result away.
+   */
+  useEffect(() => {
+    if (active) player.play();
+    else player.pause();
+  }, [active, player]);
 
   return (
     <View style={{ width }}>
@@ -325,10 +335,11 @@ function RailTile({
   width: number;
   height: number;
 }) {
+  // Rail tiles are thumbnails: they hold their first frame rather than each
+  // decoding a stream of their own alongside the carousel above them.
   const player = useVideoPlayer(item.uri, (p) => {
     p.muted = true;
     p.loop = true;
-    p.play();
   });
 
   return (

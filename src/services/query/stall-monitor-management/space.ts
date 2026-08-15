@@ -55,7 +55,7 @@ export const space = createQueryKeys('space', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       spaceService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

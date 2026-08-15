@@ -61,7 +61,7 @@ export const testNotification = createQueryKeys('testNotification', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       testNotificationService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

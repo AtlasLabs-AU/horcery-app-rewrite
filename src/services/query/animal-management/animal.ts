@@ -55,7 +55,7 @@ export const animal = createQueryKeys('animal', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       animalService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -81,7 +81,7 @@ export const animal = createQueryKeys('animal', {
       do {
         // fetch current page data
         const result = await animalService.fetchAll(
-          { page: currentPage, ...filters },
+          { ...filters, page: currentPage },
           additionalParams,
           query,
         );

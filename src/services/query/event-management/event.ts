@@ -55,7 +55,7 @@ export const event = createQueryKeys('event', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       eventService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -81,7 +81,7 @@ export const event = createQueryKeys('event', {
       do {
         // fetch current page data
         const result = await eventService.fetchAll(
-          { page: currentPage, ...filters },
+          { ...filters, page: currentPage },
           additionalParams,
           query,
         );

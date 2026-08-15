@@ -39,7 +39,7 @@ export const clip = createQueryKeys("clip", {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       clipService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),

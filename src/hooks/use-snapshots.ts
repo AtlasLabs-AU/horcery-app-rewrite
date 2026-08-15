@@ -9,6 +9,13 @@ import { useAuthStore } from '@acme/stores/authorization-states';
 import type { Snapshot } from '@/components/for-you/snapshots-card';
 
 /**
+ * Frame URLs are quantised to this many seconds. Long enough that repeated
+ * refetches reuse the same cached image, short enough that the tiles still
+ * track "the last few minutes".
+ */
+const FRAME_SLICE_SECONDS = 300;
+
+/**
  * Snapshot tiles for the For You carousel.
  *
  * **Where this differs from the current app.** There, each tile is its own
@@ -71,7 +78,17 @@ export function useSnapshots() {
 
     // One frame, five minutes back: the monitor writes slices continuously and
     // the most recent one is not always flushed yet.
-    const epoch = Math.floor(DateTime.now().minus({ minutes: 5 }).toSeconds());
+    //
+    // Quantised to FRAME_SLICE_SECONDS so the URL is stable across recomputes.
+    // Reading the clock directly produced a different `…/frames/<epoch>.jpeg`
+    // for every tile on every refetch, which is a cache key expo-image has
+    // never seen — so a pull-to-refresh re-downloaded every visible frame and
+    // flashed each blurhash placeholder. Now the URL only moves when the slice
+    // does, and identical refetches hit the cache.
+    const epoch =
+      Math.floor(
+        DateTime.now().minus({ minutes: 5 }).toSeconds() / FRAME_SLICE_SECONDS,
+      ) * FRAME_SLICE_SECONDS;
 
     return stalls.map((stall) => {
       const animal = animalByStallId.get(stall.id);

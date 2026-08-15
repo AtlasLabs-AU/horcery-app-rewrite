@@ -55,7 +55,7 @@ export const stall = createQueryKeys('stall', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       stallService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
@@ -80,7 +80,7 @@ export const stall = createQueryKeys('stall', {
 
       do {
         const result = await stallService.fetchAll(
-          { page: currentPage, ...filters },
+          { ...filters, page: currentPage },
           additionalParams,
           query,
         );

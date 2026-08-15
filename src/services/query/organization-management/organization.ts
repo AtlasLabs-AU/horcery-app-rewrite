@@ -61,7 +61,7 @@ export const organization = createQueryKeys('organization', {
     ],
     queryFn: ({ pageParam }: { pageParam: number }) =>
       organizationService.fetchAll(
-        { page: pageParam, ...filters },
+        { ...filters, page: pageParam },
         additionalParams,
         query,
       ),
