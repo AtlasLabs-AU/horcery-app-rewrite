@@ -203,7 +203,12 @@ function MenuGroup({
   );
 }
 
-/** One action row: tonal icon well, label, chevron (↗ for external links). */
+/**
+ * One action row. A row with no handler renders dimmed, without a button
+ * role or chevron — the standing rule from requirements §6b item 3: a visible
+ * control navigates, acts, is visibly disabled with a reason, or does not
+ * render. These light up as their destinations are built.
+ */
 function MenuRow({
   icon,
   label,
@@ -220,20 +225,26 @@ function MenuRow({
   testID?: string;
 }) {
   const { colors } = useTokens();
+  const wired = !!onPress;
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      disabled={!wired}
+      accessibilityRole={wired ? 'button' : undefined}
+      accessibilityLabel={wired ? label : undefined}
       testID={testID}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
+      style={({ pressed }) => [styles.row, pressed && wired && { backgroundColor: colors.bed }]}>
       <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-        <Icon name={icon} size={17} color={colors.accent} />
+        <Icon name={icon} size={17} color={wired ? colors.accent : colors.dimmed} />
       </View>
-      <Text style={[type.body, styles.rowLabel, { color: colors.foreground }]} numberOfLines={1}>
+      <Text
+        style={[type.body, styles.rowLabel, { color: wired ? colors.foreground : colors.tertiary }]}
+        numberOfLines={1}>
         {label}
       </Text>
-      <Icon name={external ? 'external' : 'chevronRight'} size={13} color={colors.dimmed} />
+      {wired ? (
+        <Icon name={external ? 'external' : 'chevronRight'} size={13} color={colors.dimmed} />
+      ) : null}
       {last ? null : (
         <View style={[styles.separator, { backgroundColor: colors.divider }]} />
       )}

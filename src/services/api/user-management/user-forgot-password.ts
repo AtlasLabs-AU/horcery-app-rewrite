@@ -1,6 +1,8 @@
 import GenericService from '../../base/generic-service';
 
-export interface IUserForgotPassword {}
+// TODO: Define the interface for the model. Until then this is an unmodelled
+// object, NOT `{}` — which would also accept `0`, `""` and `true`.
+export type IUserForgotPassword = Record<string, unknown>;
 
 class UserForgotPasswordService extends GenericService<IUserForgotPassword> {
   endPointURL: string =

@@ -45,9 +45,10 @@ export default function ForYouScreen() {
     selectOrganization,
     isRefreshing,
     refresh,
+    timezone,
   } = useForYouData();
   const { snapshots } = useSnapshots();
-  const alertStatus = useAlertStatus(organizationID);
+  const alertStatus = useAlertStatus(organizationID, timezone);
   const { colors } = useTokens();
 
   const openMenu = useCallback(() => router.push('/menu'), []);

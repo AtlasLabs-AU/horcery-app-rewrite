@@ -6,9 +6,17 @@
  * customer: a reset flow that reports success without resetting anything, or
  * a "Face ID" gate that opens on a tap, is worse than the feature not existing.
  *
- * Gate: `__DEV__` (compile-time constant, dead-code eliminated in release
- * bundles) AND an explicit opt-in env var. A production build cannot turn
+ * Gate: `__DEV__` AND an explicit opt-in env var. A release build cannot turn
  * these on; a dev build has to ask for them.
+ *
+ * Wording matters, and an earlier version of this comment got it wrong.
+ * VERIFIED 2026-08-15 against a real `expo export --platform ios` bundle:
+ * the preview strings ARE still shipped — Metro cannot tree-shake the branch
+ * because the opt-in is a runtime `process.env` read. What holds is that the
+ * flags are false whenever `__DEV__` is false, so previews are
+ * **unreachable** in a release build. Asserted in
+ * `src/config/__tests__/previews.test.ts`; making the code absent as well
+ * would need a dynamic import release never references.
  *
  * Review finding 2026-08-15 (requirements §6b, item 4).
  */

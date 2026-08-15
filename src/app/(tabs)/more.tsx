@@ -97,39 +97,52 @@ export default function MoreScreen() {
   );
 }
 
-/** Icon well + title + one-line description + chevron. */
+/**
+ * Icon well + title + one-line description + chevron.
+ *
+ * A row with no destination renders as PLAIN TEXT, dimmed, with no button
+ * role and no chevron — never as a control that looks tappable and isn't
+ * (requirements §6b item 3). The rows light up as their screens are built.
+ */
 function MoreRow({
   icon,
   title,
   description,
   last,
+  onPress,
   testID,
 }: {
   icon: IconName;
   title: string;
   description: string;
   last?: boolean;
+  onPress?: () => void;
   testID?: string;
 }) {
   const { colors } = useTokens();
+  const wired = !!onPress;
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
+      onPress={onPress}
+      disabled={!wired}
+      accessibilityRole={wired ? 'button' : undefined}
+      accessibilityLabel={wired ? title : undefined}
       testID={testID}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
+      style={({ pressed }) => [styles.row, pressed && wired && { backgroundColor: colors.bed }]}>
       <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-        <Icon name={icon} size={18} color={colors.accent} />
+        <Icon name={icon} size={18} color={wired ? colors.accent : colors.dimmed} />
       </View>
       <View style={styles.rowText}>
-        <Text style={[type.body, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[type.body, { color: wired ? colors.foreground : colors.tertiary }]}>
+          {title}
+        </Text>
         <Text
-          style={[type.footnote, { color: colors.secondary }]}
+          style={[type.footnote, { color: wired ? colors.secondary : colors.dimmed }]}
           numberOfLines={2}>
-          {description}
+          {wired ? description : `${description} (coming soon)`}
         </Text>
       </View>
-      <Icon name="chevronRight" size={13} color={colors.dimmed} />
+      {wired ? <Icon name="chevronRight" size={13} color={colors.dimmed} /> : null}
       {last ? null : (
         <View style={[styles.separator, { backgroundColor: colors.divider }]} />
       )}

@@ -26,7 +26,10 @@ Rules that apply to every change on `main` now:
   a reason, or not render.
 - Preview features (fake reset flow, tap-to-unlock Face ID, Apple/Google
   buttons) are behind `PREVIEWS` in `src/config/previews.ts` — `__DEV__` AND
-  `EXPO_PUBLIC_ENABLE_PREVIEWS=true`. They do not exist in release builds.
+  `EXPO_PUBLIC_ENABLE_PREVIEWS=true`. They are **unreachable** in release
+  builds (asserted by test). Their strings do still ship: verified against a
+  real export, Metro does not strip the branch. Do not describe them as
+  "compiled out".
 - No new `@expo/ui/swift-ui` / `jetpack-compose` imports outside
   `src/components/ui`.
 

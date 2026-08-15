@@ -23,6 +23,7 @@ import { TextField } from '@/components/auth/text-field';
 import { SymbolView } from 'expo-symbols';
 
 import { Icon } from '@/components/ui/icon';
+import { useCountdown } from '@/hooks/use-countdown';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -468,21 +469,10 @@ function CodeEntry({
 }) {
   const { colors } = useTokens();
   const [code, setCode] = useState('');
-  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
+  // Deadline-based; see useCountdown for why a tick-decrementing interval
+  // keyed to the value runs long.
+  const { remaining: cooldown, restart } = useCountdown(RESEND_COOLDOWN_S);
   const inputRef = useRef<TextInput>(null);
-
-  // Depends on whether the countdown is running, not on its value: keying this
-  // to `cooldown` tore the interval down and re-timed it on every tick, so the
-  // visible countdown ran progressively longer than RESEND_COOLDOWN_S.
-  const counting = cooldown > 0;
-  useEffect(() => {
-    if (!counting) return;
-    const timer = setInterval(
-      () => setCooldown((seconds) => Math.max(0, seconds - 1)),
-      1000,
-    );
-    return () => clearInterval(timer);
-  }, [counting]);
 
   const digits = code.padEnd(CODE_LENGTH).split('').slice(0, CODE_LENGTH);
   const complete = code.length === CODE_LENGTH;
@@ -536,7 +526,7 @@ function CodeEntry({
           testID="auth-code-submit"
         />
         <Pressable
-          onPress={cooldown > 0 ? undefined : () => setCooldown(RESEND_COOLDOWN_S)}
+          onPress={cooldown > 0 ? undefined : () => restart()}
           accessibilityRole="button"
           accessibilityState={{ disabled: cooldown > 0 }}
           style={styles.centerLink}
@@ -663,25 +653,21 @@ function Done({ onSignIn }: { onSignIn: () => void }) {
 /** Production "check your inbox" after Firebase's reset email. */
 function LinkSent({ email, onSignIn }: { email: string; onSignIn: () => void }) {
   const { colors } = useTokens();
-  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
+  const { remaining: cooldown, restart, clear } = useCountdown(RESEND_COOLDOWN_S);
   const [resending, setResending] = useState(false);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setInterval(
-      () => setCooldown((seconds) => Math.max(0, seconds - 1)),
-      1000,
-    );
-    return () => clearInterval(timer);
-  }, [cooldown]);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   const resend = async () => {
     setResending(true);
+    setResendError(null);
     try {
       await requestReset(email.trim().toLowerCase());
-      setCooldown(RESEND_COOLDOWN_S);
+      restart();
     } catch {
-      setCooldown(0);
+      // Say so. Silently clearing the cooldown left the customer waiting for
+      // an email that was never sent (review, 2026-08-15).
+      setResendError('Could not resend the link. Check your connection and try again.');
+      clear();
     } finally {
       setResending(false);
     }
@@ -707,6 +693,13 @@ function LinkSent({ email, onSignIn }: { email: string; onSignIn: () => void }) 
           A password reset link has been sent to the assigned recovery email
           address.
         </Text>
+        {resendError ? (
+          <Text
+            style={[type.subhead, styles.sentBody, { color: colors.statusAlert }]}
+            testID="auth-password-reset-resend-error">
+            {resendError}
+          </Text>
+        ) : null}
         <PrimaryButton label="Sign In" onPress={onSignIn} testID="auth-password-reset-sign-in" />
         <Pressable
           onPress={blocked ? undefined : resend}

@@ -1,5 +1,4 @@
 import GenericService from '../../base/generic-service';
-import { IDeviceInstance } from './device-instance';
 
 export interface ISpace {
   id: string;

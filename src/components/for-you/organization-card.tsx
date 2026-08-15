@@ -53,13 +53,15 @@ export function OrganizationCard({
             numberOfLines={1}>
             {organizationName}
           </Text>
-          <Pressable
-            onPress={onManageOrganization}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Manage organization">
-            <Icon name="settings" size={16} color={colors.accent} />
-          </Pressable>
+          {onManageOrganization ? (
+            <Pressable
+              onPress={onManageOrganization}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Manage organization">
+              <Icon name="settings" size={16} color={colors.accent} />
+            </Pressable>
+          ) : null}
         </View>
         <Menu
           label="Switch"
@@ -85,12 +87,14 @@ export function OrganizationCard({
 
       <View style={styles.titleRow}>
         <Text style={[type.headline, { color: colors.foreground }]}>Horcery AI</Text>
-        <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
+        {onSeeHistory ? (
+          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
+        ) : null}
       </View>
 
       <StatusLine status={alertStatus} />
 
-      {alertStatus.kind === 'normal' || alertStatus.kind === 'active' ? (
+      {alertStatus.kind === 'normal' || alertStatus.kind === 'today' ? (
         <View style={[styles.banner, { backgroundColor: colors.bed }]}>
           <View style={styles.bannerLeft}>
             <Icon name="ai" size={16} color={colors.accent} />
@@ -119,16 +123,16 @@ function StatusLine({ status }: { status: AlertStatus }) {
     unavailable: colors.statusAlert,
     not_set: colors.dimmed,
     normal: colors.statusOk,
-    active: colors.statusAlert,
+    today: colors.statusAlert,
   }[status.kind];
   const text = {
     loading: 'Checking alerts\u2026',
     unavailable: 'Alert status unavailable',
     not_set: 'No alerts set',
     normal: 'Everything looks normal',
-    active:
-      status.kind === 'active'
-        ? `${status.count} active ${status.count === 1 ? 'alert' : 'alerts'}`
+    today:
+      status.kind === 'today'
+        ? `${status.count} ${status.count === 1 ? 'alert' : 'alerts'} today`
         : '',
   }[status.kind];
 

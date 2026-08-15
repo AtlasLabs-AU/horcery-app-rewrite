@@ -34,19 +34,23 @@ export function ForYouHeader({
         {greeting}
       </Text>
       <View style={styles.actions}>
-        <HeaderIcon
-          name="search"
-          label="Search"
-          hint="Opens search"
-          onPress={onSearch}
-          testID="for-you-search-button"
-        />
-        <HeaderIcon
-          name="customize"
-          label="Customize for you page"
-          onPress={onCustomize}
-          testID="for-you-customize-button"
-        />
+        {onSearch ? (
+          <HeaderIcon
+            name="search"
+            label="Search"
+            hint="Opens search"
+            onPress={onSearch}
+            testID="for-you-search-button"
+          />
+        ) : null}
+        {onCustomize ? (
+          <HeaderIcon
+            name="customize"
+            label="Customize for you page"
+            onPress={onCustomize}
+            testID="for-you-customize-button"
+          />
+        ) : null}
         <HeaderIcon
           name="menu"
           label="Open menu"

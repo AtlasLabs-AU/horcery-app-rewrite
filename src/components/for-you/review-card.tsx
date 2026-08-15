@@ -26,16 +26,20 @@ export function ReviewCard({
       <SectionHeader
         title="Review"
         adornment={
-          <Pressable
-            onPress={onFilter}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Filter behaviors">
-            <Icon name="filter" size={18} color={colors.accent} />
-          </Pressable>
+          onFilter ? (
+            <Pressable
+              onPress={onFilter}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Filter behaviors">
+              <Icon name="filter" size={18} color={colors.accent} />
+            </Pressable>
+          ) : undefined
         }
         action={
-          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
+          onSeeHistory ? (
+            <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
+          ) : undefined
         }
       />
       {children ?? <ReviewEmptyState />}

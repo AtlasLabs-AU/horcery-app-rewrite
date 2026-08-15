@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon';
 
 import { config } from '../env';
-import { debug } from './logger';
 
 /**
  * Generates the URL for fetching the stall monitor video stream for a specific stall
