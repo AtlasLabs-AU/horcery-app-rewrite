@@ -26,20 +26,19 @@ export function ReviewCard({
       <SectionHeader
         title="Review"
         adornment={
-          onFilter ? (
-            <Pressable
-              onPress={onFilter}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Filter behaviors">
-              <Icon name="filter" size={18} color={colors.accent} />
-            </Pressable>
-          ) : undefined
+          <Pressable
+            onPress={onFilter}
+            disabled={!onFilter}
+            hitSlop={12}
+            accessibilityRole={onFilter ? 'button' : undefined}
+            accessibilityLabel={onFilter ? 'Filter behaviors' : undefined}
+            accessibilityState={{ disabled: !onFilter }}
+            testID="for-you-review-filter">
+            <Icon name="filter" size={18} color={onFilter ? colors.accent : colors.dimmed} />
+          </Pressable>
         }
         action={
-          onSeeHistory ? (
-            <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
-          ) : undefined
+          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-review-history" />
         }
       />
       {children ?? <ReviewEmptyState />}

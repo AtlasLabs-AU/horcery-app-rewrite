@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { DateTime } from 'luxon';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -10,6 +9,13 @@ export interface HistoryEvent {
   id: string;
   title: string;
   startTime: string;
+  /**
+   * Pre-formatted in the ORGANIZATION's timezone by the screen. The card must
+   * not re-parse the ISO string: `DateTime.fromISO` resolves to the DEVICE
+   * zone, which showed a 15 Aug event as "16 Aug 09:32" on a phone 10.5 hours
+   * ahead of the barn (caught on device, 2026-08-15).
+   */
+  timeLabel: string;
   /** Behaviour events carry footage; reported ones carry a note instead. */
   hasClip: boolean;
   posterUri?: string;
@@ -43,16 +49,13 @@ export function EventCard({
   onPress?: () => void;
 }) {
   const { colors } = useTokens();
-  const time = DateTime.fromISO(event.startTime);
 
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={
-        onPress ? `${event.title}, ${time.toFormat('h:mm a')}` : undefined
-      }
+      accessibilityLabel={onPress ? `${event.title}, ${event.timeLabel}` : undefined}
       testID={`history-event-${event.id}`}
       style={({ pressed }) => [
         styles.card,
@@ -67,7 +70,7 @@ export function EventCard({
           {event.title}
         </Text>
         <Text style={[type.footnote, { color: colors.tertiary }]}>
-          {time.toFormat('dd LLL yyyy hh:mm a')}
+          {event.timeLabel}
         </Text>
       </View>
 

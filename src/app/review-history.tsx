@@ -24,6 +24,8 @@ import {
   DEFAULT_EVENT_TYPES,
   useReviewHistory,
 } from '@/hooks/use-review-history';
+import { PREVIEWS } from '@/config/previews';
+import { sampleHistoryFor } from '@/config/sample/review-history-sample';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -114,6 +116,7 @@ export default function ReviewHistoryScreen() {
           id: event.id ?? `${event.start_time}-${typeId}`,
           title: event.title,
           startTime: event.start_time ?? '',
+          timeLabel: formatEventTime(event.start_time, timezone),
           // Only behaviour events with real duration have footage — the guard
           // the current app added to History but never back-ported to For You.
           hasClip: durationSeconds > 0,
@@ -134,6 +137,20 @@ export default function ReviewHistoryScreen() {
       }),
     [events],
   );
+
+  /**
+   * Sample data fills in ONLY when a dev build opted in and the organization
+   * genuinely has nothing on this day. Real events always win, and the banner
+   * below says which you are looking at.
+   */
+  const usingSample =
+    PREVIEWS.sampleHistoryData && !isLoading && !isError && rows.length === 0;
+  const visibleRows = usingSample
+    ? filterSample(sampleHistoryFor(day), behavior).map((row) => ({
+        ...row,
+        timeLabel: formatEventTime(row.startTime, timezone),
+      }))
+    : rows;
 
   const filterActive = behavior !== 'all';
 
@@ -181,7 +198,9 @@ export default function ReviewHistoryScreen() {
         {filterActive ? (
           <View style={styles.resultsRow}>
             <Text style={[type.footnote, { color: colors.tertiary }]}>
-              {`${total} ${total === 1 ? 'result' : 'results'} found`}
+              {`${usingSample ? visibleRows.length : total} ${
+                (usingSample ? visibleRows.length : total) === 1 ? 'result' : 'results'
+              } found`}
             </Text>
             <Pressable
               onPress={() => setBehavior('all')}
@@ -195,6 +214,8 @@ export default function ReviewHistoryScreen() {
           </View>
         ) : null}
 
+        {usingSample ? <SampleBanner /> : null}
+
         {isLoading ? (
           <View style={styles.centre} testID="history-loading">
             <ActivityIndicator color={colors.accent} />
@@ -203,7 +224,7 @@ export default function ReviewHistoryScreen() {
           <ErrorState onRetry={() => refetch()} />
         ) : (
           <FlatList
-            data={rows}
+            data={visibleRows}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <EventCard event={item} />}
             contentContainerStyle={styles.listContent}
@@ -228,6 +249,34 @@ export default function ReviewHistoryScreen() {
       </SafeAreaView>
     </View>
   );
+}
+
+/** Says plainly that these events are invented. Dev builds only. */
+function SampleBanner() {
+  const { colors } = useTokens();
+  return (
+    <View
+      style={[styles.sampleBanner, { backgroundColor: colors.fillTonal }]}
+      testID="history-sample-banner">
+      <Icon name="info" size={14} color={colors.accent} />
+      <Text style={[type.footnote, styles.sampleText, { color: colors.secondary }]}>
+        Sample events — this organization has none on this day.
+      </Text>
+    </View>
+  );
+}
+
+/** Sample rows honour the behavior filter, so filtering still demonstrates. */
+function filterSample(rows: HistoryEvent[], behavior: BehaviorFilter): HistoryEvent[] {
+  if (behavior === 'all') return rows;
+  if (behavior === 'alerts') return rows.filter((row) => row.isAlert);
+  const titles: Record<string, string> = {
+    lyingDown: 'Lying Down',
+    partialRolling: 'Rolling',
+    peopleInStall: 'People in Stall',
+    standing: 'Standing',
+  };
+  return rows.filter((row) => row.title === titles[behavior]);
 }
 
 /** Horse / Stall — visible so the composition reads, dimmed until built. */
@@ -279,6 +328,13 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       </View>
     </View>
   );
+}
+
+/** Timestamps are shown in the barn's zone, never the phone's (§6c). */
+function formatEventTime(iso: string | undefined, timezone?: string | null) {
+  if (!iso) return '';
+  const time = DateTime.fromISO(iso);
+  return (timezone ? time.setZone(timezone) : time).toFormat('dd LLL yyyy h:mm a');
 }
 
 function formatDuration(seconds: number) {
@@ -339,4 +395,16 @@ const styles = StyleSheet.create({
   stateText: { flex: 1, gap: space.xs },
   retry: { paddingTop: space.sm },
   footerSpinner: { paddingVertical: space.edge },
+  sampleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginHorizontal: space.edge,
+    marginTop: space.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+  },
+  sampleText: { flex: 1 },
 });

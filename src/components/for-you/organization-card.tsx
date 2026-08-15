@@ -53,15 +53,20 @@ export function OrganizationCard({
             numberOfLines={1}>
             {organizationName}
           </Text>
-          {onManageOrganization ? (
-            <Pressable
-              onPress={onManageOrganization}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Manage organization">
-              <Icon name="settings" size={16} color={colors.accent} />
-            </Pressable>
-          ) : null}
+          <Pressable
+            onPress={onManageOrganization}
+            disabled={!onManageOrganization}
+            hitSlop={12}
+            accessibilityRole={onManageOrganization ? 'button' : undefined}
+            accessibilityLabel={onManageOrganization ? 'Manage organization' : undefined}
+            accessibilityState={{ disabled: !onManageOrganization }}
+            testID="for-you-manage-organization">
+            <Icon
+              name="settings"
+              size={16}
+              color={onManageOrganization ? colors.accent : colors.dimmed}
+            />
+          </Pressable>
         </View>
         <Menu
           label="Switch"
@@ -87,9 +92,7 @@ export function OrganizationCard({
 
       <View style={styles.titleRow}>
         <Text style={[type.headline, { color: colors.foreground }]}>Horcery AI</Text>
-        {onSeeHistory ? (
-          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
-        ) : null}
+        <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
       </View>
 
       <StatusLine status={alertStatus} />
@@ -102,9 +105,7 @@ export function OrganizationCard({
               {`AI watching ${alertStatus.rulesConfigured} ${alertStatus.rulesConfigured === 1 ? 'metric' : 'metrics'}`}
             </Text>
           </View>
-          {onManageAlerts ? (
-            <LinkButton label="Manage Alerts" onPress={onManageAlerts} testID="for-you-manage-alerts" />
-          ) : null}
+          <LinkButton label="Manage Alerts" onPress={onManageAlerts} testID="for-you-manage-alerts" />
         </View>
       ) : null}
     </SectionCard>

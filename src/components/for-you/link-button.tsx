@@ -7,6 +7,12 @@ import { space, type } from '@/constants/tokens';
  * The accent text actions on For You — "Switch", "See History",
  * "Manage Alerts", "Switch to Stalls".
  *
+ * When no handler is supplied the link still RENDERS, dimmed and inert, with
+ * no button role for screen readers (Inakshi, 2026-08-15): the whole
+ * composition has to be visible to sign off look and feel, and the honest
+ * "visibly disabled" branch of the standing rule covers it. It lights up when
+ * its destination is built.
+ *
  * Previously a native `@expo/ui` Button inside a fixed-width `Host`. `Host`
  * does not size itself, so every label needed a hand-tuned width — and when
  * the label outgrew it, the row wrapped and the link dropped below its title
@@ -26,15 +32,20 @@ export function LinkButton({
   testID?: string;
 }) {
   const { colors } = useTokens();
+  const wired = !!onPress;
   return (
     <Pressable
       onPress={onPress}
+      disabled={!wired}
       hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityRole={wired ? 'button' : undefined}
+      accessibilityLabel={wired ? label : undefined}
+      accessibilityState={{ disabled: !wired }}
       testID={testID}
-      style={({ pressed }) => [styles.link, pressed && styles.pressed]}>
-      <Text style={[type.subhead, styles.label, { color: colors.accent }]} numberOfLines={1}>
+      style={({ pressed }) => [styles.link, pressed && wired && styles.pressed]}>
+      <Text
+        style={[type.subhead, styles.label, { color: wired ? colors.accent : colors.dimmed }]}
+        numberOfLines={1}>
         {label}
       </Text>
     </Pressable>

@@ -34,27 +34,29 @@ describe('no dead controls on the screens', () => {
     expect([...noOps, ...undefineds]).toEqual([]);
   });
 
-  it('components hide their optional actions rather than rendering them inert', () => {
-    // Each of these renders an action ONLY when its handler is supplied.
-    const guards: [string, RegExp][] = [
-      [join('components', 'for-you', 'review-card.tsx'), /onFilter \? \(/],
-      [join('components', 'for-you', 'review-card.tsx'), /onSeeHistory \? \(/],
-      [join('components', 'for-you', 'organization-card.tsx'), /onSeeHistory \? \(/],
-      [join('components', 'for-you', 'organization-card.tsx'), /onManageOrganization \? \(/],
-      [join('components', 'for-you', 'organization-card.tsx'), /onManageAlerts \? \(/],
-      [
-        join('components', 'for-you', 'behavior-tracker-card.tsx'),
-        /onSwitchToStalls \? \(/,
-      ],
-      [join('components', 'for-you', 'header.tsx'), /onSearch \? \(/],
-      [join('components', 'for-you', 'header.tsx'), /onCustomize \? \(/],
+  it('never claims a control is a button unconditionally', () => {
+    /**
+     * Inakshi chose the "visibly disabled" branch of the rule on 2026-08-15:
+     * unwired controls stay on screen, dimmed, so a page can be judged whole.
+     * The danger that swaps in is a control that still ANNOUNCES itself as a
+     * button. Every component below takes optional handlers, so none of them
+     * may hard-code a button role — it has to be conditional on the handler.
+     *
+     * Per-control behaviour is asserted by render in the component tests;
+     * this is the cheap sweep that catches a new component forgetting.
+     */
+    const files = [
+      join('components', 'for-you', 'review-card.tsx'),
+      join('components', 'for-you', 'organization-card.tsx'),
+      join('components', 'for-you', 'header.tsx'),
+      join('components', 'for-you', 'link-button.tsx'),
     ];
 
-    const missing = guards
-      .filter(([file, pattern]) => !pattern.test(read(file)))
-      .map(([file, pattern]) => `${file} :: ${pattern}`);
+    const offenders = files.filter((file) =>
+      /accessibilityRole="button"/.test(read(file)),
+    );
 
-    expect(missing).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 
   it('rows without a destination drop their button role', () => {

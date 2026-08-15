@@ -29,4 +29,10 @@ export const PREVIEWS = {
   faceIdUnlock: __DEV__ && optedIn,
   /** Apple / Google sign-in buttons that only explain themselves. */
   socialSignInButtons: __DEV__ && optedIn,
+  /**
+   * Review History falls back to invented events when the organization has
+   * none on the selected day, so the page can be judged populated. A banner
+   * says so on screen; real events always win.
+   */
+  sampleHistoryData: __DEV__ && optedIn,
 } as const;

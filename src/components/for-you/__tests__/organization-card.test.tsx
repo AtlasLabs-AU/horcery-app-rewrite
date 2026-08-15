@@ -83,20 +83,22 @@ describe('OrganizationCard alert status', () => {
     expect(one.getByText('AI watching 1 metric')).toBeTruthy();
   });
 
-  it('hides Manage Alerts when no handler is wired, in every state', async () => {
-    // §6b finding 3 — a visible control must act or not render.
-    const states: AlertStatus[] = [
-      { kind: 'loading' },
-      { kind: 'unavailable' },
-      { kind: 'not_set' },
-      { kind: 'normal', rulesConfigured: 2 },
-      { kind: 'today', count: 1, rulesConfigured: 2 },
-    ];
+  it('shows unwired actions dimmed and inert, never as buttons', async () => {
+    /**
+     * The standing rule (§6b finding 3) allows either branch: not rendering,
+     * or rendering VISIBLY DISABLED. Inakshi chose the second on 2026-08-15 —
+     * she cannot sign off a page's look and feel if half of it is missing —
+     * so an unwired action stays on screen but must not claim to be operable:
+     * no button role, and disabled so it cannot be pressed.
+     */
+    const view = await renderWith({ kind: 'normal', rulesConfigured: 2 });
 
-    for (const status of states) {
-      const view = await renderWith(status);
-      expect(view.queryByTestId('for-you-manage-alerts')).toBeNull();
-      expect(view.queryByTestId('for-you-ai-history')).toBeNull();
-    }
+    const history = view.getByTestId('for-you-ai-history');
+    expect(history.props.accessibilityRole).toBeUndefined();
+    expect(history.props.accessibilityState?.disabled).toBe(true);
+
+    const manage = view.getByTestId('for-you-manage-alerts');
+    expect(manage.props.accessibilityRole).toBeUndefined();
+    expect(manage.props.accessibilityState?.disabled).toBe(true);
   });
 });

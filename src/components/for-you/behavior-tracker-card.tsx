@@ -107,13 +107,11 @@ export function BehaviorTrackerCard({
         <Text style={[type.headline, styles.selectedLabel, { color: colors.foreground }]}>
           {selected?.label}
         </Text>
-        {onSwitchToStalls ? (
-          <LinkButton
-            label="Switch to Stalls"
-            onPress={onSwitchToStalls}
-            testID="for-you-tracker-switch"
-          />
-        ) : null}
+        <LinkButton
+          label="Switch to Stalls"
+          onPress={onSwitchToStalls}
+          testID="for-you-tracker-switch"
+        />
       </View>
 
       <ChartPlaceholder height={168} testID="for-you-tracker-chart" />

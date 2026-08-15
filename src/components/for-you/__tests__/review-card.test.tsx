@@ -22,7 +22,7 @@ import { ReviewCard } from '@/components/for-you/review-card';
  * result instead, which is immune to that.
  */
 describe('ReviewCard', () => {
-  it('renders the empty state, and no actions, when nothing is wired', async () => {
+  it('shows unwired actions dimmed and inert, then live once wired', async () => {
     const view = await render(<ReviewCard />);
 
     expect(view.getByTestId('for-you-review-empty')).toBeTruthy();
@@ -30,19 +30,27 @@ describe('ReviewCard', () => {
       view.getByText(/Stall Monitor will feature recent events/i),
     ).toBeTruthy();
 
-    // A button that does nothing is worse than no button: it teaches the
-    // customer the app is broken, and a screen reader announces a control
-    // that cannot be operated.
-    expect(view.queryByTestId('for-you-review-history')).toBeNull();
-    expect(view.queryByLabelText('Filter behaviors')).toBeNull();
+    /**
+     * Visible, so the page can be judged whole (Inakshi, 2026-08-15) — but
+     * NOT announced as a button and not pressable, because a control that
+     * looks operable and isn't teaches the customer the app is broken.
+     */
+    const history = view.getByTestId('for-you-review-history');
+    expect(history.props.accessibilityRole).toBeUndefined();
+    expect(history.props.accessibilityState?.disabled).toBe(true);
 
-    // Wiring one action must not conjure the other. Done as a re-render
-    // rather than a third `render` — see the RNTL note above. `rerender` is
-    // ASYNC in v14 exactly like `render`; without the await the assertions
-    // below run against the previous tree.
+    const filter = view.getByTestId('for-you-review-filter');
+    expect(filter.props.accessibilityRole).toBeUndefined();
+
+    // `rerender` is ASYNC in v14 exactly like `render`; without the await the
+    // assertions below run against the previous tree.
     await view.rerender(<ReviewCard onSeeHistory={jest.fn()} />);
-    expect(view.getByTestId('for-you-review-history')).toBeTruthy();
-    expect(view.queryByLabelText('Filter behaviors')).toBeNull();
+    const wired = view.getByTestId('for-you-review-history');
+    expect(wired.props.accessibilityRole).toBe('button');
+    // The other action is still unwired, so it stays inert.
+    expect(
+      view.getByTestId('for-you-review-filter').props.accessibilityRole,
+    ).toBeUndefined();
   });
 
   it('renders content instead of the empty state, and invokes wired actions', async () => {

@@ -34,23 +34,19 @@ export function ForYouHeader({
         {greeting}
       </Text>
       <View style={styles.actions}>
-        {onSearch ? (
-          <HeaderIcon
-            name="search"
-            label="Search"
-            hint="Opens search"
-            onPress={onSearch}
-            testID="for-you-search-button"
-          />
-        ) : null}
-        {onCustomize ? (
-          <HeaderIcon
-            name="customize"
-            label="Customize for you page"
-            onPress={onCustomize}
-            testID="for-you-customize-button"
-          />
-        ) : null}
+        <HeaderIcon
+          name="search"
+          label="Search"
+          hint="Opens search"
+          onPress={onSearch}
+          testID="for-you-search-button"
+        />
+        <HeaderIcon
+          name="customize"
+          label="Customize for you page"
+          onPress={onCustomize}
+          testID="for-you-customize-button"
+        />
         <HeaderIcon
           name="menu"
           label="Open menu"
@@ -76,16 +72,19 @@ function HeaderIcon({
   testID?: string;
 }) {
   const { colors } = useTokens();
+  const wired = !!onPress;
   return (
     <Pressable
       onPress={onPress}
+      disabled={!wired}
       hitSlop={12}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
+      accessibilityRole={wired ? 'button' : undefined}
+      accessibilityLabel={wired ? label : undefined}
+      accessibilityHint={wired ? hint : undefined}
+      accessibilityState={{ disabled: !wired }}
       testID={testID}
-      style={({ pressed }) => (pressed ? styles.pressed : undefined)}>
-      <Icon name={name} size={24} color={colors.foreground} />
+      style={({ pressed }) => (pressed && wired ? styles.pressed : undefined)}>
+      <Icon name={name} size={24} color={wired ? colors.foreground : colors.dimmed} />
     </Pressable>
   );
 }
