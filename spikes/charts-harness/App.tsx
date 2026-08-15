@@ -36,6 +36,15 @@ export default function App() {
   const onFirstPaint = useCallback((ms: number) => setFirstPaintMs(Math.round(ms)), []);
 
   useEffect(() => setFirstPaintMs(null), [rendererId, scenarioIndex, mountKey]);
+  // Harness trace — every state change lands in the Metro log so a run can be
+  // reconstructed exactly. Remove nothing here: it is the audit trail.
+  useEffect(() => {
+    console.log(`[harness] renderer=${rendererId} scenario=${scenario.name} mount=${mountKey}`);
+  }, [rendererId, scenario.name, mountKey]);
+  useEffect(() => {
+    console.log('[harness] App mounted');
+    return () => console.log('[harness] App UNMOUNTED');
+  }, []);
 
   // Remount loop for the reliability/memory check.
   useEffect(() => {
@@ -78,7 +87,7 @@ export default function App() {
           testIDPrefix="renderer"
         />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips}>
           {scenarios.map((s, i) => (
             <Pressable
               key={s.name}
@@ -185,14 +194,17 @@ function useJsFps() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#ffffff' },
-  header: { paddingHorizontal: 16, paddingTop: 8 },
+  // Top padding clears the Expo dev-client's floating "Tools" bubble (top-right,
+  // ~90–110 px), which otherwise swallows taps on the third renderer segment.
+  header: { paddingHorizontal: 16, paddingTop: 72 },
   title: { fontSize: 17, fontWeight: '600', color: '#0f172a' },
   segmented: { flexDirection: 'row', margin: 16, marginBottom: 8, borderRadius: 10, backgroundColor: '#f1f5f9', padding: 3 },
   segment: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   segmentOn: { backgroundColor: '#ffffff' },
   segmentText: { fontSize: 13, color: '#475569' },
   segmentTextOn: { color: '#0f172a', fontWeight: '600' },
-  chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
+  chipRow: { flexGrow: 0 },
+  chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 8, alignItems: 'center' },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#f1f5f9' },
   chipOn: { backgroundColor: '#0369A1' },
   chipText: { fontSize: 12, color: '#334155' },

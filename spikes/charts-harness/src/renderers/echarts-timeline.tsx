@@ -188,9 +188,15 @@ export function EChartsTimeline({
     // in ECharts' own RendererType union — hence the cast.
     const chart = echarts.init(ref.current as never, 'light', { renderer: backend as 'svg', width, height });
     chart.setOption(option as never);
-    // `finished` fires when the first full render is done.
-    chart.on('finished', () => onFirstPaint?.(performance.now() - t0));
-    return () => chart.dispose();
+    // Wuba's native back-ends do not emit ECharts' `finished`, so "first
+    // paint" is the first animation frame after the draw call — the SAME proxy
+    // the Victory renderer uses, so the figures are comparable.
+    const raf = requestAnimationFrame(() => onFirstPaint?.(performance.now() - t0));
+    (chart as unknown as { __raf: number }).__raf = raf;
+    return () => {
+      cancelAnimationFrame((chart as unknown as { __raf: number }).__raf);
+      chart.dispose();
+    };
   }, [option, backend, width, height, onFirstPaint]);
 
   return <Chart ref={ref as never} useRNGH />;

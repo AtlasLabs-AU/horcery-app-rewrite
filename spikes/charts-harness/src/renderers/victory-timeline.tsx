@@ -1,11 +1,12 @@
 import { Group, matchFont, rect, RoundedRect, Text as SkiaText } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { runOnJS, useAnimatedReaction } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { useRef } from 'react';
 import {
   CartesianChart,
   useCartesianTransformContext,
-  useChartPressState,
   useChartTransformState,
   type Scale,
 } from 'victory-native';
@@ -41,8 +42,12 @@ import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
  *    by clamping the transform after each gesture; during a gesture the user
  *    can briefly overshoot. ECharts enforces it natively via dataZoom.
  *
- * Tooltip: press position from useChartPressState → hit-test in JS → an RN
- * View 40 px above the finger, hidden after 2 s.
+ * Tooltip: Victory's press state SNAPS to the nearest data point, and this
+ * chart's data is two anchors that only fix the domain — so it cannot hit an
+ * interval. The raw tap is taken with a gesture of our own, inverted through
+ * the current zoom into a day fraction, and hit-tested in JS; the tooltip is an
+ * RN View 40 px above the finger, hidden after 2 s. More adapter code Victory
+ * needs that ECharts' `trigger: 'item'` gives for free.
  */
 
 const TICKS = hourTicks();
@@ -141,48 +146,79 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
   );
 
   const { state: transform } = useChartTransformState();
-  const { state: press } = useChartPressState({ x: 0, y: { y: 0 } });
+
+  // Zoom-aware hour ticks. Victory keeps whatever `tickValues` it is given and
+  // only drops the ones outside the zoomed domain, so at 10 % span a fixed
+  // every-4-hours list leaves one label. ECharts regenerates ticks per zoom
+  // level and hides overlaps itself. Here we do it by hand: from the visible
+  // domain (reported by onScaleChange) pick the coarsest hour step whose labels
+  // fit the width. This is exactly the adapter code Victory would need in
+  // production — part of its cost, so it is in the harness, not hidden.
+  const [visible, setVisible] = useState<[number, number]>([0, 1]);
+  const xTicks = useMemo(() => {
+    const [d0, d1] = visible;
+    const spanHours = Math.max(1, (d1 - d0) * 24);
+    const labelPx = 44; // "12 AM" at 12 px, plus breathing room
+    const maxLabels = Math.max(2, Math.floor((width - 60) / labelPx));
+    const step = [1, 2, 3, 4, 6, 8, 12].find((h) => spanHours / h <= maxLabels) ?? 12;
+    return TICKS.filter((t, i) => i % step === 0 && t.position >= d0 - 1e-9 && t.position <= d1 + 1e-9).map(
+      (t) => t.position,
+    );
+  }, [visible, width]);
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
-  const [firstPaintAt] = useState(() => performance.now());
+  const boundsRef = useRef({ left: 0, right: width, top: 0, bottom: height });
+  const visibleRef = useRef<[number, number]>([0, 1]);
 
-  useEffect(() => {
-    // Skia has no "finished" event; the first commit after mount is the
-    // closest honest proxy. Measured the same way for both back-ends' mount.
-    const id = requestAnimationFrame(() => onFirstPaint?.(performance.now() - firstPaintAt));
-    return () => cancelAnimationFrame(id);
-  }, [firstPaintAt, onFirstPaint, timeline]);
+  // Tap → tooltip. Pixel → day fraction through the CURRENT zoom, then row.
+  const hitTest = (px: number, py: number) => {
+    const b = boundsRef.current;
+    const [d0, d1] = visibleRef.current;
+    if (px < b.left || px > b.right || py < b.top || py > b.bottom) return;
+    const xVal = d0 + ((px - b.left) / (b.right - b.left)) * (d1 - d0);
+    const row = Math.floor(((py - b.top) / (b.bottom - b.top)) * rows);
+    const hit = bars.find((bar) => bar.row === row && xVal >= bar.start && xVal <= bar.end);
+    if (!hit) return;
+    setTooltip({ text: hit.tooltip, x: px, y: py });
+  };
+  const tap = useMemo(
+    () =>
+      Gesture.Tap()
+        .maxDuration(250)
+        .onEnd((e) => {
+          'worklet';
+          runOnJS(hitTest)(e.x, e.y);
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt when bars change; refs otherwise
+    [bars, rows],
+  );
 
-  // Zoom limits — enforced after the gesture (see header note 2).
+  // Zoom limits — enforced after the gesture (see header note 2). Both the
+  // scale AND the pan are clamped: for pixel range [L, R] the visible domain is
+  // invert((px - tx) / k), so keeping it inside the day means
+  // R·(1−k) ≤ tx ≤ L·(1−k). Clamping only k (an earlier version) could leave
+  // the view panned past the end of the day with nothing on screen.
+  const plotRange = useSharedValue<[number, number]>([0, width]);
   useAnimatedReaction(
     () => ({ active: transform.zoomActive.value || transform.panActive.value, m: transform.matrix.value }),
     ({ active, m }) => {
       if (active) return;
-      const k = m[0] ?? 1; // scaleX in a column-major Matrix4
+      // Skia's Matrix4 is ROW-major: scaleX at 0, translateX at 3.
+      const k = m[0] ?? 1;
+      const tx = m[3] ?? 0;
       const maxK = 1 / GEOMETRY.zoomMinSpan;
-      if (k < 1 || k > maxK) {
-        const clamped = Math.min(Math.max(k, 1), maxK);
+      const [L, R] = plotRange.value;
+      const kc = Math.min(Math.max(k, 1), maxK);
+      const txc = Math.min(Math.max(tx, R * (1 - kc)), L * (1 - kc));
+      if (kc !== k || txc !== tx) {
         const next = [...m] as unknown as number[];
-        next[0] = clamped;
-        if (clamped === 1) next[12] = 0; // fully zoomed out: no pan offset either
+        next[0] = kc;
+        next[3] = txc;
         transform.matrix.value = next as unknown as typeof m;
         transform.offset.value = next as unknown as typeof m;
       }
     },
   );
 
-  // Tap → tooltip. Hit-test in JS against the un-transformed positions.
-  const showTooltipAt = (px: number, py: number, xVal: number, yVal: number) => {
-    const row = Math.floor(rows - yVal);
-    const hit = bars.find((b) => b.row === row && xVal >= b.start && xVal <= b.end);
-    if (!hit) return;
-    setTooltip({ text: hit.tooltip, x: px, y: py });
-  };
-  useAnimatedReaction(
-    () => ({ on: press.isActive.value, px: press.x.position.value, py: press.y.y.position.value, xv: press.x.value.value, yv: press.y.y.value.value }),
-    (cur, prev) => {
-      if (cur.on && !prev?.on) runOnJS(showTooltipAt)(cur.px, cur.py, cur.xv as number, cur.yv);
-    },
-  );
   useEffect(() => {
     if (!tooltip) return;
     const id = setTimeout(() => setTooltip(null), GEOMETRY.tooltipHideMs);
@@ -199,6 +235,8 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
 
   return (
     <View style={{ width, height }}>
+      <GestureDetector gesture={tap}>
+      <View style={{ width, height }}>
       <CartesianChart
         data={[{ x: 0, y: 0 }, { x: 1, y: rows }]}
         xKey="x"
@@ -207,10 +245,26 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
         padding={{ left: 8, right: 8, top: 8, bottom: 28 }}
         transformState={transform}
         transformConfig={{ pinch: { dimensions: 'x' }, pan: { dimensions: 'x' } }}
-        chartPressState={press}
+        onChartBoundsChange={(b) => {
+          plotRange.value = [b.left, b.right];
+          boundsRef.current = b;
+        }}
+        onScaleChange={(x) => {
+          // Fires on every render, not only on zoom, and a fresh array each
+          // time would loop React forever — so only commit a real change.
+          const [a, b] = x.domain() as [number, number];
+          const next: [number, number] = [Math.max(0, a), Math.min(1, b)];
+          visibleRef.current = next;
+          setVisible((prev) =>
+            Math.abs(prev[0] - next[0]) < 1e-6 && Math.abs(prev[1] - next[1]) < 1e-6 ? prev : next,
+          );
+        }}
         xAxis={{
           font,
-          tickValues: TICKS.map((t) => t.position),
+          tickValues: xTicks,
+          // Victory downsamples `tickValues` to `tickCount` (default 5) even
+          // when given explicitly; match the count so nothing is dropped.
+          tickCount: Math.max(2, xTicks.length),
           formatXLabel: (v) => TICKS[Math.round(Number(v) * 24)]?.label ?? '',
           labelColor: GEOMETRY.axisText,
           lineWidth: 0,
@@ -220,6 +274,7 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
           {
             font,
             tickValues: labels.map((_, i) => rows - 0.5 - i),
+            tickCount: rows, // otherwise two of the seven day labels are dropped
             formatYLabel: (v) => labels[Math.round(rows - 0.5 - Number(v))] ?? '',
             labelColor: GEOMETRY.axisText,
             lineWidth: 1,
@@ -231,6 +286,8 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
         )}>
         {() => null}
       </CartesianChart>
+      </View>
+      </GestureDetector>
 
       <View style={styles.legend} pointerEvents="none">
         {timeline.series.map((s) => (
@@ -242,7 +299,7 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
       </View>
 
       {tooltip ? (
-        <View style={[styles.tooltip, { left: Math.min(tooltip.x, width - 190), top: Math.max(0, tooltip.y - 40) }]} pointerEvents="none">
+        <View style={[styles.tooltip, { left: Math.min(tooltip.x, width - 240), top: Math.max(0, tooltip.y - 40) }]} pointerEvents="none">
           <Text style={styles.tooltipText}>{tooltip.text}</Text>
         </View>
       ) : null}
