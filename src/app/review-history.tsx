@@ -185,20 +185,24 @@ export default function ReviewHistoryScreen() {
         <DayStrip selected={day} today={now} onSelect={setSelectedDay} />
 
         <View style={styles.filterRow}>
-          <Menu
-            label={filterActive ? `Behavior (${behaviors.length})` : 'Behavior'}
-            accessibilityLabel="Filter by behavior"
-            width={150}
-            height={36}
-            testID="history-behavior-filter"
-            actions={BEHAVIOR_OPTIONS.map((option) => ({
-              id: option.id,
-              label: option.label,
-              icon: option.icon,
-              selected: behaviors.includes(option.id),
-              onPress: () => toggleBehavior(option.id),
-            }))}
-          />
+          {/* The native menu needs a fixed box; the wrapper stops the flex row
+              shrinking it and clipping the label to "ehavior (". */}
+          <View style={styles.behaviorSlot}>
+            <Menu
+              label={filterActive ? `Behavior (${behaviors.length})` : 'Behavior'}
+              accessibilityLabel="Filter by behavior"
+              width={150}
+              height={36}
+              testID="history-behavior-filter"
+              actions={BEHAVIOR_OPTIONS.map((option) => ({
+                id: option.id,
+                label: option.label,
+                icon: option.icon,
+                selected: behaviors.includes(option.id),
+                onPress: () => toggleBehavior(option.id),
+              }))}
+            />
+          </View>
           <DimmedChip label="Horse" />
           <DimmedChip label="Stall" />
         </View>
@@ -367,6 +371,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.edge,
     paddingTop: space.md,
   },
+  behaviorSlot: { width: 150, height: 36, flexShrink: 0 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
