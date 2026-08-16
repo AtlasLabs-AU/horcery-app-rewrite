@@ -98,6 +98,25 @@ significant variant × normal/dense/ceiling combination. None of those cells is
 complete, so there are no Run 2 medians, tails, freeze counts or memory-return
 claims yet.
 
+### Corrected iOS Release follow-up
+
+The shared axis correction has now been rebuilt in both isolated iOS Release
+apps. Both show the required starting and ending `12 AM` labels at 100%, and
+both regenerate readable labels at maximum zoom. Android rebuild proof remains
+pending.
+
+That verification found a separate Victory adapter defect before measurement:
+the first pinch centred correctly, while a second cumulative pinch moved both
+Victory variants toward 10 PM–midnight. The failed screenshots remain in the
+evidence store. The installed Victory gesture composes later pinches around a
+raw screen focal point as though it were still an untransformed chart point.
+The harness now provides the cumulative pinch through Victory's public custom
+gesture input, with pure tests for focal invariance and zoom/pan clamping. A
+fresh isolated iOS Release build plus recordings of four repeated centred
+pinches verify that both `relayout` and `matrix` remain centred and stop at the
+10% floor. No performance cell was scored while the variants had different
+interaction meaning.
+
 The final recommendation also remains blocked by the observed-heavy QA fixture
 and release-like runs on a physical mid-range Android, modern Android, iPhone
 and tablet. Simulator/emulator checks cannot satisfy §6a's decision gates.

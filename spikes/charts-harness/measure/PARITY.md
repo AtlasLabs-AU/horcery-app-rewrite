@@ -10,10 +10,10 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Required behaviour | ECharts · Skia | Victory · Skia | Evidence needed |
 |---|---|---|---|
 | Seven rows, oldest day at top | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
-| Shared clock axis, required labels and overlap hiding | Defect found in prior Release; shared tick fix is in source, rebuild proof pending | Provisional at 100% in prior Release; shared tick fix + zoom proof pending | Rebuild and capture both at 100% + 10% |
+| Shared clock axis, required labels and overlap hiding | Verified in corrected iOS Release at 100% and maximum zoom | Verified in corrected iOS Release at 100% and maximum zoom | Corrected screenshots in manifest; Android rebuild still pending |
 | Row guides, 16 px bars, 4 px radius, 1 px minimum | Pending | Pending | Screenshot / pixel inspection |
 | With Horse / Without Horse colours and legend | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
-| 10%–100% horizontal zoom limits | Pending | Pending | Interaction recording |
+| 10%–100% horizontal zoom limits | Provisional on iOS: maximum-zoom screenshot retained; interaction recording pending | Verified on iOS for relayout and matrix: four repeated centred pinches remain centred and clamp at the floor | Corrected screenshots and Victory recordings in manifest; Android proof pending |
 | Pan clamps inside one day | Pending | Pending | Interaction recording |
 | Exact tooltip text and two-second dismissal | Pending | Pending | Recording + accessibility label |
 | Near-tap hint: “Zoom to click” within one hour | Pending | Pending | Interaction recording |
@@ -30,7 +30,7 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Native semantic summary exists | Android tree captured | Live Android inspection; clean raw tree optional | Automated layer retained; spoken testing deferred |
 | Native interval semantics contain series/date/time/count | Android tree captured | Live Android inspection; clean raw tree optional | Automated layer retained; spoken testing deferred |
 | Semantic nodes remain bounded and pageable | Unit tests + 20-node normal tree | Unit tests | Automated guard retained; spoken testing deferred |
-| Phone | Release screenshot only | Release screenshot only | Interaction recording still required |
+| Phone | Corrected iOS Release screenshot; recording pending | Corrected iOS Release screenshots plus repeated-pinch recordings | Android and physical-device evidence still required |
 | Tablet layout | Prior Release screenshot; axis fix needs rebuild | Prior Release screenshot; shared fix needs rebuild | Interaction still pending; physical tablet is a decision gate |
 
 ## Open product-design call
@@ -39,6 +39,21 @@ The fall-back day repeats 1 AM. The shared clock grammar intentionally overlays
 both occurrences. The adapter must keep both intervals distinguishable; whether
 the axis also says “1 AM ×2” remains a product-design decision and cannot be
 scored as implemented until resolved.
+
+## Corrected Victory cumulative-pinch defect
+
+The first corrected Victory Release build exposed a real adapter defect: one
+pinch stayed centred, but later pinches drifted toward the end of the day in
+both render modes. The failed screenshots are retained in the manifest. The
+installed Victory Native pinch handler composes a new scale around the raw
+screen focal point on the wrong side of the existing transform, so that focal
+point is treated as an untransformed chart coordinate after the first pinch.
+
+The harness now supplies a screen-space cumulative pinch through Victory's
+public `customGestures` hook. Three pure math tests pin focal-point invariance,
+repeat-centre invariance, and the 10% clamp. A fresh isolated iOS Release build
+and two recordings verify the same four-pinch sequence for `relayout` and
+`matrix`. This restores iOS interaction parity; it is not performance evidence.
 
 ## Blocked decision evidence
 

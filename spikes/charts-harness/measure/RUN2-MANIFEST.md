@@ -74,3 +74,27 @@ therefore the Victory accessibility rows remain pending in `PARITY.md`.
 - VoiceOver and spoken TalkBack behavior have not been recorded.
 
 No score or renderer recommendation may be derived from this manifest alone.
+
+## Corrected iOS axis and Victory interaction evidence
+
+These artefacts were captured after the shared axis correction and the
+Victory cumulative-pinch correction. The Victory drift images are deliberately
+retained: they prove the defect existed and prevent the later fixed images from
+being mistaken for the first attempt. Source is the changes committed with
+this manifest on top of `4ed06cf`.
+
+| Finalist | Artefact | Bytes | SHA-256 | What it proves / limitation |
+|---|---|---:|---|---|
+| ECharts · Skia | `corrected/echarts-skia/ios/ios-simulator-release.zip` | 27,877,494 | `f19d04f2189862a72f9da96ee7ad912cb65311684788722e9cdaff9327c26e11` | Corrected isolated iOS Simulator Release build. Not physical-device evidence. |
+| ECharts · Skia | `corrected/echarts-skia/ios/normal-100-percent.png` | 662,656 | `ba47f2c3a071bc46c0ec46b6213ea732b961e79470d6bbaeee8fabd85fc2f8a1` | Both required `12 AM` endpoints are visible at full day. |
+| ECharts · Skia | `corrected/echarts-skia/ios/normal-max-zoom.png` | 620,142 | `9504cad9c9600252f6137efcd9f9b3a2770cfa8feccf06ededeca6fabec40b0a` | Readable regenerated labels at the zoom floor; no interaction recording yet. |
+| Victory · Skia | `corrected/victory/ios/ios-simulator-release.zip` | 27,109,143 | `5313125782d787b88abf720f75657ad0eec41b0478aaa26bffe869adeb306882` | First corrected-axis build; it still contains the cumulative-pinch defect. Retained as failed evidence. |
+| Victory · Skia | `corrected/victory/ios/normal-100-percent.png` | 656,068 | `4a79a7da894e116cb49803056b3c603fd1d16474266d4140cbaafc094d7302e7` | Both required `12 AM` endpoints are visible at full day. |
+| Victory · Skia | `corrected/victory/ios/normal-one-pinch.png` | 610,144 | `ba7b62ae9e5924dedf190625a0d76399127fe1f9a1845731d062481da487f4a8` | The first centred pinch behaved correctly before the cumulative defect appeared. |
+| Victory · Skia | `corrected/victory/ios/normal-max-zoom-relayout-drift.png` | 608,510 | `80ebc27cced082ed8f532f1bc01201f69b4494ff1e8bee383c5640b08cb3edb8` | Failed relayout evidence: repeated pinch drifted to the end of day. |
+| Victory · Skia | `corrected/victory/ios/normal-max-zoom-matrix-drift.png` | 596,473 | `eddd9a077ccc5563faff88088559a321eac9da8fab08afc9a60a01b8ba76afe6` | Failed matrix evidence: same repeated-pinch drift. |
+| Victory · Skia | `corrected/victory/ios/ios-simulator-release-interaction-fix.zip` | 27,110,728 | `026d33e4b19b774369640e26d021d8d7d033873df82de95bd89d754268a321f7` | Fresh isolated Release containing the custom cumulative gesture correction. |
+| Victory · Skia | `corrected/victory/ios/normal-max-zoom-relayout-fixed.png` | 607,587 | `a1a6a7d1de9f462fe94432c80a1096e7f0a625bfef81e8d4bed2a86baa005aa2` | Relayout stays around the repeated gesture centre at maximum zoom. |
+| Victory · Skia | `corrected/victory/ios/normal-max-zoom-matrix-fixed.png` | 609,822 | `4888effddae2d4df2b1f513a6c88251e4f0371a62eb81ae73f6d51fe0e4c7f3c` | Matrix stays around the repeated gesture centre at maximum zoom. |
+| Victory · Skia | `corrected/victory/ios/normal-repeated-pinch-relayout-fixed.mov` | 2,941,497 | `f766f13ae3bdaf810e6aab7ec545d2c4e5d6d3037465d695e8157afb562e937a` | Four repeated centred pinches remain centred and clamp for relayout. Simulator only. |
+| Victory · Skia | `corrected/victory/ios/normal-repeated-pinch-matrix-fixed.mov` | 3,184,908 | `910fce003a433b65602b17353e93647ad5f839d19471d2967e3262304bbf1989` | Same four-pinch proof for matrix. Simulator only. |

@@ -1,7 +1,7 @@
 import { Group, matchFont, rect, RoundedRect, Text as SkiaText } from '@shopify/react-native-skia';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, Platform, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import {
   CartesianChart,
@@ -25,6 +25,10 @@ import {
 import type { RendererProps, VictoryRenderMode } from '../renderer';
 import { visibleHourTicks } from '../axis-ticks';
 import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
+import {
+  clampHorizontalTransform,
+  composeScreenSpacePinch,
+} from './victory-transform';
 
 /**
  * Victory Native (Skia). The challenger.
@@ -243,6 +247,60 @@ export const VictoryTimeline = memo(function VictoryTimeline({
     [sourceBars, rows, timeline],
   );
 
+  // Victory Native's built-in cumulative pinch composes around an already
+  // transformed raw focal coordinate, which makes the second and later
+  // pinches drift. Keep Victory's transform state/rendering, but supply the
+  // correctly composed screen-space gestures through its public
+  // `customGestures` adapter point.
+  const pinch = useMemo(
+    () =>
+      Gesture.Pinch()
+        .onBegin(() => {
+          transform.offset.value = transform.matrix.value;
+        })
+        .onStart(() => {
+          transform.zoomActive.value = true;
+        })
+        .onChange((event) => {
+          const offset = transform.offset.value;
+          const nextTransform = composeScreenSpacePinch(
+            { k: offset[0] ?? 1, tx: offset[3] ?? 0 },
+            event.scale,
+            event.focalX,
+          );
+          const next = [...offset] as unknown as number[];
+          next[0] = nextTransform.k;
+          next[3] = nextTransform.tx;
+          transform.matrix.value = next as unknown as typeof offset;
+        })
+        .onFinalize(() => {
+          transform.zoomActive.value = false;
+        }),
+    [transform],
+  );
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .maxPointers(1)
+        .onStart(() => {
+          transform.panActive.value = true;
+        })
+        .onChange((event) => {
+          const current = transform.matrix.value;
+          const next = [...current] as unknown as number[];
+          next[3] = (current[3] ?? 0) + event.changeX;
+          transform.matrix.value = next as unknown as typeof current;
+        })
+        .onFinalize(() => {
+          transform.panActive.value = false;
+        }),
+    [transform],
+  );
+  const chartGestures = useMemo(
+    () => Gesture.Race(tap, Gesture.Simultaneous(pinch, pan)),
+    [pan, pinch, tap],
+  );
+
   // Zoom limits — enforced after the gesture (see header note 2). Both the
   // scale AND the pan are clamped: for pixel range [L, R] the visible domain is
   // invert((px - tx) / k), so keeping it inside the day means
@@ -256,10 +314,15 @@ export const VictoryTimeline = memo(function VictoryTimeline({
       // Skia's Matrix4 is ROW-major: scaleX at 0, translateX at 3.
       const k = m[0] ?? 1;
       const tx = m[3] ?? 0;
-      const maxK = 1 / GEOMETRY.zoomMinSpan;
       const [L, R] = plotRange.value;
-      const kc = Math.min(Math.max(k, 1), maxK);
-      const txc = Math.min(Math.max(tx, R * (1 - kc)), L * (1 - kc));
+      const clamped = clampHorizontalTransform(
+        { k, tx },
+        L,
+        R,
+        GEOMETRY.zoomMinSpan,
+      );
+      const kc = clamped.k;
+      const txc = clamped.tx;
       if (kc !== k || txc !== tx) {
         const next = [...m] as unknown as number[];
         next[0] = kc;
@@ -286,7 +349,6 @@ export const VictoryTimeline = memo(function VictoryTimeline({
 
   return (
     <View style={{ width, height }}>
-      <GestureDetector gesture={tap}>
       <View style={{ width, height }}>
       <CartesianChart
         data={[{ x: 0, y: 0 }, { x: 1, y: rows }]}
@@ -295,7 +357,8 @@ export const VictoryTimeline = memo(function VictoryTimeline({
         domain={{ x: [0, 1], y: [0, rows] }}
         padding={{ left: 8, right: 8, top: 8, bottom: 28 }}
         transformState={transform}
-        transformConfig={{ pinch: { dimensions: 'x' }, pan: { dimensions: 'x' } }}
+        transformConfig={{ pinch: { enabled: false }, pan: { enabled: false } }}
+        customGestures={chartGestures}
         onChartBoundsChange={(b) => {
           plotRange.value = [b.left, b.right];
           boundsRef.current = b;
@@ -355,7 +418,6 @@ export const VictoryTimeline = memo(function VictoryTimeline({
           : () => null}
       </CartesianChart>
       </View>
-      </GestureDetector>
 
       <View style={styles.legend} pointerEvents="none">
         {timeline.series.map((s) => (
