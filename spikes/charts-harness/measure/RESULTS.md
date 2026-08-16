@@ -29,6 +29,30 @@
 > Run 2's protocol supersedes `PROTOCOL.md` for the decision. See
 > `RUN2-PROTOCOL.md` when it lands.
 
+## Run 2 — Stage 2 domain result (2026-08-16)
+
+The renderer-independent bottleneck identified in Run 1 is fixed in source and
+pinned by `occupancy-timeline.bench.test.ts`; this is not yet a replacement for
+the Android end-to-end rerun.
+
+- Same-session laptop wall-clock before/after: **5.33 → 0.36 µs/sample** for
+  the 13,440-sample ceiling immediately before and after the arithmetic change.
+- The regression gate now uses process CPU time so concurrent Metro/native
+  builds cannot turn scheduler starvation into a domain-code failure. Latest
+  contended run: **1.79 CPU µs/sample**, under the unchanged 2 µs ceiling.
+- `positionInDay` ×10,000: **185.33 ms before → 0.08 CPU ms after**. Day UTC
+  offsets and the one DST transition are computed once; positioning is then
+  arithmetic while retaining the 30 characterised clock-alignment behaviours.
+- Samples are bucketed into the seven known day ranges arithmetically. The
+  defensive out-of-order path and all fixture fingerprints remain tested.
+- New shared `occupancy-layout.ts` retains every source interval while merging
+  only same-row, same-series sub-pixel bars. It is idempotent, restores all
+  6,720 originals at 10% zoom, preserves covered time, and generates legacy
+  tooltip strings lazily for only the selected reduced bar.
+
+The earlier 2.2–2.6 s Android result remains the device baseline until the
+corrected release harness is rebuilt and measured in Run 2.
+
 ---
 
 Commit measured: `db04811` (harness) on `main`. Protocol: `PROTOCOL.md`.

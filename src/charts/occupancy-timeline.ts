@@ -42,6 +42,12 @@ export interface OccupancyDay {
   /** Local midnight, and the following local midnight. */
   start: EpochSeconds;
   end: EpochSeconds;
+  /** Following local midnight before `end` is clamped to now. */
+  nextMidnight: EpochSeconds;
+  /** UTC offset, in seconds, in force at `start`. */
+  utcOffset: number;
+  /** The one offset transition on this day, when daylight saving changes. */
+  utcOffsetChange?: { at: EpochSeconds; utcOffset: number };
   /** Whether `end` had to be clamped to `now` — the day is still in progress. */
   isToday: boolean;
 }
@@ -92,6 +98,31 @@ const DAY_KEY = 'yyyy-MM-dd';
 
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+function utcOffsetSeconds(t: EpochSeconds, zone: string): number {
+  return DateTime.fromSeconds(t, { zone }).offset * 60;
+}
+
+/** Finds the first whole second using the day's new UTC offset. */
+function findUtcOffsetChange(
+  start: EpochSeconds,
+  nextMidnight: EpochSeconds,
+  zone: string,
+  initialOffset: number,
+): OccupancyDay['utcOffsetChange'] {
+  const finalOffset = utcOffsetSeconds(nextMidnight - 1, zone);
+  if (finalOffset === initialOffset) return undefined;
+
+  let before = start;
+  let after = nextMidnight - 1;
+  while (before + 1 < after) {
+    const middle = Math.floor((before + after) / 2);
+    if (utcOffsetSeconds(middle, zone) === initialOffset) before = middle;
+    else after = middle;
+  }
+
+  return { at: after, utcOffset: utcOffsetSeconds(after, zone) };
+}
+
 /** Parses a `yyyy-MM-dd` calendar date as local midnight in `zone`, or throws. */
 function calendarDate(value: string, zone: string): DateTime {
   if (!CALENDAR_DATE.test(value)) {
@@ -122,9 +153,17 @@ function intervalsForDay(
 ): OccupancyInterval[] {
   if (samples.length === 0) return [];
 
-  // Prometheus returns ascending timestamps, but the current app sorts
-  // defensively and so do we — a merged multi-series result can interleave.
-  const sorted = [...samples].sort((a, b) => a[0] - b[0]);
+  // Prometheus normally returns ascending timestamps. Buckets are private to
+  // this build, so avoid copying/sorting the common case while retaining the
+  // old app's defensive behaviour for interleaved results.
+  let isSorted = true;
+  for (let i = 1; i < samples.length; i++) {
+    if (samples[i - 1]![0] > samples[i]![0]) {
+      isSorted = false;
+      break;
+    }
+  }
+  const sorted = isSorted ? samples : samples.sort((a, b) => a[0] - b[0]);
 
   const last = sorted[sorted.length - 1]!;
   if (Number(last[1]) > threshold) {
@@ -168,24 +207,31 @@ export function buildOccupancyTimeline(
 
   const now = input.now.setZone(zone);
   const nowSeconds = now.toSeconds();
+  const nowKey = now.toFormat(DAY_KEY);
   const selected = calendarDate(input.selectedDate, zone);
 
   // Rows: `dayCount` calendar days ending on the selected date, oldest first.
   const days: OccupancyDay[] = [];
   for (let offset = dayCount - 1; offset >= 0; offset--) {
     const start = selected.minus({ days: offset });
-    const end = start.plus({ days: 1 });
-    const isToday = start.toFormat(DAY_KEY) === now.toFormat(DAY_KEY);
+    const followingMidnight = start.plus({ days: 1 });
+    const key = start.toFormat(DAY_KEY);
+    const startSeconds = start.toSeconds();
+    const nextMidnight = followingMidnight.toSeconds();
+    const utcOffset = start.offset * 60;
+    const isToday = key === nowKey;
     days.push({
-      key: start.toFormat(DAY_KEY),
-      start: start.toSeconds(),
+      key,
+      start: startSeconds,
       // A day still in progress ends at `now`, so an open bar stops at the
       // present rather than running to midnight and claiming the future.
-      end: isToday ? Math.min(end.toSeconds(), nowSeconds) : end.toSeconds(),
+      end: isToday ? Math.min(nextMidnight, nowSeconds) : nextMidnight,
+      nextMidnight,
+      utcOffset,
+      utcOffsetChange: findUtcOffsetChange(startSeconds, nextMidnight, zone, utcOffset),
       isToday,
     });
   }
-  const dayByKey = new Map(days.map((day) => [day.key, day]));
 
   const series: OccupancySeries[] = [];
   let intervalCount = 0;
@@ -193,19 +239,32 @@ export function buildOccupancyTimeline(
   for (const raw of result) {
     // Samples in the future are noise from `end` overshooting `now`; drop them
     // (the current app does the same).
-    const byDay = new Map<string, [EpochSeconds, string][]>();
+    const byDay: [EpochSeconds, string][][] = days.map(() => []);
+    let dayIndex = 0;
+    let previousTimestamp = Number.NEGATIVE_INFINITY;
+
     for (const sample of raw.values) {
-      if (sample[0] > nowSeconds) continue;
-      const key = DateTime.fromSeconds(sample[0], { zone }).toFormat(DAY_KEY);
-      if (!dayByKey.has(key)) continue; // outside the visible rows
-      let bucket = byDay.get(key);
-      if (!bucket) byDay.set(key, (bucket = []));
-      bucket.push(sample);
+      const timestamp = sample[0];
+      if (timestamp > nowSeconds) continue;
+
+      if (timestamp < previousTimestamp) {
+        // A defensive fallback for interleaved input. Seven rows make this
+        // bounded scan cheaper and clearer than rebuilding date strings.
+        dayIndex = days.findIndex((day) => timestamp >= day.start && timestamp < day.nextMidnight);
+      } else {
+        while (dayIndex < days.length && timestamp >= days[dayIndex]!.nextMidnight) dayIndex++;
+      }
+      previousTimestamp = timestamp;
+
+      const day = days[dayIndex];
+      if (!day || timestamp < day.start) continue;
+      byDay[dayIndex]!.push(sample);
     }
 
     const intervalsByDay: Record<string, OccupancyInterval[]> = {};
-    for (const day of days) {
-      const intervals = intervalsForDay(byDay.get(day.key) ?? [], day, threshold);
+    for (let i = 0; i < days.length; i++) {
+      const day = days[i]!;
+      const intervals = intervalsForDay(byDay[i]!, day, threshold);
       if (intervals.length > 0) {
         intervalsByDay[day.key] = intervals;
         intervalCount += intervals.length;
@@ -248,13 +307,16 @@ export function dayLabel(day: OccupancyDay, zone: string): string {
  * vertical scan on that day for every hour after 2 AM. Barns are quiet at
  * 2 AM; the scan matters all day. See PEOPLE_IN_STALL.md §9.
  */
-export function positionInDay(t: EpochSeconds, day: OccupancyDay, zone: string): number {
+export function positionInDay(t: EpochSeconds, day: OccupancyDay, _zone: string): number {
   if (t <= day.start) return 0;
   // The closing midnight is clock 00:00 of the NEXT day; it must read as 1.
-  const nextMidnight = DateTime.fromSeconds(day.start, { zone }).plus({ days: 1 }).toSeconds();
-  if (t >= nextMidnight) return 1;
-  const local = DateTime.fromSeconds(t, { zone });
-  return (local.hour * 3600 + local.minute * 60 + local.second) / 86400;
+  if (t >= day.nextMidnight) return 1;
+
+  const offset = day.utcOffsetChange && t >= day.utcOffsetChange.at
+    ? day.utcOffsetChange.utcOffset
+    : day.utcOffset;
+  const clockSeconds = t + offset - (day.start + day.utcOffset);
+  return clockSeconds / 86400;
 }
 
 /**
