@@ -53,6 +53,55 @@ the Android end-to-end rerun.
 The earlier 2.2–2.6 s Android result remains the device baseline until the
 corrected release harness is rebuilt and measured in Run 2.
 
+## Run 2 — Stages 3–6 status (2026-08-16)
+
+**Status: engineering scaffolding and isolated Release smoke checks are
+complete; the measurement matrix and decision gates are not. No finalist
+leads.** Raw artefacts and their limitations are indexed in
+`RUN2-MANIFEST.md`; behavioural claims are tracked separately in `PARITY.md`.
+
+- Both adapters now consume the same renderer-independent timeline and shared
+  level-of-detail API. Run 2 exposes LOD off/on, ECharts progressive
+  default/tuned and Victory relayout/matrix variants without changing the
+  fixtures or meaning.
+- The accessibility layer is native and outside either canvas. It pages at 20
+  interval nodes and its formatting/paging behavior is pinned by five tests.
+  An Android ECharts tree proves the summary and 20 exact interval labels. A
+  clean live Victory inspection showed the same nodes, but the retained XML is
+  contaminated by a System UI dialog, so Victory remains pending until a clean
+  raw capture exists. Neither finalist has spoken VoiceOver/TalkBack evidence.
+- Shared loading, error and no-data states, parent ScrollView and lifecycle
+  controls exist in the harness. Their parity rows remain pending until the
+  required transition recordings or traces are retained.
+- Fresh isolated iOS Simulator and Android Release builds launch without Metro.
+  `package.json#expo.autolinking` excludes React Native SVG and the dev-client
+  family. Source-map audits show that ECharts contains no Victory/SVG sources
+  and Victory contains no Wuba/ECharts/zrender/SVG sources.
+- Release sizes: ECharts 125,651,811-byte APK and 27,876,515-byte zipped iOS
+  simulator archive; Victory 124,549,851-byte APK and 27,108,558-byte archive.
+  The small deltas are cost evidence, not a quality verdict.
+- Both finalists visibly render the normal fixture on both simulators. The
+  iPad mini screenshots expose a parity defect: ECharts omits the ending
+  `12 AM` label even though the catalogue requires both endpoints always shown.
+  A shared renderer-independent tick selector now retains both visible
+  endpoints for both adapters; a fresh Release rebuild and 100%/10% capture is
+  still required before this row can pass. Different intermediate label
+  spacing is acceptable overlap hiding, not by itself a semantic difference.
+- Both exports emit a `tslib/tslib.js` exports-fallback warning. ECharts also
+  emits React Native Skia deprecated-path API warnings at runtime; this is a
+  maintenance-risk item to resolve or price before selection.
+
+One-off `gfxinfo` and `meminfo` files in the manifest are smoke diagnostics,
+not results. The frozen protocol requires randomized order, at least seven
+repetitions, common external metrics and JS-sensitive tracing for every
+significant variant × normal/dense/ceiling combination. None of those cells is
+complete, so there are no Run 2 medians, tails, freeze counts or memory-return
+claims yet.
+
+The final recommendation also remains blocked by the observed-heavy QA fixture
+and release-like runs on a physical mid-range Android, modern Android, iPhone
+and tablet. Simulator/emulator checks cannot satisfy §6a's decision gates.
+
 ---
 
 Commit measured: `db04811` (harness) on `main`. Protocol: `PROTOCOL.md`.

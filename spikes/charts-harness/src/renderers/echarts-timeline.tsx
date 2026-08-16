@@ -26,6 +26,7 @@ import {
 } from '@/charts/occupancy-layout';
 
 import type { EChartsProgressiveMode, RendererProps, RenderSignal } from '../renderer';
+import { visibleHourTicks } from '../axis-ticks';
 import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
 
 /**
@@ -62,6 +63,7 @@ function buildOption(
   width: number,
   height: number,
   progressiveMode: EChartsProgressiveMode,
+  visible: readonly [number, number],
 ) {
   if (!timeline) {
     return {
@@ -90,6 +92,9 @@ function buildOption(
 
   const { zone, days, series } = timeline;
   const categories = days.map((d) => dayLabel(d, zone));
+  const labelledTicks = new Map(
+    visibleHourTicks(TICKS, visible, width).map((tick) => [Math.round(tick.position * 24), tick.label]),
+  );
 
   const barSeries = series.map((s, seriesIndex) => {
     const data: EChartsBarDatum[] = (layout?.bars ?? [])
@@ -174,8 +179,8 @@ function buildOption(
         color: GEOMETRY.axisText,
         showMinLabel: true,
         showMaxLabel: true,
-        hideOverlap: true,
-        formatter: (v: number) => TICKS[Math.round(v * 24)]?.label ?? '',
+        hideOverlap: false,
+        formatter: (v: number) => labelledTicks.get(Math.round(v * 24)) ?? '',
       },
     },
     yAxis: {
@@ -219,8 +224,8 @@ export const EChartsTimeline = memo(function EChartsTimeline({
     [layout, lodEnabled, visible, width],
   );
   const option = useMemo(
-    () => buildOption(timeline, displayedLayout, width, height, progressiveMode),
-    [timeline, displayedLayout, width, height, progressiveMode],
+    () => buildOption(timeline, displayedLayout, width, height, progressiveMode, visible),
+    [timeline, displayedLayout, width, height, progressiveMode, visible],
   );
   const Chart = backend === 'svg' ? SvgChart : SkiaChart;
 

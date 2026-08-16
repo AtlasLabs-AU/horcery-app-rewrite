@@ -23,6 +23,7 @@ import {
 } from '@/charts/occupancy-layout';
 
 import type { RendererProps, VictoryRenderMode } from '../renderer';
+import { visibleHourTicks } from '../axis-ticks';
 import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
 
 /**
@@ -195,16 +196,10 @@ export const VictoryTimeline = memo(function VictoryTimeline({
   };
 
   const [visible, setVisible] = useState<[number, number]>([0, 1]);
-  const xTicks = useMemo(() => {
-    const [d0, d1] = visible;
-    const spanHours = Math.max(1, (d1 - d0) * 24);
-    const labelPx = 44; // "12 AM" at 12 px, plus breathing room
-    const maxLabels = Math.max(2, Math.floor((width - 60) / labelPx));
-    const step = [1, 2, 3, 4, 6, 8, 12].find((h) => spanHours / h <= maxLabels) ?? 12;
-    return TICKS.filter((t, i) => i % step === 0 && t.position >= d0 - 1e-9 && t.position <= d1 + 1e-9).map(
-      (t) => t.position,
-    );
-  }, [visible, width]);
+  const xTicks = useMemo(
+    () => visibleHourTicks(TICKS, visible, width).map((tick) => tick.position),
+    [visible, width],
+  );
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const boundsRef = useRef({ left: 0, right: width, top: 0, bottom: height });
   const visibleRef = useRef<[number, number]>([0, 1]);

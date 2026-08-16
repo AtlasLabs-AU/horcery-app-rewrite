@@ -9,10 +9,10 @@ paths are recorded in `RUN2-MANIFEST.md`.
 
 | Required behaviour | ECharts · Skia | Victory · Skia | Evidence needed |
 |---|---|---|---|
-| Seven rows, oldest day at top | Pending | Pending | Screenshot |
-| Shared clock axis, required labels and overlap hiding | Pending | Pending | Screenshot at 100% and 10% span |
+| Seven rows, oldest day at top | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
+| Shared clock axis, required labels and overlap hiding | Defect found in prior Release; shared tick fix is in source, rebuild proof pending | Provisional at 100% in prior Release; shared tick fix + zoom proof pending | Rebuild and capture both at 100% + 10% |
 | Row guides, 16 px bars, 4 px radius, 1 px minimum | Pending | Pending | Screenshot / pixel inspection |
-| With Horse / Without Horse colours and legend | Pending | Pending | Screenshot |
+| With Horse / Without Horse colours and legend | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
 | 10%–100% horizontal zoom limits | Pending | Pending | Interaction recording |
 | Pan clamps inside one day | Pending | Pending | Interaction recording |
 | Exact tooltip text and two-second dismissal | Pending | Pending | Recording + accessibility label |
@@ -27,11 +27,11 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Organization-zone labels retained | Pending | Pending | Domain test + screenshot |
 | Parent ScrollView does not steal chart pinch/pan | Pending | Pending | Interaction recording |
 | Background → foreground remount is correct | Pending | Pending | Transition recording + memory trace |
-| Summary is reachable without canvas semantics | Pending | Pending | VoiceOver + TalkBack capture |
-| An interval announces series, date, times and people | Pending | Pending | VoiceOver + TalkBack capture |
-| Worst case exposes bounded, pageable native nodes | Pending | Pending | Accessibility tree + unit test |
-| Phone | Pending | Pending | Release screenshot/recording |
-| Tablet layout | Pending | Pending | iPad simulator; physical tablet is a decision gate |
+| Summary is reachable without canvas semantics | Android tree only; spoken proof pending | Live Android inspection only; raw + spoken proof pending | VoiceOver + TalkBack capture |
+| An interval announces series, date, times and people | Android tree only; spoken proof pending | Live Android inspection only; raw + spoken proof pending | VoiceOver + TalkBack capture |
+| Worst case exposes bounded, pageable native nodes | Unit tests + 20-node normal tree; ceiling tree pending | Unit tests; raw tree pending | Ceiling accessibility tree + unit test |
+| Phone | Release screenshot only | Release screenshot only | Interaction recording still required |
+| Tablet layout | Prior Release screenshot; axis fix needs rebuild | Prior Release screenshot; shared fix needs rebuild | Interaction still pending; physical tablet is a decision gate |
 
 ## Open product-design call
 
