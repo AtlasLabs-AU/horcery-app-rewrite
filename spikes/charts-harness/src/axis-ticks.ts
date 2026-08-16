@@ -3,6 +3,18 @@ interface HourTick {
   label: string;
 }
 
+/** Format an axis position without rounding a fractional-hour tick into a lie. */
+export function clockLabelAtPosition(value: number): string {
+  const totalMinutes = Math.round(Math.min(1, Math.max(0, value)) * 24 * 60);
+  const hour24 = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  const hour12 = hour24 % 12 || 12;
+  const suffix = hour24 < 12 ? 'AM' : 'PM';
+  return minutes === 0
+    ? `${hour12} ${suffix}`
+    : `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`;
+}
+
 /**
  * Select readable clock labels for the visible domain while retaining both
  * visible endpoints. Both finalists use this function so overlap handling

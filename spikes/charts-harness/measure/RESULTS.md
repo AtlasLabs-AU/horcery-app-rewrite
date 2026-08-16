@@ -102,8 +102,9 @@ claims yet.
 
 The shared axis correction has now been rebuilt in both isolated iOS Release
 apps. Both show the required starting and ending `12 AM` labels at 100%, and
-both regenerate readable labels at maximum zoom. Android rebuild proof remains
-pending.
+both regenerate readable labels at maximum zoom. Corrected Android proof now
+exists for both finalists; the ECharts follow-up below records an additional
+fractional-label defect found during that readback.
 
 That verification found a separate Victory adapter defect before measurement:
 the first pinch centred correctly, while a second cumulative pinch moved both
@@ -122,6 +123,27 @@ fixed-focal pinches verify that both `relayout` and `matrix` stay under the
 gesture and stop at the 10% floor. Both Android failed attempts remain indexed
 alongside the successful evidence. No performance cell was scored while the
 variants had different interaction meaning.
+
+### Corrected Android ECharts follow-up
+
+The isolated ECharts Android Release now proves the shared full-day axis,
+10% zoom clamp, fixed-focal zoom behavior and both midnight pan boundaries.
+Behavioral checks also retain the exact tooltip with two-second dismissal,
+quiet-week rows, loading/error/no-data replacement states, and both selectable
+halves of the overnight interval.
+
+Release readback found and corrected an adapter accuracy defect before any
+performance scoring: ECharts generates fractional-hour ticks after zoom, but
+the adapter rounded them to the nearest hour, producing false and sometimes
+duplicate labels. A first attempt that hid fractional ticks also failed
+readback. The final adapter formats the actual time, including minutes when
+necessary, and is covered by focused tests. Both failed and passing artefacts
+are retained.
+
+The required near-tap “Zoom to click” hint is not implemented in either
+finalist. Behavioral parity therefore remains open, as do the Victory state,
+tooltip, pan and remaining fixture captures. No renderer recommendation is
+issued.
 
 The final recommendation also remains blocked by the observed-heavy QA fixture
 and release-like runs on a physical mid-range Android, modern Android, iPhone

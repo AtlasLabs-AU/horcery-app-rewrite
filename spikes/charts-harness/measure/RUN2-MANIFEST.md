@@ -124,3 +124,32 @@ aggressive fixed-focal pinches, enough to cross the 10% floor repeatedly.
 | iOS | `corrected/victory/ios/normal-max-zoom-relayout-overshoot-fixed.mov` | 6,148,732 | `f1efbbdeb06139ec35364e4e657643c853b80324f1f8ce1105e8d02a15837935` | Ten-pinch relayout proof. Simulator only. |
 | iOS | `corrected/victory/ios/normal-max-zoom-matrix-overshoot-fixed.png` | 599,577 | `476d24f7b15ecafb4931909bd6cc008d2727fcb3a844cea8ebda7fe70ece8992` | Final matrix at the 10% floor. |
 | iOS | `corrected/victory/ios/normal-max-zoom-matrix-overshoot-fixed.mov` | 6,190,975 | `8c6c1fcecae50e10b50b59de6e16f980d3ae51bdd40cf6029fd64cf1b335ce43` | Ten-pinch matrix proof. Simulator only. |
+
+## Corrected ECharts Android axis and behavior evidence
+
+These artefacts come from isolated ECharts Android Release builds after the
+shared endpoint correction. The first build retained a fractional-tick
+rounding defect; it and its failed evidence remain indexed deliberately. The
+final build formats the actual generated tick time and is the build to use for
+subsequent measurements.
+
+| Artefact | Bytes | SHA-256 | What it proves / limitation |
+|---|---:|---|---|
+| `corrected/echarts-skia/android/android-release-pre-axis.apk` | 125,652,807 | `e84324287ca33dfbe47a786024f8d66ca517ed57772f752172ce6938f8aff4d8` | Failed-label Release retained for provenance; do not measure. |
+| `corrected/echarts-skia/android/normal-max-zoom-rounded-label-defect.png` | 451,112 | `2d91c19608af4fa2d1a8b1a0a497115d65694903d4a6cc81a18aa0cb96208306` | Failed evidence: fractional ticks were rounded into duplicate false-hour labels. |
+| `corrected/echarts-skia/android/android-release-accurate-axis.apk` | 125,652,827 | `9408cc8e795c9eecbe7dca72809123332b693b5dfa5523fd42f782e8029f3abc` | Final isolated Release with accurate fractional tick formatting. Emulator only. |
+| `corrected/echarts-skia/android/normal-100-percent.png` | 122,611 | `663b056a71e47a52dfc5dcd6edca77ac58e0cc8661a930e6ddaa3eef084268e2` | Full-day axis shows both required midnight endpoints. Captured before the fractional formatter change, which does not affect whole-hour full-day ticks. |
+| `corrected/echarts-skia/android/normal-max-zoom-accurate.png` | 458,877 | `d67e40f8749a14350f8fd90fb24cdee8fabd671c0f89b6f242a6491963b03e9f` | Final Release labels the actual fractional times at the zoom floor. |
+| `corrected/echarts-skia/android/pan-right-boundary-midnight.png` | 456,540 | `ca6dc77cecad54ab8c91491559370bba89895770ba5df8f098723d3c517b59f1` | Final Release clamps at the closing midnight with one `12 AM` endpoint. |
+| `corrected/echarts-skia/android/pan-left-boundary-midnight.png` | 451,923 | `e82df229e84095ee59042fc99771ebb87b54c975070a13a1764d26e3925b558f` | Final Release clamps at the opening midnight with one `12 AM` endpoint. |
+| `corrected/echarts-skia/android/final-zoom-pan-boundaries.mp4` | 1,132,378 | `0882e62517e148c172fcd7f16ee755ec6f02380e30d06097a977397c1c11d688` | Final fixed-focal zoom plus both pan-boundary interactions. Emulator only. |
+| `corrected/echarts-skia/android/normal-tooltip.png` | 128,739 | `2fee577096195deefbe74ba4dedec98b2e0892dca2fd2e3fcc17615914be6610` | Exact legacy date/time/count tooltip text. |
+| `corrected/echarts-skia/android/tooltip-two-second-dismiss.mp4` | 236,723 | `827fc81229eb4b233e78e5dcbc12600d9713bccb9320ea40fad51459e97aec90` | Tooltip appears on item tap and dismisses after the configured two seconds. |
+| `corrected/echarts-skia/android/state-transitions.mp4` | 639,976 | `b07bf51742ffa69d2d2940dd3ce4d9214edb9206d8534d41d60875908b5889b3` | Normal → no-data → loading → error → normal clears stale chart content. |
+| `corrected/echarts-skia/android/quiet-week.png` | 481,232 | `5542c973c6463a80389b973191a75749bf696edfddb1222956fd615239569f28` | Valid all-zero response keeps seven rows and legend rather than showing no-data. |
+| `corrected/echarts-skia/android/overnight-right-edge-tooltip.png` | 131,690 | `ee04617f51471848f187cc8085cb4d52170973cb2796f26fd360dd71ae571def` | Aug 13 interval is selectable through 12:00 AM. |
+| `corrected/echarts-skia/android/overnight-left-edge-tooltip.png` | 129,716 | `60e570989e2688b53c7a1707f465a946baf98178636adf228c173f4b2d87aae2` | Aug 14 continuation begins at 12:00 AM and ends at 12:40 AM. |
+
+The near-tap hint failed live verification: tapping empty row space within one
+hour of a bar produced no “Zoom to click” message. It is not implemented in
+either adapter, so the behavioral parity gate remains open.

@@ -10,18 +10,18 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Required behaviour | ECharts · Skia | Victory · Skia | Evidence needed |
 |---|---|---|---|
 | Seven rows, oldest day at top | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
-| Shared clock axis, required labels and overlap hiding | Verified in corrected iOS Release at 100% and maximum zoom | Verified in corrected iOS and Android Release at 100% and maximum zoom | Corrected screenshots in manifest; ECharts Android rebuild still pending |
+| Shared clock axis, required labels and overlap hiding | Verified in corrected iOS and Android Release at 100%, maximum zoom and both pan boundaries | Verified in corrected iOS and Android Release at 100% and maximum zoom | Corrected screenshots in manifest; ECharts fractional ticks now show their true minute instead of being rounded to a false hour |
 | Row guides, 16 px bars, 4 px radius, 1 px minimum | Pending | Pending | Screenshot / pixel inspection |
 | With Horse / Without Horse colours and legend | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
-| 10%–100% horizontal zoom limits | Provisional on iOS: maximum-zoom screenshot retained; interaction recording pending | Verified on iOS and Android for relayout and matrix: ten aggressive fixed-focal pinches remain under that focal and clamp at the floor | Corrected screenshots and recordings in manifest |
-| Pan clamps inside one day | Pending | Pending | Interaction recording |
-| Exact tooltip text and two-second dismissal | Pending | Pending | Recording + accessibility label |
-| Near-tap hint: “Zoom to click” within one hour | Pending | Pending | Interaction recording |
-| Quiet week remains seven empty rows with legend | Pending | Pending | Screenshot |
-| No-data overlay; no stale rows, legend or tooltip | Pending | Pending | Transition recording |
-| Loading presentation; no stale chart | Pending | Pending | Transition recording |
-| Error copy; no stale chart | Pending | Pending | Transition recording |
-| Overnight intervals split at the correct day edge | Pending | Pending | Screenshot |
+| 10%–100% horizontal zoom limits | Verified on Android: repeated fixed-focal pinches clamp at the floor; corrected iOS maximum-zoom screenshot retained | Verified on iOS and Android for relayout and matrix: ten aggressive fixed-focal pinches remain under that focal and clamp at the floor | Corrected screenshots and recordings in manifest; physical devices remain required |
+| Pan clamps inside one day | Verified on Android at both midnight boundaries | Pending | Final ECharts interaction recording and boundary screenshots in manifest |
+| Exact tooltip text and two-second dismissal | Verified on Android Release | Pending | ECharts screenshot + dismissal recording; exact formatter remains pinned by domain tests |
+| Near-tap hint: “Zoom to click” within one hour | **Failed: not implemented** | **Failed: not implemented** | Live empty-space tap produced no hint; implement renderer-independent behavior before parity can pass |
+| Quiet week remains seven empty rows with legend | Verified on Android Release | Pending | ECharts screenshot |
+| No-data overlay; no stale rows, legend or tooltip | Verified on Android Release | Pending | ECharts transition recording + screenshot |
+| Loading presentation; no stale chart | Verified on Android Release | Pending | ECharts transition recording + screenshot |
+| Error copy; no stale chart | Verified on Android Release | Pending | ECharts transition recording + screenshot |
+| Overnight intervals split at the correct day edge | Verified on Android: both midnight halves selectable with exact tooltips | Pending | ECharts right-edge and left-edge tooltip screenshots |
 | Spring-forward clock grammar retained | Pending | Pending | Screenshot + domain test |
 | Fall-back overlap remains distinguishable | Pending | Pending | Screenshot + design note |
 | Organization-zone labels retained | Pending | Pending | Domain test + screenshot |
@@ -30,7 +30,7 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Native semantic summary exists | Android tree captured | Clean Android raw tree captured | Automated layer retained; spoken testing deferred |
 | Native interval semantics contain series/date/time/count | Android tree captured | Clean Android raw tree captured | Automated layer retained; spoken testing deferred |
 | Semantic nodes remain bounded and pageable | Unit tests + 20-node normal tree | Unit tests | Automated guard retained; spoken testing deferred |
-| Phone | Corrected iOS Release screenshot; recording pending | Corrected iOS and Android Release screenshots plus repeated-pinch recordings | Physical-device evidence still required |
+| Phone | Corrected iOS and Android Release screenshots plus Android zoom/pan recording | Corrected iOS and Android Release screenshots plus repeated-pinch recordings | Physical-device evidence still required |
 | Tablet layout | Prior Release screenshot; axis fix needs rebuild | Prior Release screenshot; shared fix needs rebuild | Interaction still pending; physical tablet is a decision gate |
 
 ## Open product-design call
@@ -39,6 +39,22 @@ The fall-back day repeats 1 AM. The shared clock grammar intentionally overlays
 both occurrences. The adapter must keep both intervals distinguishable; whether
 the axis also says “1 AM ×2” remains a product-design decision and cannot be
 scored as implemented until resolved.
+
+## Corrected ECharts fractional-label defect
+
+The first corrected Android build exposed a separate ECharts-adapter error at
+maximum zoom: the formatter rounded every generated value-axis tick to the
+nearest hour. A 12:30 PM tick could therefore be labelled 1 PM, and adjacent
+ticks could display the same clock time. The first attempted correction hid
+all fractional ticks and failed Release readback because ECharts legitimately
+regenerates non-whole-hour ticks after `dataZoom`.
+
+The final formatter labels the actual generated time, including minutes when
+needed, and retains the midnight endpoints. Unit tests cover whole hours,
+fractional hours, floating-point noise and both day bounds. A fresh isolated
+Android Release shows truthful regenerated labels at the zoom floor and one
+midnight label at each pan boundary. The failed rounded-label screenshot and
+recording remain in the manifest.
 
 ## Corrected Victory cumulative-pinch defect
 

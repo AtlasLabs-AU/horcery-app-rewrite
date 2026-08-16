@@ -26,7 +26,7 @@ import {
 } from '@/charts/occupancy-layout';
 
 import type { EChartsProgressiveMode, RendererProps, RenderSignal } from '../renderer';
-import { visibleHourTicks } from '../axis-ticks';
+import { clockLabelAtPosition } from '../axis-ticks';
 import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
 
 /**
@@ -92,10 +92,6 @@ function buildOption(
 
   const { zone, days, series } = timeline;
   const categories = days.map((d) => dayLabel(d, zone));
-  const labelledTicks = new Map(
-    visibleHourTicks(TICKS, visible, width).map((tick) => [Math.round(tick.position * 24), tick.label]),
-  );
-
   const barSeries = series.map((s, seriesIndex) => {
     const data: EChartsBarDatum[] = (layout?.bars ?? [])
       .filter((bar) => bar.seriesIndex === seriesIndex)
@@ -180,7 +176,7 @@ function buildOption(
         showMinLabel: true,
         showMaxLabel: true,
         hideOverlap: false,
-        formatter: (v: number) => labelledTicks.get(Math.round(v * 24)) ?? '',
+        formatter: clockLabelAtPosition,
       },
     },
     yAxis: {
