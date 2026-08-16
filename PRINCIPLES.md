@@ -47,6 +47,34 @@ it doesn't go in. When two collide, the tie-break rule at the bottom applies.
     a label, and a 44pt target. Cheaper now than later, and it is what makes
     QA automation possible.
 
+## Colour (decided by Inakshi, 2026-08-17)
+
+The look is **editorial**: white canvas, ink and grey doing the work, one
+deep purple used only where you press. This is how principles 3, 4, 8 and 9
+cash out in colour, and it is enforced by `src/__tests__/no-color-literals`:
+
+- **Canvas and ink.** Near-white background, white cards, four-step grey ink
+  ramp. Text, links, selected states, icon tints and checkmarks are **ink**
+  (`colors.accent` *is* ink) — never a hue.
+- **Purple is a control fill, nothing else.** Deep aubergine (`colors.inverse`)
+  on primary buttons and the on-state of switches. Not on links, chips,
+  icons, headers, avatars, pills or backgrounds. Lifted to mauve in dark so
+  it still reads as purple.
+- **Status is the only other chroma**, rationed: red for a real alert or a
+  validation error, green for confirmed-good. Data is never coloured by how
+  "good" it is. On a monochrome page one red pill is unmissable — that is
+  the point.
+- **Selection by tone and weight**, never by an inverted block: a light well
+  and headline weight, or a text tab with an underline. Icons sit bare — no
+  tinted circles behind them.
+- **The logo keeps brand `#615FFF`.** That hue does not appear in the UI.
+- **No custom skeuomorphic controls** (metallic toggles and the like were
+  looked at and put away, 2026-08-17): the native switch, tinted, is the
+  switch. Depth comes from air and hairlines.
+- Every value lives in `src/constants/tokens.ts`; light and dark carry the
+  same keys. A screen that "needs" a colour literal means the palette is
+  missing a role — add the role.
+
 ## Tie-break
 
 **Smooth over showy.** When principles collide — glass that costs frames on

@@ -13,11 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useTokens } from '@/hooks/use-tokens';
 import { Fyp, Spacing } from '@/constants/theme';
-import { THEME_NAMES, themes, type ThemeName } from '@/constants/themes';
-import { radius, space, type as typeRamp } from '@/constants/tokens';
-import { useThemePreference } from '@acme/stores/theme-preference';
 
 /**
  * PROTOTYPES — snapshot video carousel.
@@ -98,7 +94,6 @@ export default function CarouselPrototypes() {
   return (
     <View style={styles.page}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ThemeSwitcher width={width - PAGE_MARGIN * 2} />
         <Text
           style={styles.stallsLink}
           onPress={() => router.push('/proto-preferences')}
@@ -162,59 +157,6 @@ export default function CarouselPrototypes() {
  * next — squarely in the "1.5 to 2 visible" band, so the swipe explains
  * itself without dots doing the work.
  */
-/**
- * R&D-only: flips the token palette every screen reads through `useTokens`.
- * Never leaves `rnd`; the winner becomes the palette in tokens.ts.
- */
-function ThemeSwitcher({ width }: { width: number }) {
-  const { colors } = useTokens();
-  const theme = useThemePreference((s) => s.theme);
-  const setTheme = useThemePreference((s) => s.setTheme);
-  const options = THEME_NAMES.map((name) => ({ label: themes[name].label, value: name }));
-
-  return (
-    <View style={[switcherStyles.card, { backgroundColor: colors.card }]}>
-      <Text style={[typeRamp.eyebrow, { color: colors.tertiary }]}>Theme under review</Text>
-      <SegmentedControl<ThemeName>
-        options={options}
-        value={theme}
-        onChange={setTheme}
-        width={width - space.edge * 2}
-      />
-      <Text style={[typeRamp.footnote, { color: colors.secondary }]}>{themes[theme].blurb}</Text>
-      <View style={switcherStyles.swatches}>
-        {(['accent', 'inverse', 'fillTonal', 'bed', 'background'] as const).map((key) => (
-          <View
-            key={key}
-            style={[
-              switcherStyles.swatch,
-              { backgroundColor: colors[key], borderColor: colors.divider },
-            ]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const switcherStyles = StyleSheet.create({
-  card: {
-    marginHorizontal: PAGE_MARGIN,
-    marginBottom: space.md,
-    padding: space.edge,
-    gap: space.sm,
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-  },
-  swatches: { flexDirection: 'row', gap: space.sm },
-  swatch: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-});
-
 function Carousel({
   items,
   variant,

@@ -1,11 +1,27 @@
 /**
- * Design tokens — the start of the R3 system from the UI design brief
+ * Design tokens — the R3 system from the UI design brief
  * (Horcery_App_UI_Design_Requirements.md). Structure adapted from Clarity
  * (https://github.com/SchroederNathan/clarity, MIT); values are Horcery's.
  *
- * Light and dark carry identical key sets. The accent family is seeded from
- * brand #615FFF: tonal indigo for fills and beds, full saturation only for
- * small emphasis (links, active states) — never large floods.
+ * COLOUR — the "editorial" palette, decided by Inakshi 2026-08-17 after
+ * on-device comparison (requirements §4d, PRINCIPLES.md "Colour"):
+ *
+ * - **White canvas; ink and grey carry the interface.** Text, links,
+ *   selected states, icon tints and checkmarks are ink (`accent` IS ink).
+ * - **Deep purple lives in exactly one role: control fills** — primary
+ *   buttons and the on-state of switches (`inverse`). Nowhere else.
+ * - **The two status colours are the only other chroma**, and they are
+ *   rationed: `statusAlert` for real alerts and validation, `statusOk` for
+ *   confirmed-good — never for data that merely is what it is.
+ * - Selection is shown by tone and weight (a light well, headline weight),
+ *   never by an inverted block. Depth comes from air and hairlines, not
+ *   from tinted containers.
+ * - The logo keeps brand #615FFF; that hue does not appear in the UI.
+ * - Dark is the twin, not an afterthought: near-black canvas, white ink,
+ *   purple lifted so it still reads as purple.
+ *
+ * Light and dark carry identical key sets. `src/__tests__/no-color-literals`
+ * keeps colour out of screens; every hue below is the only place it lives.
  */
 
 import { Platform } from 'react-native';
@@ -13,19 +29,19 @@ import { Platform } from 'react-native';
 export const palette = {
   light: {
     /** Canvas behind everything. */
-    background: '#F4F4F6',
+    background: '#FAFAFB',
     /** Opaque raised card. */
     card: '#FFFFFF',
-    /** Soft lavender-tinted bed (grouped-list section, elevated wells). */
-    bed: '#EDEDFB',
-    /** Tonal indigo control fill (icon circles, switch tracks). */
-    fillTonal: '#E4E4F8',
-    /** Small-emphasis accent only: links, active checkmarks, tints. */
-    accent: '#615FFF',
+    /** Light grey bed (grouped-list section, elevated wells, selected tone). */
+    bed: '#F3F3F5',
+    /** Grey control fill (switch off-track, tonal wells where still used). */
+    fillTonal: '#ECECEF',
+    /** Emphasis is INK: links, selected states, icon tints, checkmarks. */
+    accent: '#1C1C22',
     /** Text/icon drawn ON an accent fill (selected day, avatar initials). */
     onAccent: '#FFFFFF',
-    /** The primary-button surface — near-black in light, flips in dark. */
-    inverse: '#1C1C22',
+    /** The one place purple lives: primary buttons and switch on-state. */
+    inverse: '#3F2E5C',
     onInverse: '#FFFFFF',
     /** Ink ramp. */
     foreground: '#1C1C22',
@@ -33,27 +49,28 @@ export const palette = {
     tertiary: '#87878F',
     dimmed: '#B4B4BC',
     /** Lines. */
-    divider: '#E6E6EB',
+    divider: '#E8E8EC',
     /** Status. Red is for real alerts and validation only — never data. */
-    statusOk: '#12B76A',
-    statusAlert: '#E5484D',
+    statusOk: '#2E9E6B',
+    statusAlert: '#D9484A',
   },
   dark: {
     background: '#0B0B0D',
-    card: '#1B1B20',
-    bed: '#222234',
-    fillTonal: '#2C2C48',
-    accent: '#7B79FF',
-    onAccent: '#FFFFFF',
-    inverse: '#F2F2F7',
-    onInverse: '#111114',
+    card: '#1A1A1E',
+    bed: '#222226',
+    fillTonal: '#2C2C31',
+    accent: '#F2F2F7',
+    onAccent: '#0B0B0D',
+    /** Lifted so the button still reads as purple on near-black. */
+    inverse: '#7E6BB5',
+    onInverse: '#FFFFFF',
     foreground: '#F2F2F7',
     secondary: '#A7A7B4',
     tertiary: '#77777F',
     dimmed: '#4E4E56',
     divider: '#2A2A31',
-    statusOk: '#30C783',
-    statusAlert: '#F2555A',
+    statusOk: '#3BC08A',
+    statusAlert: '#F0595E',
   },
 } as const;
 
