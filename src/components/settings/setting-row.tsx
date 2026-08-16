@@ -4,7 +4,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Toggle } from '@/components/ui/toggle';
 import { useTokens } from '@/hooks/use-tokens';
-import { motion, radius, space, type } from '@/constants/tokens';
+import { motion, space, type } from '@/constants/tokens';
 
 /**
  * A settings row whose ICON tells the truth about the state, not just the
@@ -51,13 +51,15 @@ export function SettingRow({
 
   return (
     <View style={styles.row} testID={testID}>
-      <View style={[styles.iconWell, { backgroundColor: value ? colors.fillTonal : colors.bed }]}>
-        {/* Keyed on the glyph so a change mounts a fresh view and animates. */}
+      {/* Bare icon, no well (editorial pass): the tint and glyph carry the
+          state; a tinted circle behind it was one container too many. Keyed
+          on the glyph so a change mounts a fresh view and crossfades. */}
+      <View style={styles.iconSlot}>
         <Animated.View
           key={glyph}
           entering={FadeIn.duration(motion.fast)}
           exiting={FadeOut.duration(motion.fast)}>
-          <Icon name={glyph} size={18} color={value ? (tint ?? colors.accent) : colors.dimmed} />
+          <Icon name={glyph} size={20} color={value ? (tint ?? colors.accent) : colors.dimmed} />
         </Animated.View>
       </View>
 
@@ -92,10 +94,8 @@ const styles = StyleSheet.create({
     gap: space.md,
     paddingLeft: space.edge,
   },
-  iconWell: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.full,
+  iconSlot: {
+    width: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -87,9 +87,10 @@ export function EventCard({
           <View style={[styles.playBadge, { backgroundColor: colors.card }]}>
             <Icon name="spaces" size={18} color={colors.accent} />
           </View>
+          {/* Duration is not a control, so it is a card-on-image pill, not the button colour. */}
           {event.durationLabel ? (
-            <View style={[styles.durationPill, { backgroundColor: colors.inverse }]}>
-              <Text style={[type.caption, { color: colors.onInverse }]}>
+            <View style={[styles.durationPill, { backgroundColor: colors.card }]}>
+              <Text style={[type.caption, styles.durationText, { color: colors.foreground }]}>
                 {event.durationLabel}
               </Text>
             </View>
@@ -101,7 +102,7 @@ export function EventCard({
         {event.animalName ? (
           <>
             <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-              <Text style={[type.caption, styles.avatarText]}>
+              <Text style={[type.caption, styles.avatarText, { color: colors.onAccent }]}>
                 {initials(event.animalName)}
               </Text>
             </View>
@@ -125,7 +126,7 @@ export function EventCard({
             style={[
               type.caption,
               styles.tagText,
-              { color: event.isAlert ? '#FFFFFF' : colors.accent },
+              { color: event.isAlert ? colors.onInverse : colors.secondary },
             ]}>
             {event.title}
           </Text>
@@ -198,7 +199,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#FFFFFF', fontWeight: '700' },
+  avatarText: { fontWeight: '700' },
+  durationText: { fontWeight: '600' },
   animalName: { flex: 1 },
   tag: {
     borderRadius: radius.full,

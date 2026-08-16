@@ -234,8 +234,9 @@ function MenuRow({
       accessibilityLabel={wired ? label : undefined}
       testID={testID}
       style={({ pressed }) => [styles.row, pressed && wired && { backgroundColor: colors.bed }]}>
-      <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-        <Icon name={icon} size={17} color={wired ? colors.accent : colors.dimmed} />
+      {/* Bare icon, no tinted well (editorial pass 2026-08-17). */}
+      <View style={styles.iconWell}>
+        <Icon name={icon} size={20} color={wired ? colors.foreground : colors.dimmed} />
       </View>
       <Text
         style={[type.body, styles.rowLabel, { color: wired ? colors.foreground : colors.tertiary }]}
@@ -349,9 +350,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconWell: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
+    width: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },

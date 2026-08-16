@@ -129,8 +129,9 @@ function MoreRow({
       accessibilityLabel={wired ? title : undefined}
       testID={testID}
       style={({ pressed }) => [styles.row, pressed && wired && { backgroundColor: colors.bed }]}>
-      <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-        <Icon name={icon} size={18} color={wired ? colors.accent : colors.dimmed} />
+      {/* Bare icon, no tinted well (editorial pass 2026-08-17). */}
+      <View style={styles.iconWell}>
+        <Icon name={icon} size={20} color={wired ? colors.foreground : colors.dimmed} />
       </View>
       <View style={styles.rowText}>
         <Text style={[type.body, { color: wired ? colors.foreground : colors.tertiary }]}>
@@ -184,9 +185,7 @@ const styles = StyleSheet.create({
     gap: space.xxs,
   },
   iconWell: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.full,
+    width: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },

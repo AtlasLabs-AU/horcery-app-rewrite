@@ -44,7 +44,7 @@ export function SectionHeader({
   return (
     <View style={styles.headerRow}>
       <View style={styles.titleGroup}>
-        <Text style={[type.title3, styles.title, { color: colors.foreground }]} numberOfLines={1}>
+        <Text style={[type.title, styles.title, { color: colors.foreground }]} numberOfLines={1}>
           {title}
         </Text>
         {adornment}
@@ -59,7 +59,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     marginHorizontal: space.edge,
-    padding: space.edge,
+    // Editorial pass: card padding = the brief's 20, and the title up one
+    // step (title, not title3). Type and air do the hierarchy, not fills.
+    padding: space.card,
   },
   headerRow: {
     flexDirection: 'row',

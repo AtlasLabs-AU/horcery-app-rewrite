@@ -1,17 +1,25 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { useTokens } from '@/hooks/use-tokens';
 
+/**
+ * The tab bar reads TOKENS (editorial pass, 2026-08-17): before, it read
+ * the scaffold's Colors and stayed brand indigo in every theme variant.
+ * Selected = ink; unselected = tertiary grey. Background is left to the
+ * system so iOS 26 keeps its glass.
+ */
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const { colors } = useTokens();
 
   return (
     <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      tintColor={colors.foreground}
+      iconColor={{ default: colors.tertiary, selected: colors.foreground }}
+      indicatorColor={colors.fillTonal}
+      labelStyle={{
+        default: { color: colors.tertiary },
+        selected: { color: colors.foreground },
+      }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

@@ -6,7 +6,7 @@ import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LinkButton } from '@/components/for-you/link-button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { TextTabs } from '@/components/ui/text-tabs';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -37,11 +37,15 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
 ];
 
 /**
- * Behavior Tracker — period toggle, behaviour selector tiles, and the chart for
- * the selected behaviour. Chart stubbed pending the charting decision.
+ * Behavior Tracker — period tabs, behaviour selector, and the chart for the
+ * selected behaviour. Chart stubbed pending the charting decision.
  *
- * Header carries the ⋮ menu beside the title (as the current app does) and the
- * native segmented control flush right, both on the title line.
+ * Editorial pass (Inakshi, 2026-08-17 — "the white slab is the biggest
+ * issue"): selection is shown by TONE and WEIGHT, never by an inverted
+ * block. The chosen behaviour sits in a light well with an ink icon and a
+ * headline-weight label; the others are bare icons in grey. Daily / Weekly
+ * are text tabs rather than a filled segmented control, so the card has one
+ * selection idiom. The ⋮ sits flush right after the tabs, on the title line.
  */
 export function BehaviorTrackerCard({
   behaviors = DEFAULT_BEHAVIORS,
@@ -65,22 +69,21 @@ export function BehaviorTrackerCard({
     <SectionCard testID="for-you-behavior-tracker">
       <SectionHeader
         title="Behavior Tracker"
-        adornment={
-          <Menu
-            icon="overflow"
-            accessibilityLabel="Behavior tracker options"
-            testID="for-you-tracker-menu"
-            actions={TRACKER_MENU_ACTIONS}
-          />
-        }
         action={
-          <SegmentedControl
-            options={PERIOD_OPTIONS}
-            value={period}
-            onChange={setPeriod}
-            width={132}
-            testID="for-you-tracker-period"
-          />
+          <View style={styles.headerActions}>
+            <TextTabs
+              options={PERIOD_OPTIONS}
+              value={period}
+              onChange={setPeriod}
+              testID="for-you-tracker-period"
+            />
+            <Menu
+              icon="overflow"
+              accessibilityLabel="Behavior tracker options"
+              testID="for-you-tracker-menu"
+              actions={TRACKER_MENU_ACTIONS}
+            />
+          </View>
         }
       />
 
@@ -97,20 +100,29 @@ export function BehaviorTrackerCard({
               testID={`for-you-behavior-${behavior.id}`}
               style={[
                 styles.behaviorTile,
-                { backgroundColor: isSelected ? colors.accent : colors.fillTonal },
+                isSelected && { backgroundColor: colors.bed },
               ]}>
               <Icon
                 name={behavior.icon}
-                size={26}
-                color={isSelected ? colors.onInverse : colors.secondary}
+                size={22}
+                color={isSelected ? colors.foreground : colors.tertiary}
               />
+              <Text
+                style={[
+                  type.caption,
+                  isSelected && styles.selectedCaption,
+                  { color: isSelected ? colors.foreground : colors.tertiary },
+                ]}
+                numberOfLines={1}>
+                {behavior.label}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
       <View style={styles.selectedRow}>
-        <Text style={[type.headline, styles.selectedLabel, { color: colors.foreground }]}>
+        <Text style={[type.title3, styles.selectedLabel, { color: colors.foreground }]}>
           {selected?.label}
         </Text>
         <LinkButton
@@ -141,19 +153,28 @@ export function BehaviorTrackerCard({
 }
 
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
   behaviorRow: {
     flexDirection: 'row',
-    gap: space.md,
+    gap: space.sm,
     marginTop: space.edge,
   },
   behaviorTile: {
     flex: 1,
-    height: 62,
+    minHeight: 64,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.xs,
+    gap: space.xs,
     borderRadius: radius.sm,
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  selectedCaption: { fontWeight: '600' },
   selectedRow: {
     flexDirection: 'row',
     alignItems: 'center',
