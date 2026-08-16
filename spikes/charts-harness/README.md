@@ -1,6 +1,7 @@
 # Charts harness — People In Stall renderer spike (§6a)
 
-Three renderers behind one switch, nine fixtures behind another, identical
+Three renderers behind one switch, nine deterministic data fixtures plus loading
+and error states behind another, identical
 geometry, all drawing the app's own `src/charts` domain layer.
 
 ```
@@ -10,6 +11,26 @@ npx expo run:ios                        # debug — for correctness / parity
 npx expo run:ios --configuration Release   # what performance is measured on
 npx expo run:android --variant release
 ```
+
+## Run 2 isolated finalists
+
+`HORCERY_RENDERER` changes the Metro entry graph and native app identifier.
+Prebuild each finalist before its Release build so autolinking is recalculated;
+the two bundle IDs can then remain installed side-by-side.
+
+```bash
+HORCERY_RENDERER=echarts-skia npx expo prebuild --clean --no-install
+HORCERY_RENDERER=echarts-skia npx expo run:ios --configuration Release
+
+HORCERY_RENDERER=victory npx expo prebuild --clean --no-install
+HORCERY_RENDERER=victory npx expo run:ios --configuration Release
+```
+
+For Android on this test machine, set `JAVA_HOME` to the Temurin 17 JDK recorded
+in the Run 2 handover before the same prebuild plus `expo run:android --variant
+release` sequence. Bundle source-map audits must show no `victory-native` source
+in the ECharts build and no `echarts`, `zrender`, or Wuba source in the Victory
+build. A combined harness bundle is not evidence for bundle size or cold start.
 
 - **Renderers:** `ECharts · SVG` (what the current app uses), `ECharts · Skia`, `Victory · Skia`.
 - **Fixtures:** from `src/charts/fixtures/people-in-stall.ts` — the chip shows name · bar count.

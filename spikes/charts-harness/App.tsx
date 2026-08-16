@@ -1,18 +1,33 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import {
+  buildOccupancyA11yModel,
+  occupancyA11yPage,
+  type OccupancyA11yModel,
+} from '@/charts/occupancy-a11y';
+
+import {
+  DEFAULT_RENDERER_ID,
   RENDERERS,
   type EChartsProgressiveMode,
   type RendererId,
   type RenderSignal,
   type VictoryRenderMode,
 } from './src/renderer';
-import { EChartsTimeline } from './src/renderers/echarts-timeline';
-import { VictoryTimeline } from './src/renderers/victory-timeline';
-import { GEOMETRY, loadScenarios } from './src/scenarios';
+import { RendererHost } from './src/renderer-host';
+import { GEOMETRY, loadScenarios, seriesLabel } from './src/scenarios';
 
 /**
  * §6a chart renderer harness — People In Stall.
@@ -31,7 +46,7 @@ export default function App() {
   const { width: windowWidth } = useWindowDimensions();
   const chartWidth = windowWidth - 32;
 
-  const [rendererId, setRendererId] = useState<RendererId>('echarts-svg');
+  const [rendererId, setRendererId] = useState<RendererId>(DEFAULT_RENDERER_ID);
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [mountKey, setMountKey] = useState(0);
   const [renderSignal, setRenderSignal] = useState<RenderSignal | null>(null);
@@ -39,6 +54,8 @@ export default function App() {
   const [lodEnabled, setLodEnabled] = useState(false);
   const [progressiveMode, setProgressiveMode] = useState<EChartsProgressiveMode>('default');
   const [victoryMode, setVictoryMode] = useState<VictoryRenderMode>('relayout');
+  const [parentScroll, setParentScroll] = useState(false);
+  const [chartForeground, setChartForeground] = useState(true);
   const jsFps = useJsFps();
 
   const scenario = scenarios[scenarioIndex]!;
@@ -85,20 +102,40 @@ export default function App() {
       lodEnabled,
       onRenderSignal,
     };
-    switch (rendererId) {
-      case 'echarts-svg':
-        return <EChartsTimeline {...props} backend="svg" progressiveMode={progressiveMode} />;
-      case 'echarts-skia':
-        return <EChartsTimeline {...props} backend="skia" progressiveMode={progressiveMode} />;
-      case 'victory-skia':
-        return <VictoryTimeline {...props} renderMode={victoryMode} />;
-    }
+    return (
+      <RendererHost
+        {...props}
+        rendererId={rendererId}
+        progressiveMode={progressiveMode}
+        victoryMode={victoryMode}
+      />
+    );
   }, [chartWidth, lodEnabled, onRenderSignal, progressiveMode, rendererId, scenario.timeline, victoryMode]);
+
+  const chartPresentation = chartForeground ? (
+    scenario.status === 'data' ? (
+      <>
+        <View
+          key={`${rendererId}-${scenario.name}-${mountKey}-${lodEnabled}-${progressiveMode}-${victoryMode}`}
+          testID={`chart-${rendererId}`}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants">
+          {chart}
+        </View>
+        {scenario.timeline ? <OccupancyAccessibilityOverlay timeline={scenario.timeline} /> : null}
+      </>
+    ) : (
+      <ChartStateOverlay status={scenario.status} />
+    )
+  ) : (
+    <ChartStateOverlay status="background" />
+  );
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaView style={styles.root}>
         <StatusBar style="dark" />
+        <ParentContainer scrollEnabled={parentScroll}>
         <View style={styles.header}>
           <Text style={styles.title}>People In Stall — renderer spike</Text>
         </View>
@@ -149,6 +186,26 @@ export default function App() {
           )}
         </View>
 
+        <View style={styles.variants}>
+          <Segmented
+            options={[{ id: 'static', label: 'Parent static' }, { id: 'scroll', label: 'Parent ScrollView' }]}
+            value={parentScroll ? 'scroll' : 'static'}
+            onChange={(id) => setParentScroll(id === 'scroll')}
+            testIDPrefix="parent"
+            compact
+          />
+          <Segmented
+            options={[{ id: 'foreground', label: 'Chart foreground' }, { id: 'background', label: 'Chart background' }]}
+            value={chartForeground ? 'foreground' : 'background'}
+            onChange={(id) => {
+              setRenderSignal(null);
+              setChartForeground(id === 'foreground');
+            }}
+            testIDPrefix="lifecycle"
+            compact
+          />
+        </View>
+
         <View style={styles.chips}>
           {scenarios.map((s, i) => (
             <Pressable
@@ -167,11 +224,7 @@ export default function App() {
         </View>
 
         <View style={styles.chartCard} testID="chart-card">
-          <View
-            key={`${rendererId}-${scenario.name}-${mountKey}-${lodEnabled}-${progressiveMode}-${victoryMode}`}
-            testID={`chart-${rendererId}`}>
-            {chart}
-          </View>
+          {chartPresentation}
         </View>
 
         <View style={styles.stats} testID="stats">
@@ -196,8 +249,87 @@ export default function App() {
         </View>
 
         <Text style={styles.purpose}>{scenario.purpose}</Text>
+        </ParentContainer>
       </SafeAreaView>
     </GestureHandlerRootView>
+  );
+}
+
+function ParentContainer({ scrollEnabled, children }: { scrollEnabled: boolean; children: ReactNode }) {
+  if (scrollEnabled) {
+    return (
+      <ScrollView contentContainerStyle={styles.screen} testID="parent-scroll-view">
+        {children}
+      </ScrollView>
+    );
+  }
+  return (
+    <View style={styles.screen} testID="parent-static-view">
+      {children}
+    </View>
+  );
+}
+
+function ChartStateOverlay({ status }: { status: 'no-data' | 'loading' | 'error' | 'background' }) {
+  const copy = {
+    'no-data': 'No Data Available',
+    loading: 'Loading People In Stall chart',
+    error: 'Something went wrong.\nPlease try again later.',
+    background: 'Chart is in the background',
+  }[status];
+  return (
+    <View
+      style={styles.stateOverlay}
+      testID={`chart-state-${status}`}
+      accessible
+      accessibilityRole={status === 'loading' ? 'progressbar' : 'text'}
+      accessibilityLabel={copy.replace('\n', ' ')}>
+      {status === 'loading' ? <ActivityIndicator color="#0369a1" /> : null}
+      <Text style={styles.stateText}>{copy}</Text>
+    </View>
+  );
+}
+
+function OccupancyAccessibilityOverlay({ timeline }: { timeline: NonNullable<ReturnType<typeof loadScenarios>[number]['timeline']> }) {
+  const model = useMemo<OccupancyA11yModel>(
+    () =>
+      buildOccupancyA11yModel(timeline, {
+        chartLabel: 'People In Stall chart',
+        seriesLabel,
+      }),
+    [timeline],
+  );
+  const [pageIndex, setPageIndex] = useState(0);
+  const page = occupancyA11yPage(model, pageIndex);
+
+  useEffect(() => setPageIndex(0), [model]);
+
+  return (
+    <View style={styles.a11yOverlay} pointerEvents="box-none" testID="occupancy-a11y-layer">
+      <View
+        style={styles.a11yNode}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel={`${model.summary} ${page.pageLabel}. Swipe up or down to browse interval pages.`}
+        accessibilityValue={{ min: 1, max: page.pageCount, now: page.page + 1, text: page.pageLabel }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'increment') setPageIndex((value) => value + 1);
+          if (event.nativeEvent.actionName === 'decrement') setPageIndex((value) => value - 1);
+        }}
+        testID="occupancy-a11y-summary"
+      />
+      {page.intervals.map((interval, index) => (
+        <View
+          key={interval.id}
+          style={[styles.a11yNode, { top: index + 2 }]}
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={interval.label}
+          testID={`occupancy-a11y-interval-${index}`}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -267,6 +399,7 @@ function useJsFps() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#ffffff' },
+  screen: { flexGrow: 1, backgroundColor: '#ffffff' },
   // Top padding clears the Expo dev-client's floating "Tools" bubble (top-right,
   // ~90–110 px), which otherwise swallows taps on the third renderer segment.
   header: { paddingHorizontal: 16, paddingTop: 72 },
@@ -278,6 +411,10 @@ const styles = StyleSheet.create({
   segmentOn: { backgroundColor: '#ffffff' },
   segmentText: { fontSize: 13, color: '#475569' },
   segmentTextOn: { color: '#0f172a', fontWeight: '600' },
+  stateOverlay: { width: '100%', height: 300, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  stateText: { color: '#64748b', fontSize: 14, textAlign: 'center' },
+  a11yOverlay: { position: 'absolute', inset: 0 },
+  a11yNode: { position: 'absolute', left: 0, top: 0, width: 1, height: 1, overflow: 'hidden' },
   // Wrapping rows, not a horizontal scroller: every fixture is one tap away,
   // for a human and for argent alike.
   chips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 6, paddingBottom: 8 },

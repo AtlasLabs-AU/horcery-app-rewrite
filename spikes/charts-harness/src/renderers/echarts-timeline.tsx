@@ -1,4 +1,5 @@
-import { SkiaChart, SkiaRenderer, SvgChart, SVGRenderer } from '@wuba/react-native-echarts';
+import SkiaChart, { SkiaRenderer } from '@wuba/react-native-echarts/skiaChart';
+import SvgChart, { SVGRenderer } from '@wuba/react-native-echarts/svgChart';
 import { CustomChart } from 'echarts/charts';
 import {
   DataZoomComponent,

@@ -12,6 +12,10 @@ const appSrc = path.resolve(harness, '../../src');
 const charts = path.join(appSrc, 'charts');
 
 const config = getDefaultConfig(harness);
+const isolatedRenderer = process.env.HORCERY_RENDERER;
+if (isolatedRenderer && isolatedRenderer !== 'echarts-skia' && isolatedRenderer !== 'victory') {
+  throw new Error('HORCERY_RENDERER must be "echarts-skia" or "victory".');
+}
 
 config.watchFolders = [charts];
 // The shared domain files sit under the APP's tree, so hierarchical lookup
@@ -23,6 +27,21 @@ config.resolver.nodeModulesPaths = [path.join(harness, 'node_modules')];
 
 const defaultResolve = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (isolatedRenderer && moduleName === './src/renderer-host') {
+    const suffix = isolatedRenderer === 'victory' ? 'victory' : 'echarts';
+    return context.resolveRequest(context, path.join(harness, 'src', `renderer-host.${suffix}.tsx`), platform);
+  }
+  if (isolatedRenderer && moduleName === './renderer-selection') {
+    const suffix = isolatedRenderer === 'victory' ? 'victory' : 'echarts';
+    return context.resolveRequest(context, path.join(harness, 'src', `renderer-selection.${suffix}.ts`), platform);
+  }
+  if (isolatedRenderer === 'echarts-skia' && moduleName === '@wuba/react-native-echarts/svgChart') {
+    return context.resolveRequest(
+      context,
+      path.join(harness, 'src', 'renderers', 'svg-echarts-disabled.tsx'),
+      platform,
+    );
+  }
   // echarts/zrender import `tslib`, whose package `exports` map offers Metro an
   // ESM wrapper (modules/index.js) whose default-import interop comes back
   // undefined at runtime → "Cannot read property '__extends' of undefined".

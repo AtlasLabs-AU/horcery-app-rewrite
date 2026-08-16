@@ -1,5 +1,7 @@
 import type { OccupancyTimeline } from '@/charts/occupancy-timeline';
 
+import { ISOLATED_RENDERER } from './renderer-selection';
+
 /**
  * The contract every renderer under test implements. Same props, same
  * timeline, same size — the only variable is the library underneath.
@@ -29,8 +31,18 @@ export type VictoryRenderMode = 'relayout' | 'matrix';
 
 export type RendererId = 'echarts-svg' | 'echarts-skia' | 'victory-skia';
 
-export const RENDERERS: { id: RendererId; label: string }[] = [
+const ALL_RENDERERS: { id: RendererId; label: string }[] = [
   { id: 'echarts-svg', label: 'ECharts · SVG' },
   { id: 'echarts-skia', label: 'ECharts · Skia' },
   { id: 'victory-skia', label: 'Victory · Skia' },
 ];
+
+export const RENDERERS =
+  ISOLATED_RENDERER === null
+    ? ALL_RENDERERS
+    : ALL_RENDERERS.filter((renderer) =>
+        ISOLATED_RENDERER === 'victory' ? renderer.id === 'victory-skia' : renderer.id === ISOLATED_RENDERER,
+      );
+
+export const DEFAULT_RENDERER_ID: RendererId =
+  ISOLATED_RENDERER === 'victory' ? 'victory-skia' : ISOLATED_RENDERER ?? 'echarts-skia';

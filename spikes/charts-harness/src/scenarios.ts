@@ -14,6 +14,7 @@ import { buildOccupancyTimeline, type OccupancyTimeline } from '@/charts/occupan
 export interface Scenario {
   name: string;
   purpose: string;
+  status: 'data' | 'no-data' | 'loading' | 'error';
   timeline: OccupancyTimeline | null;
   intervalCount: number;
   /** How long the domain layer took to build it — renderer-independent cost. */
@@ -58,6 +59,7 @@ function build(fixture: Fixture): Scenario {
   return {
     name: fixture.name,
     purpose: fixture.purpose,
+    status: fixture.name === 'no-data' ? 'no-data' : 'data',
     timeline,
     intervalCount: timeline?.intervalCount ?? 0,
     buildMs: Math.round((performance.now() - t0) * 10) / 10,
@@ -66,6 +68,24 @@ function build(fixture: Fixture): Scenario {
 
 let cache: Scenario[] | undefined;
 export function loadScenarios(): Scenario[] {
-  cache ??= FIXTURES.map(build);
+  cache ??= [
+    ...FIXTURES.map(build),
+    {
+      name: 'loading',
+      purpose: 'The query is in flight. No stale bars or legend may remain visible.',
+      status: 'loading',
+      timeline: null,
+      intervalCount: 0,
+      buildMs: 0,
+    },
+    {
+      name: 'error',
+      purpose: 'The query failed. The retry-safe error copy replaces the chart and clears stale state.',
+      status: 'error',
+      timeline: null,
+      intervalCount: 0,
+      buildMs: 0,
+    },
+  ];
   return cache;
 }
