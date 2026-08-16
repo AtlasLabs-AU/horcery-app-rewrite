@@ -107,15 +107,24 @@ Not changed, but noted for design: **oldest day at the top**. Newest-at-top may 
 
 Both renderers must produce **all** of §2–§7 from the same `OccupancyTimeline`. Then, per §6a weights, on the same device and build:
 
+- **Accuracy (rejection gate)** — identical input must retain timestamps, intervals,
+  counts, series meaning, missing-data meaning, organization-zone/DST behavior and
+  level-of-detail semantics. Accuracy cannot be traded for speed or cost.
 - **Smoothness (30 %)** — frame rate during pinch-zoom and pan under **three loads**: `normal-week` (38 bars), **observed-heavy** (the anonymised real response — see §11; not yet captured), and `worst-case` (6 720 one-sample bars, the theoretical ceiling). `dense-week` (374) is a mid-point, not a ceiling. Mount time of the seven-row chart at each load.
 - **Reliability / memory (25 %)** — no leak across 50 mount/unmount cycles; no crash on `no-data` → `normal-week` → `no-data` transitions.
-- **Parity (20 %)** — the checklist above, ticked one by one; screenshots beside the current app.
-- **Accessibility (15 %)** — a bar is reachable and announced ("With Horse, 7:02 AM to 7:41 AM, 2 people") without sight.
+- **Whole-catalogue scalability (20 %)** — representative continuous time-series
+  and mixed/annotated-series slices reuse the same adapter architecture without
+  chart-specific framework code or duplicated interaction logic.
+- **Parity (15 %)** — the checklist above, ticked one by one; screenshots beside the current app.
 - **Cost (10 %)** — bundle delta, native build friction, licence.
 
 **Rejection gates:** cannot hit 60 fps on pan of `normal-week` on the mid-range Android; falls over (crash, >1 s frame, unbounded memory) on `worst-case`; cannot render `quiet-week` distinctly from `no-data`; cannot expose bars to the accessibility tree.
 
 **Where results count:** simulator and emulator runs establish parity, build compatibility, developer ergonomics and *large* performance differences. **They do not pick the winner.** The final acceptance is a **release build on a physical mid-range Android**; if there is no office device, borrowing or buying one is justified — the cost is trivial beside committing the whole app to the wrong chart stack.
+
+Manual VoiceOver and TalkBack validation is deferred from this renderer spike.
+The existing renderer-independent semantic layer and automated tests stay; spoken
+screen-reader validation returns as a pre-release shipping gate.
 
 ## 11. Open items
 

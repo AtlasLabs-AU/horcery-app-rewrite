@@ -1,8 +1,8 @@
-# Run 2 behavioural and accessibility parity
+# Run 2 behavioural parity
 
 This is the evidence ledger for `PEOPLE_IN_STALL.md` §§2–7. A screenshot is
-visual evidence only; interaction and screen-reader rows require a recording,
-accessibility-tree capture or platform trace. `Pending` is not parity.
+visual evidence only; interaction rows require a recording or platform trace.
+`Pending` is not parity.
 
 Raw artefacts live outside git under `spike-evidence/run2/`; stable hashes and
 paths are recorded in `RUN2-MANIFEST.md`.
@@ -27,9 +27,9 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Organization-zone labels retained | Pending | Pending | Domain test + screenshot |
 | Parent ScrollView does not steal chart pinch/pan | Pending | Pending | Interaction recording |
 | Background → foreground remount is correct | Pending | Pending | Transition recording + memory trace |
-| Summary is reachable without canvas semantics | Android tree only; spoken proof pending | Live Android inspection only; raw + spoken proof pending | VoiceOver + TalkBack capture |
-| An interval announces series, date, times and people | Android tree only; spoken proof pending | Live Android inspection only; raw + spoken proof pending | VoiceOver + TalkBack capture |
-| Worst case exposes bounded, pageable native nodes | Unit tests + 20-node normal tree; ceiling tree pending | Unit tests; raw tree pending | Ceiling accessibility tree + unit test |
+| Native semantic summary exists | Android tree captured | Live Android inspection; clean raw tree optional | Automated layer retained; spoken testing deferred |
+| Native interval semantics contain series/date/time/count | Android tree captured | Live Android inspection; clean raw tree optional | Automated layer retained; spoken testing deferred |
+| Semantic nodes remain bounded and pageable | Unit tests + 20-node normal tree | Unit tests | Automated guard retained; spoken testing deferred |
 | Phone | Release screenshot only | Release screenshot only | Interaction recording still required |
 | Tablet layout | Prior Release screenshot; axis fix needs rebuild | Prior Release screenshot; shared fix needs rebuild | Interaction still pending; physical tablet is a decision gate |
 

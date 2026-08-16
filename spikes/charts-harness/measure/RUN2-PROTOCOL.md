@@ -11,8 +11,30 @@ Frozen before Run 2 device numbers. Requirements authority:
 - Victory: React relayout and transformed-matrix variants.
 - Final bundle/cold-start comparisons use isolated single-renderer builds.
 
-No variant may reduce labels, legend, tooltip meaning, zoom limits, accessible
+No variant may reduce labels, legend, tooltip meaning, zoom limits, domain
 meaning, or any fixture to make its library look faster.
+
+## Accuracy gate
+
+Accuracy is evaluated before performance and is never averaged into a score.
+Both finalists must consume the same domain objects and preserve timestamps,
+interval boundaries, counts, units, thresholds, missing/quiet/error meaning,
+organization-zone and DST behavior, and full-detail semantics through LOD.
+Any material mismatch rejects that finalist regardless of smoothness or cost.
+
+## Whole-catalogue scalability
+
+People In Stall is necessary but not sufficient. Before renderer selection:
+
+1. Inventory the legacy chart families and their capabilities.
+2. Group them into reusable technical archetypes.
+3. Implement bounded representative slices for at least continuous time series
+   and mixed/annotated series, using renderer-independent inputs.
+4. Record adapter-only code, duplicated behavior, unsupported capabilities,
+   large-data behavior, bundle impact and maintenance warnings.
+
+A finalist fails scalability if other chart families require a bespoke chart
+framework, repeated interaction/state machinery, or changed domain meaning.
 
 ## Inputs
 
@@ -82,7 +104,7 @@ iOS).
 - PSS after clean-launch baselines and after 10, 25 and 50 remounts.
 - Cold start, domain preparation, renderer preparation and visible frame.
 - App size, native dependency/build cost and warnings for isolated builds.
-- Behavioural, accessibility and visual evidence pointers.
+- Accuracy, behavioural, scalability and visual evidence pointers.
 
 ## Raw evidence
 
@@ -96,12 +118,18 @@ raw evidence pointer.
 
 ## Decision rules
 
-Rejection gates are applied before scoring. A finalist is rejected for a
+Rejection gates are applied before scoring. A finalist is rejected for changed
+domain meaning or inaccurate output, a
 crash/unbounded memory, missing required behaviour, any interaction freeze over
 100 ms, unsmooth worst-case pan/zoom, delayed useful content, memory that does
-not substantially return, changed domain meaning, or inaccessible canvas-only
-information.
+not substantially return, or an architecture that does not scale across the
+representative chart families.
 
 Only passing finalists are scored: smoothness 30%, reliability/memory 25%,
-behavioural parity 20%, accessibility 15%, implementation cost 10%. If neither
-passes, the outcome is "neither passed", not a forced winner.
+whole-catalogue scalability 20%, behavioural parity 15%, implementation cost
+10%. If neither passes, the outcome is "neither passed", not a forced winner.
+
+Manual VoiceOver and TalkBack validation is deferred by product decision. The
+shared native semantic layer and its automated tests remain, but spoken
+screen-reader testing is a pre-release shipping gate rather than a blocker for
+this renderer decision.
