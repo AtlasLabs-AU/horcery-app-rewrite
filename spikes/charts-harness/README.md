@@ -18,6 +18,11 @@ npx expo run:android --variant release
 Prebuild each finalist before its Release build so autolinking is recalculated;
 the two bundle IDs can then remain installed side-by-side.
 
+The Run 2 native graph intentionally excludes the dev-client family and
+`react-native-svg` through `package.json#expo.autolinking`. The historical SVG
+source remains available for reference, but a freshly prebuilt Run 2 binary
+contains only the two Skia finalists' shared native prerequisites.
+
 ```bash
 HORCERY_RENDERER=echarts-skia npx expo prebuild --clean --no-install
 HORCERY_RENDERER=echarts-skia npx expo run:ios --configuration Release

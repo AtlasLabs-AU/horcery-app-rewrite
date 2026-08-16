@@ -33,10 +33,5 @@ module.exports = {
     scheme: `horcery-charts-harness${suffix ? `-${suffix}` : ''}`,
     newArchEnabled: true,
     plugins: isolated ? [] : ['expo-dev-client'],
-    autolinking: {
-      exclude: isolated
-        ? ['expo-dev-client', 'expo-dev-launcher', 'expo-dev-menu', 'expo-dev-menu-interface', 'react-native-svg']
-        : [],
-    },
   },
 };

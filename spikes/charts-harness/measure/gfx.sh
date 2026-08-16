@@ -12,7 +12,7 @@
 # invisible to it, which is exactly why it is the honest smoothness measure:
 # JS can be idle while the UI stutters, and vice versa.
 set -euo pipefail
-PKG=au.com.atlaslabs.horcery.chartsharness
+PKG="${HORCERY_PACKAGE:-au.com.atlaslabs.horcery.chartsharness}"
 ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"
 
 case "${1:-}" in
