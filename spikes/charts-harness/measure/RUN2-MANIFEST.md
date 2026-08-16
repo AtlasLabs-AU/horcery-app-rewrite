@@ -98,3 +98,29 @@ this manifest on top of `4ed06cf`.
 | Victory · Skia | `corrected/victory/ios/normal-max-zoom-matrix-fixed.png` | 609,822 | `4888effddae2d4df2b1f513a6c88251e4f0371a62eb81ae73f6d51fe0e4c7f3c` | Matrix stays around the repeated gesture centre at maximum zoom. |
 | Victory · Skia | `corrected/victory/ios/normal-repeated-pinch-relayout-fixed.mov` | 2,941,497 | `f766f13ae3bdaf810e6aab7ec545d2c4e5d6d3037465d695e8157afb562e937a` | Four repeated centred pinches remain centred and clamp for relayout. Simulator only. |
 | Victory · Skia | `corrected/victory/ios/normal-repeated-pinch-matrix-fixed.mov` | 3,184,908 | `910fce003a433b65602b17353e93647ad5f839d19471d2967e3262304bbf1989` | Same four-pinch proof for matrix. Simulator only. |
+
+### Overshoot correction and cross-platform proof
+
+The four-pinch iOS sequence above did not strongly overshoot the zoom floor.
+Android did, and exposed two additional adapter errors. The two drift captures
+below are failed evidence, not finalist results. The final proof uses ten
+aggressive fixed-focal pinches, enough to cross the 10% floor repeatedly.
+
+| Platform | Artefact | Bytes | SHA-256 | What it proves / limitation |
+|---|---|---:|---|---|
+| Android | `corrected/victory/android/android-release-interaction-fix.apk` | 124,554,175 | `a5eaa44bbf8a3adaf42a68be84a3d4de6654c2b03b0d048a2f77063caaac6ab2` | First cumulative-pinch build; lacks overshoot rebasing. Retained as failed build evidence. |
+| Android | `corrected/victory/android/normal-max-zoom-relayout-overshoot-drift.png` | 444,093 | `99d37ef1f4812ee9a07888850506263f82e304c02b0940a02fbb1f94508b1176` | Failed attempt 1: raw overshoot translation snapped the reduced scale to the end of day. |
+| Android | `corrected/victory/android/normal-max-zoom-relayout-origin-begin-drift.png` | 445,778 | `7ac9fe5edf1a29885a3e5fbb2569bb09b9847d7d899fc5a637107fa5358ed235` | Failed attempt 2: `onBegin` focal was not reliable on Android. |
+| Android | `corrected/victory/android/normal-max-zoom-relayout-origin-begin-drift.mp4` | 737,146 | `792ae978f664593c7a81de87853902334f02c9a2dc995d31d4798c68db736a8e` | Recording of failed attempt 2. |
+| Android | `corrected/victory/android/android-release-overshoot-fix.apk` | 124,554,495 | `84c7c07d31389169ad14502d622bb36e2625a024be8b39eb881552bfe54d908a` | Final isolated Android Release build with active-focal overshoot rebasing. Emulator only. |
+| Android | `corrected/victory/android/normal-100-percent.png` | 485,267 | `afc3b51902fd5e1e5c35ac7c33d6447271ba87da338b4f4460b8445e4080c120` | Correct full-day axis with both `12 AM` endpoints. Captured before the JS-only overshoot correction. |
+| Android | `corrected/victory/android/normal-max-zoom-relayout-fixed.png` | 445,799 | `1c8b50000b146b0f9a579749ea49df9591fca1aa25d7b63ecf5b08c96e32062f` | Final relayout remains under the fixed focal at the 10% floor. |
+| Android | `corrected/victory/android/normal-max-zoom-relayout-fixed.mp4` | 615,272 | `470d40380a911fcb82ba25fe95c1b9a5078cedeaf32e30418f5d7080e5a6fef5` | Ten-pinch relayout proof. Emulator only. |
+| Android | `corrected/victory/android/normal-max-zoom-matrix-fixed.png` | 448,658 | `367243e2837fa6b0e79be96708ee173d60cabb35687943a2a7e36df691444f6d` | Final matrix remains under the fixed focal at the 10% floor. |
+| Android | `corrected/victory/android/normal-max-zoom-matrix-fixed.mp4` | 758,015 | `4c33b8fe5f822eb3e3eca8f487f6f3e6ca3ac0dc260f01c316e3ac97b25fa988` | Ten-pinch matrix proof. Emulator only. |
+| Android | `corrected/victory/android/accessibility-tree.xml` | 41,420 | `fb7ba5c4eadf0e8130ee7b67c6157b7a2cfe99908773d32deeca18dc12f2df87` | Clean app tree with summary and bounded interval semantics. Spoken testing is deferred. |
+| iOS | `corrected/victory/ios/ios-simulator-release-overshoot-fix.zip` | 27,110,930 | `7a53a2b0aa3c521fac9f5297a6f079e7cc7f539b259525fcdcef9a6d07ae80ab` | Final isolated iOS Simulator Release from the same source. |
+| iOS | `corrected/victory/ios/normal-max-zoom-relayout-overshoot-fixed.png` | 598,135 | `fb03ff196348a8e20a9b6b471a930f574781adc9498dc84a05f6881b1ed5a696` | Final relayout at the 10% floor after ten aggressive pinches. |
+| iOS | `corrected/victory/ios/normal-max-zoom-relayout-overshoot-fixed.mov` | 6,148,732 | `f1efbbdeb06139ec35364e4e657643c853b80324f1f8ce1105e8d02a15837935` | Ten-pinch relayout proof. Simulator only. |
+| iOS | `corrected/victory/ios/normal-max-zoom-matrix-overshoot-fixed.png` | 599,577 | `476d24f7b15ecafb4931909bd6cc008d2727fcb3a844cea8ebda7fe70ece8992` | Final matrix at the 10% floor. |
+| iOS | `corrected/victory/ios/normal-max-zoom-matrix-overshoot-fixed.mov` | 6,190,975 | `8c6c1fcecae50e10b50b59de6e16f980d3ae51bdd40cf6029fd64cf1b335ce43` | Ten-pinch matrix proof. Simulator only. |

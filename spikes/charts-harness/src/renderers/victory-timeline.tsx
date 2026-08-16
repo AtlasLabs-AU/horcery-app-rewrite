@@ -255,13 +255,18 @@ export const VictoryTimeline = memo(function VictoryTimeline({
   const pinch = useMemo(
     () =>
       Gesture.Pinch()
-        .onBegin(() => {
+        .onBegin((event) => {
           transform.offset.value = transform.matrix.value;
+          transform.origin.value = { x: event.focalX, y: event.focalY };
         })
         .onStart(() => {
           transform.zoomActive.value = true;
         })
         .onChange((event) => {
+          // Gesture Handler does not guarantee a meaningful focal point in
+          // `onBegin` on every platform. Keep the latest active focal for the
+          // post-gesture overshoot clamp.
+          transform.origin.value = { x: event.focalX, y: event.focalY };
           const offset = transform.offset.value;
           const nextTransform = composeScreenSpacePinch(
             { k: offset[0] ?? 1, tx: offset[3] ?? 0 },
@@ -320,6 +325,7 @@ export const VictoryTimeline = memo(function VictoryTimeline({
         L,
         R,
         GEOMETRY.zoomMinSpan,
+        transform.origin.value.x,
       );
       const kc = clamped.k;
       const txc = clamped.tx;

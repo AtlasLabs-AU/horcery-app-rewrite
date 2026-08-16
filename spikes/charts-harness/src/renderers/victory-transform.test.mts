@@ -39,3 +39,14 @@ test('zoom and pan clamp to the catalogue 10 percent minimum span', () => {
     { k: 4, tx: -60 },
   );
 });
+
+test('overshoot clamp keeps the data coordinate under the pinch focal point', () => {
+  const focal = 200;
+  const overshot = composeScreenSpacePinch({ k: 1, tx: 0 }, 20, focal);
+  const before = domainAtPixel(focal, overshot);
+  const clamped = clampHorizontalTransform(overshot, 20, 380, 0.1, focal);
+
+  assert.deepEqual(overshot, { k: 20, tx: -3800 });
+  assert.deepEqual(clamped, { k: 10, tx: -1800 });
+  assert.equal(domainAtPixel(focal, clamped), before);
+});

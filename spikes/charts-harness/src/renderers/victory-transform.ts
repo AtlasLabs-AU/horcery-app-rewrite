@@ -30,12 +30,19 @@ export function clampHorizontalTransform(
   plotLeft: number,
   plotRight: number,
   minimumVisibleSpan: number,
+  anchorX = (plotLeft + plotRight) / 2,
 ): HorizontalTransform {
   'worklet';
   const maxK = 1 / minimumVisibleSpan;
   const k = Math.min(Math.max(current.k, 1), maxK);
+  // If scale is reduced after an overshooting pinch, translation must be
+  // rebased to the reduced scale. Reusing translation calculated for the raw
+  // scale snaps the viewport to a day boundary. Preserve the data coordinate
+  // under the last gesture focal point while changing scale.
+  const anchorDomain = (anchorX - current.tx) / current.k;
+  const rebasedTx = anchorX - k * anchorDomain;
   const tx = Math.min(
-    Math.max(current.tx, plotRight * (1 - k)),
+    Math.max(rebasedTx, plotRight * (1 - k)),
     plotLeft * (1 - k),
   );
   return { k, tx };

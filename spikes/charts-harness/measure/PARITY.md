@@ -10,10 +10,10 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Required behaviour | ECharts · Skia | Victory · Skia | Evidence needed |
 |---|---|---|---|
 | Seven rows, oldest day at top | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
-| Shared clock axis, required labels and overlap hiding | Verified in corrected iOS Release at 100% and maximum zoom | Verified in corrected iOS Release at 100% and maximum zoom | Corrected screenshots in manifest; Android rebuild still pending |
+| Shared clock axis, required labels and overlap hiding | Verified in corrected iOS Release at 100% and maximum zoom | Verified in corrected iOS and Android Release at 100% and maximum zoom | Corrected screenshots in manifest; ECharts Android rebuild still pending |
 | Row guides, 16 px bars, 4 px radius, 1 px minimum | Pending | Pending | Screenshot / pixel inspection |
 | With Horse / Without Horse colours and legend | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |
-| 10%–100% horizontal zoom limits | Provisional on iOS: maximum-zoom screenshot retained; interaction recording pending | Verified on iOS for relayout and matrix: four repeated centred pinches remain centred and clamp at the floor | Corrected screenshots and Victory recordings in manifest; Android proof pending |
+| 10%–100% horizontal zoom limits | Provisional on iOS: maximum-zoom screenshot retained; interaction recording pending | Verified on iOS and Android for relayout and matrix: ten aggressive fixed-focal pinches remain under that focal and clamp at the floor | Corrected screenshots and recordings in manifest |
 | Pan clamps inside one day | Pending | Pending | Interaction recording |
 | Exact tooltip text and two-second dismissal | Pending | Pending | Recording + accessibility label |
 | Near-tap hint: “Zoom to click” within one hour | Pending | Pending | Interaction recording |
@@ -27,10 +27,10 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Organization-zone labels retained | Pending | Pending | Domain test + screenshot |
 | Parent ScrollView does not steal chart pinch/pan | Pending | Pending | Interaction recording |
 | Background → foreground remount is correct | Pending | Pending | Transition recording + memory trace |
-| Native semantic summary exists | Android tree captured | Live Android inspection; clean raw tree optional | Automated layer retained; spoken testing deferred |
-| Native interval semantics contain series/date/time/count | Android tree captured | Live Android inspection; clean raw tree optional | Automated layer retained; spoken testing deferred |
+| Native semantic summary exists | Android tree captured | Clean Android raw tree captured | Automated layer retained; spoken testing deferred |
+| Native interval semantics contain series/date/time/count | Android tree captured | Clean Android raw tree captured | Automated layer retained; spoken testing deferred |
 | Semantic nodes remain bounded and pageable | Unit tests + 20-node normal tree | Unit tests | Automated guard retained; spoken testing deferred |
-| Phone | Corrected iOS Release screenshot; recording pending | Corrected iOS Release screenshots plus repeated-pinch recordings | Android and physical-device evidence still required |
+| Phone | Corrected iOS Release screenshot; recording pending | Corrected iOS and Android Release screenshots plus repeated-pinch recordings | Physical-device evidence still required |
 | Tablet layout | Prior Release screenshot; axis fix needs rebuild | Prior Release screenshot; shared fix needs rebuild | Interaction still pending; physical tablet is a decision gate |
 
 ## Open product-design call
@@ -50,10 +50,18 @@ screen focal point on the wrong side of the existing transform, so that focal
 point is treated as an untransformed chart coordinate after the first pinch.
 
 The harness now supplies a screen-space cumulative pinch through Victory's
-public `customGestures` hook. Three pure math tests pin focal-point invariance,
-repeat-centre invariance, and the 10% clamp. A fresh isolated iOS Release build
-and two recordings verify the same four-pinch sequence for `relayout` and
-`matrix`. This restores iOS interaction parity; it is not performance evidence.
+public `customGestures` hook. Android then exposed two further clamp defects
+that the lighter iOS sequence did not reach. First, reducing an overshooting
+scale reused translation calculated for the larger scale and snapped to a day
+edge. Second, Android did not provide a reliable focal point in `onBegin`; the
+clamp now uses the latest active `onChange` focal instead. Both failed attempts
+are retained.
+
+Four pure math tests pin focal-point invariance, repeat-centre invariance, the
+10% clamp and overshoot rebasing. Fresh isolated Release builds and recordings
+on iOS and Android verify ten aggressive fixed-focal pinches for both
+`relayout` and `matrix`. This restores simulator/emulator interaction parity;
+it is not performance or physical-device evidence.
 
 ## Blocked decision evidence
 
