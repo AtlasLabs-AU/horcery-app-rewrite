@@ -10,6 +10,7 @@
     "@react-native-firebase/app": "^26.2.0",
     "@react-native-firebase/auth": "^26.2.0",
     "@react-native-firebase/remote-config": "^26.2.0",
+    "@shopify/flash-list": "2.0.2",
     "@tanstack/react-query": "^5.101.4",
     "expo": "~57.0.12",
     "expo-build-properties": "^57.0.10",

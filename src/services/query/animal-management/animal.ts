@@ -46,8 +46,8 @@ export const animal = createQueryKeys('animal', {
     query?: string[],
   ) => ({
     queryKey: [
-      'user-management',
-      'user',
+      'animal-management',
+      'animal',
       'fetchInfinite',
       filters,
       additionalParams,

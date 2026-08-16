@@ -50,6 +50,7 @@ describe('no dead controls on the screens', () => {
       join('components', 'for-you', 'organization-card.tsx'),
       join('components', 'for-you', 'header.tsx'),
       join('components', 'for-you', 'link-button.tsx'),
+      join('components', 'horses', 'horse-card.tsx'),
     ];
 
     const offenders = files.filter((file) =>
