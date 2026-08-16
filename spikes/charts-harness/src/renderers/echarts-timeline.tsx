@@ -8,7 +8,7 @@ import {
   TooltipComponent,
 } from 'echarts/components';
 import * as echarts from 'echarts/core';
-import { useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 
 import {
   dayLabel,
@@ -170,7 +170,7 @@ function buildOption(timeline: OccupancyTimeline | null, width: number, height: 
   };
 }
 
-export function EChartsTimeline({
+export const EChartsTimeline = memo(function EChartsTimeline({
   timeline,
   width,
   height,
@@ -200,4 +200,4 @@ export function EChartsTimeline({
   }, [option, backend, width, height, onFirstPaint]);
 
   return <Chart ref={ref as never} useRNGH />;
-}
+});

@@ -1,9 +1,8 @@
 import { Group, matchFont, rect, RoundedRect, Text as SkiaText } from '@shopify/react-native-skia';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
-import { useRef } from 'react';
 import {
   CartesianChart,
   useCartesianTransformContext,
@@ -137,7 +136,7 @@ function Bars({
   );
 }
 
-export function VictoryTimeline({ timeline, width, height, onFirstPaint }: RendererProps) {
+export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, height, onFirstPaint }: RendererProps) {
   const rows = timeline?.days.length ?? 7;
   const bars = useMemo(() => (timeline ? flatten(timeline) : []), [timeline]);
   const labels = useMemo(
@@ -154,6 +153,22 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
   // domain (reported by onScaleChange) pick the coarsest hour step whose labels
   // fit the width. This is exactly the adapter code Victory would need in
   // production — part of its cost, so it is in the harness, not hidden.
+  // First paint — the same proxy the ECharts renderer uses (first animation
+  // frame after the draw), fired once Victory has measured its layout, since
+  // CartesianChart renders nothing until then. (In the 2026-08-16 release run
+  // this stat read "…" for Victory: an earlier edit had deleted this block
+  // outright — a harness bug, not a Victory finding.)
+  const paintStart = useMemo(() => performance.now(), [timeline]);
+  const reportedRef = useRef(false);
+  useEffect(() => {
+    reportedRef.current = false;
+  }, [paintStart]);
+  const reportFirstPaint = () => {
+    if (reportedRef.current) return;
+    reportedRef.current = true;
+    requestAnimationFrame(() => onFirstPaint?.(performance.now() - paintStart));
+  };
+
   const [visible, setVisible] = useState<[number, number]>([0, 1]);
   const xTicks = useMemo(() => {
     const [d0, d1] = visible;
@@ -248,6 +263,7 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
         onChartBoundsChange={(b) => {
           plotRange.value = [b.left, b.right];
           boundsRef.current = b;
+          reportFirstPaint();
         }}
         onScaleChange={(x) => {
           // Fires on every render, not only on zoom, and a fresh array each
@@ -305,7 +321,7 @@ export function VictoryTimeline({ timeline, width, height, onFirstPaint }: Rende
       ) : null}
     </View>
   );
-}
+});
 
 // Keep Skia's text import referenced for renderers that add in-canvas labels.
 void SkiaText;
