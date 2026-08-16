@@ -1,6 +1,6 @@
 import { Group, matchFont, rect, RoundedRect, Text as SkiaText } from '@shopify/react-native-skia';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { PixelRatio, Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import {
@@ -13,12 +13,16 @@ import {
 import {
   dayLabel,
   hourTicks,
-  intervalTooltip,
-  positionInDay,
   type OccupancyTimeline,
 } from '@/charts/occupancy-timeline';
+import {
+  layoutOccupancyTimeline,
+  occupancyLayoutBarTooltips,
+  reduceOccupancyLayout,
+  type OccupancyLayoutBar,
+} from '@/charts/occupancy-layout';
 
-import type { RendererProps } from '../renderer';
+import type { RendererProps, VictoryRenderMode } from '../renderer';
 import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
 
 /**
@@ -28,15 +32,16 @@ import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
  * a coordinate system: `data` only fixes the domain (x 0..1, y 0..rows), and
  * every bar is drawn by hand with Skia from the domain model.
  *
- * Zoom is Victory's transform state (pinch + pan on x). Two honest choices had
- * to be made and are worth knowing when reading the numbers:
+ * Zoom is Victory's transform state (pinch + pan on x). The harness exposes
+ * both honest rendering choices so Run 2 can measure rather than assume:
  *
  * 1. Bars are drawn OUTSIDE the transformed canvas group and re-laid-out from
  *    the rescaled x-axis on each transform update. Drawing them inside the
  *    matrix group would be cheaper (pure UI-thread), but a horizontal matrix
  *    scale stretches corner radii into ellipses and breaks the 1 px minimum
- *    width — geometry the catalogue requires. So this path costs a React
- *    re-render per transform tick, and that cost is real and measured.
+ *    width — geometry the catalogue requires. The `relayout` variant pays a
+ *    React re-render per transform tick; `matrix` stays on the UI thread and
+ *    accepts the radius/minimum-width distortion. Both costs are measured.
  * 2. Victory has no built-in zoom limits. The 10 %–100 % span rule is applied
  *    by clamping the transform after each gesture; during a gesture the user
  *    can briefly overshoot. ECharts enforces it natively via dataZoom.
@@ -55,43 +60,17 @@ const font = matchFont({
   fontSize: 12,
 });
 
-interface Bar {
-  row: number;
-  start: number;
-  end: number;
-  color: string;
-  tooltip: string;
-}
-
-function flatten(timeline: OccupancyTimeline): Bar[] {
-  const bars: Bar[] = [];
-  const { zone, days } = timeline;
-  for (const s of timeline.series) {
-    const color = seriesColor(s.id);
-    days.forEach((day, row) => {
-      for (const iv of s.intervalsByDay[day.key] ?? []) {
-        bars.push({
-          row,
-          start: positionInDay(iv.enter, day, zone),
-          end: positionInDay(iv.exit, day, zone),
-          color,
-          tooltip: intervalTooltip(iv, zone),
-        });
-      }
-    });
-  }
-  return bars;
-}
-
 /** Bars, re-laid-out from the zoomed x-scale. Lives inside the chart so it can read the transform. */
-function Bars({
+function RelayoutBars({
   bars,
+  seriesIds,
   rows,
   xScale,
   yScale,
   bounds,
 }: {
-  bars: Bar[];
+  bars: OccupancyLayoutBar[];
+  seriesIds: string[];
   rows: number;
   xScale: Scale;
   yScale: Scale;
@@ -115,8 +94,8 @@ function Bars({
   return (
     <Group clip={clip}>
       {bars.map((b, i) => {
-        const x0 = zoomed(b.start);
-        const x1 = zoomed(b.end);
+        const x0 = zoomed(b.x0);
+        const x1 = zoomed(b.x1);
         if (x1 < bounds.left || x0 > bounds.right) return null; // off-screen when zoomed
         // Oldest row on top: row 0 → the highest y value.
         const cy = yScale(rows - 0.5 - b.row);
@@ -128,7 +107,7 @@ function Bars({
             width={Math.max(x1 - x0, GEOMETRY.barMinWidth)}
             height={GEOMETRY.barHeight}
             r={GEOMETRY.barRadius}
-            color={b.color}
+            color={seriesColor(seriesIds[b.seriesIndex] ?? '')}
           />
         );
       })}
@@ -136,9 +115,58 @@ function Bars({
   );
 }
 
-export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, height, onFirstPaint }: RendererProps) {
+/**
+ * Best reasonable Victory alternative: geometry stays in the transformed
+ * canvas group, so pinch/pan does not rebuild every rectangle in JS. The
+ * matrix also scales the 1 px minimum and corner radius horizontally; that
+ * visual cost is deliberately measured rather than hidden.
+ */
+function MatrixBars({
+  bars,
+  seriesIds,
+  rows,
+  xScale,
+  yScale,
+}: {
+  bars: OccupancyLayoutBar[];
+  seriesIds: string[];
+  rows: number;
+  xScale: Scale;
+  yScale: Scale;
+}) {
+  const half = GEOMETRY.barHeight / 2;
+  return (
+    <Group>
+      {bars.map((bar, index) => {
+        const x0 = xScale(bar.x0);
+        const x1 = xScale(bar.x1);
+        const cy = yScale(rows - 0.5 - bar.row);
+        return (
+          <RoundedRect
+            key={index}
+            x={x0}
+            y={cy - half}
+            width={Math.max(x1 - x0, GEOMETRY.barMinWidth)}
+            height={GEOMETRY.barHeight}
+            r={GEOMETRY.barRadius}
+            color={seriesColor(seriesIds[bar.seriesIndex] ?? '')}
+          />
+        );
+      })}
+    </Group>
+  );
+}
+
+export const VictoryTimeline = memo(function VictoryTimeline({
+  timeline,
+  width,
+  height,
+  lodEnabled,
+  onRenderSignal,
+  renderMode,
+}: RendererProps & { renderMode: VictoryRenderMode }) {
   const rows = timeline?.days.length ?? 7;
-  const bars = useMemo(() => (timeline ? flatten(timeline) : []), [timeline]);
+  const layout = useMemo(() => (timeline ? layoutOccupancyTimeline(timeline) : null), [timeline]);
   const labels = useMemo(
     () => (timeline ? timeline.days.map((d) => dayLabel(d, timeline.zone)) : []),
     [timeline],
@@ -153,20 +181,17 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
   // domain (reported by onScaleChange) pick the coarsest hour step whose labels
   // fit the width. This is exactly the adapter code Victory would need in
   // production — part of its cost, so it is in the harness, not hidden.
-  // First paint — the same proxy the ECharts renderer uses (first animation
-  // frame after the draw), fired once Victory has measured its layout, since
-  // CartesianChart renders nothing until then. (In the 2026-08-16 release run
-  // this stat read "…" for Victory: an earlier edit had deleted this block
-  // outright — a harness bug, not a Victory finding.)
-  const paintStart = useMemo(() => performance.now(), [timeline]);
+  // A library layout callback is useful diagnostics, but it is not visible
+  // presentation. Run 2 measures the latter externally from native frames.
+  const signalStart = useMemo(() => performance.now(), [timeline, lodEnabled, renderMode]);
   const reportedRef = useRef(false);
   useEffect(() => {
     reportedRef.current = false;
-  }, [paintStart]);
-  const reportFirstPaint = () => {
+  }, [signalStart]);
+  const reportRenderSignal = () => {
     if (reportedRef.current) return;
     reportedRef.current = true;
-    requestAnimationFrame(() => onFirstPaint?.(performance.now() - paintStart));
+    onRenderSignal?.({ source: 'victory-layout', elapsedMs: performance.now() - signalStart });
   };
 
   const [visible, setVisible] = useState<[number, number]>([0, 1]);
@@ -184,6 +209,20 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
   const boundsRef = useRef({ left: 0, right: width, top: 0, bottom: height });
   const visibleRef = useRef<[number, number]>([0, 1]);
 
+  const displayedLayout = useMemo(
+    () =>
+      layout && lodEnabled
+        ? reduceOccupancyLayout(layout, {
+            visibleSpan: visible,
+            plotWidthPx: width * PixelRatio.get(),
+          })
+        : layout,
+    [layout, lodEnabled, visible, width],
+  );
+  const bars = displayedLayout?.bars ?? [];
+  const sourceBars = layout?.bars ?? [];
+  const seriesIds = displayedLayout?.seriesIds ?? [];
+
   // Tap → tooltip. Pixel → day fraction through the CURRENT zoom, then row.
   const hitTest = (px: number, py: number) => {
     const b = boundsRef.current;
@@ -191,9 +230,11 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
     if (px < b.left || px > b.right || py < b.top || py > b.bottom) return;
     const xVal = d0 + ((px - b.left) / (b.right - b.left)) * (d1 - d0);
     const row = Math.floor(((py - b.top) / (b.bottom - b.top)) * rows);
-    const hit = bars.find((bar) => bar.row === row && xVal >= bar.start && xVal <= bar.end);
+    // Hit-test originals, not reduced geometry, so LOD never changes meaning.
+    const hit = sourceBars.find((bar) => bar.row === row && xVal >= bar.x0 && xVal <= bar.x1);
     if (!hit) return;
-    setTooltip({ text: hit.tooltip, x: px, y: py });
+    const text = occupancyLayoutBarTooltips(hit, timeline!.zone)[0];
+    if (text) setTooltip({ text, x: px, y: py });
   };
   const tap = useMemo(
     () =>
@@ -204,7 +245,7 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
           runOnJS(hitTest)(e.x, e.y);
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt when bars change; refs otherwise
-    [bars, rows],
+    [sourceBars, rows, timeline],
   );
 
   // Zoom limits — enforced after the gesture (see header note 2). Both the
@@ -242,7 +283,7 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
 
   if (!timeline) {
     return (
-      <View style={[styles.noData, { width, height: height - 30 }]}>
+      <View style={[styles.noData, { width, height: height - 30 }]} onLayout={reportRenderSignal}>
         <Text style={styles.noDataText}>No Data Available</Text>
       </View>
     );
@@ -263,7 +304,12 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
         onChartBoundsChange={(b) => {
           plotRange.value = [b.left, b.right];
           boundsRef.current = b;
-          reportFirstPaint();
+          // Victory invokes this callback while CartesianChart is rendering.
+          // Reporting synchronously would update App while a child is still
+          // rendering, so React can discard the diagnostic. Defer only the
+          // parent notification; the timestamp still starts at this mount and
+          // the source remains the library's bounds/layout callback.
+          requestAnimationFrame(reportRenderSignal);
         }}
         onScaleChange={(x) => {
           // Fires on every render, not only on zoom, and a fresh array each
@@ -297,10 +343,21 @@ export const VictoryTimeline = memo(function VictoryTimeline({ timeline, width, 
             lineColor: GEOMETRY.rowGuide,
           },
         ]}
-        renderOutside={({ xScale, yScale, chartBounds }) => (
-          <Bars bars={bars} rows={rows} xScale={xScale} yScale={yScale} bounds={chartBounds} />
-        )}>
-        {() => null}
+        renderOutside={renderMode === 'relayout' ? ({ xScale, yScale, chartBounds }) => (
+          <RelayoutBars
+            bars={bars}
+            seriesIds={seriesIds}
+            rows={rows}
+            xScale={xScale}
+            yScale={yScale}
+            bounds={chartBounds}
+          />
+        ) : undefined}>
+        {renderMode === 'matrix'
+          ? ({ xScale, yScale }) => (
+              <MatrixBars bars={bars} seriesIds={seriesIds} rows={rows} xScale={xScale} yScale={yScale} />
+            )
+          : () => null}
       </CartesianChart>
       </View>
       </GestureDetector>

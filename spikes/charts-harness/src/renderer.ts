@@ -14,9 +14,18 @@ export interface RendererProps {
   timeline: OccupancyTimeline | null;
   width: number;
   height: number;
-  /** Called once the first frame with all bars is on screen. */
-  onFirstPaint?: (elapsedMs: number) => void;
+  lodEnabled: boolean;
+  /** Diagnostic library callback. It is NOT proof of visible presentation. */
+  onRenderSignal?: (signal: RenderSignal) => void;
 }
+
+export interface RenderSignal {
+  elapsedMs: number;
+  source: 'echarts-rendered' | 'echarts-finished' | 'echarts-raf-fallback' | 'victory-layout';
+}
+
+export type EChartsProgressiveMode = 'default' | 'tuned';
+export type VictoryRenderMode = 'relayout' | 'matrix';
 
 export type RendererId = 'echarts-svg' | 'echarts-skia' | 'victory-skia';
 

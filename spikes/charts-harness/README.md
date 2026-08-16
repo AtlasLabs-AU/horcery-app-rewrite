@@ -13,7 +13,8 @@ npx expo run:android --variant release
 
 - **Renderers:** `ECharts · SVG` (what the current app uses), `ECharts · Skia`, `Victory · Skia`.
 - **Fixtures:** from `src/charts/fixtures/people-in-stall.ts` — the chip shows name · bar count.
-- **Stats row:** bars, domain-layer build time, first paint, JS-thread FPS (rough guide only).
+- **Stats row:** bars, domain-layer build time, library render signal, JS-thread FPS. The signal is diagnostic only; Run 2 visible presentation comes from native frame evidence.
+- **Variants:** shared LOD off/on; ECharts progressive default/tuned; Victory relayout/matrix. The trace logs every selected combination.
 - **Remount ×50:** unmount/remount loop for the leak check; watch memory in the platform profiler.
 
 UI-thread frame times come from the platform, not from the app:

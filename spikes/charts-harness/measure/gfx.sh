@@ -2,7 +2,9 @@
 # Android UI-thread frame statistics for the harness, from the platform itself.
 #
 #   measure/gfx.sh reset            # clear counters before a gesture set
-#   measure/gfx.sh report <label>   # print one CSV line for what happened since
+#   measure/gfx.sh report <label>   # print one summary line since reset
+#   measure/gfx.sh framestats <file> # retain raw per-frame timestamps
+#   measure/gfx.sh meminfo <file>    # retain the raw memory snapshot
 #
 # `dumpsys gfxinfo` reports frames the RenderThread actually produced: total,
 # how many missed their deadline ("janky"), and 50/90/95/99th-percentile frame
@@ -33,5 +35,17 @@ case "${1:-}" in
     pss=$("$ADB" shell dumpsys meminfo "$PKG" | awk '/TOTAL PSS:/ {print $3; exit}')
     echo "$label,pss_kb=$pss"
     ;;
-  *) echo "usage: gfx.sh reset | report <label> | mem <label>"; exit 2 ;;
+  framestats)
+    file="${2:?output file required}"
+    mkdir -p "$(dirname "$file")"
+    "$ADB" shell dumpsys gfxinfo "$PKG" framestats > "$file"
+    shasum -a 256 "$file"
+    ;;
+  meminfo)
+    file="${2:?output file required}"
+    mkdir -p "$(dirname "$file")"
+    "$ADB" shell dumpsys meminfo "$PKG" > "$file"
+    shasum -a 256 "$file"
+    ;;
+  *) echo "usage: gfx.sh reset | report <label> | mem <label> | framestats <file> | meminfo <file>"; exit 2 ;;
 esac

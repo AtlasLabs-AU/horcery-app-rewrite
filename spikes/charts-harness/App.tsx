@@ -3,7 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { RENDERERS, type RendererId } from './src/renderer';
+import {
+  RENDERERS,
+  type EChartsProgressiveMode,
+  type RendererId,
+  type RenderSignal,
+  type VictoryRenderMode,
+} from './src/renderer';
 import { EChartsTimeline } from './src/renderers/echarts-timeline';
 import { VictoryTimeline } from './src/renderers/victory-timeline';
 import { GEOMETRY, loadScenarios } from './src/scenarios';
@@ -28,19 +34,26 @@ export default function App() {
   const [rendererId, setRendererId] = useState<RendererId>('echarts-svg');
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [mountKey, setMountKey] = useState(0);
-  const [firstPaintMs, setFirstPaintMs] = useState<number | null>(null);
+  const [renderSignal, setRenderSignal] = useState<RenderSignal | null>(null);
   const [remounting, setRemounting] = useState<number | null>(null);
+  const [lodEnabled, setLodEnabled] = useState(false);
+  const [progressiveMode, setProgressiveMode] = useState<EChartsProgressiveMode>('default');
+  const [victoryMode, setVictoryMode] = useState<VictoryRenderMode>('relayout');
   const jsFps = useJsFps();
 
   const scenario = scenarios[scenarioIndex]!;
-  const onFirstPaint = useCallback((ms: number) => setFirstPaintMs(Math.round(ms)), []);
+  const onRenderSignal = useCallback((signal: RenderSignal) => {
+    setRenderSignal({ ...signal, elapsedMs: Math.round(signal.elapsedMs) });
+  }, []);
 
-  useEffect(() => setFirstPaintMs(null), [rendererId, scenarioIndex, mountKey]);
   // Harness trace — every state change lands in the Metro log so a run can be
   // reconstructed exactly. Remove nothing here: it is the audit trail.
   useEffect(() => {
-    console.log(`[harness] renderer=${rendererId} scenario=${scenario.name} mount=${mountKey}`);
-  }, [rendererId, scenario.name, mountKey]);
+    console.log(
+      `[harness] renderer=${rendererId} scenario=${scenario.name} mount=${mountKey} ` +
+      `lod=${lodEnabled} progressive=${progressiveMode} victory=${victoryMode}`,
+    );
+  }, [rendererId, scenario.name, mountKey, lodEnabled, progressiveMode, victoryMode]);
   useEffect(() => {
     console.log('[harness] App mounted');
     return () => console.log('[harness] App UNMOUNTED');
@@ -54,23 +67,33 @@ export default function App() {
       return;
     }
     const id = setTimeout(() => {
+      setRenderSignal(null);
       setMountKey((k) => k + 1);
       setRemounting(remounting + 1);
     }, 120);
     return () => clearTimeout(id);
   }, [remounting]);
 
-  const chart = (() => {
-    const props = { timeline: scenario.timeline, width: chartWidth, height: GEOMETRY.chartHeight, onFirstPaint };
+  // The stats ticker intentionally re-renders App once a second. Keeping this
+  // element referentially stable makes that instrumentation invisible to both
+  // candidates rather than charging Victory for the harness UI.
+  const chart = useMemo(() => {
+    const props = {
+      timeline: scenario.timeline,
+      width: chartWidth,
+      height: GEOMETRY.chartHeight,
+      lodEnabled,
+      onRenderSignal,
+    };
     switch (rendererId) {
       case 'echarts-svg':
-        return <EChartsTimeline {...props} backend="svg" />;
+        return <EChartsTimeline {...props} backend="svg" progressiveMode={progressiveMode} />;
       case 'echarts-skia':
-        return <EChartsTimeline {...props} backend="skia" />;
+        return <EChartsTimeline {...props} backend="skia" progressiveMode={progressiveMode} />;
       case 'victory-skia':
-        return <VictoryTimeline {...props} />;
+        return <VictoryTimeline {...props} renderMode={victoryMode} />;
     }
-  })();
+  }, [chartWidth, lodEnabled, onRenderSignal, progressiveMode, rendererId, scenario.timeline, victoryMode]);
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -83,16 +106,58 @@ export default function App() {
         <Segmented
           options={RENDERERS.map((r) => ({ id: r.id, label: r.label }))}
           value={rendererId}
-          onChange={(id) => setRendererId(id as RendererId)}
+          onChange={(id) => {
+            setRenderSignal(null);
+            setRendererId(id as RendererId);
+          }}
           testIDPrefix="renderer"
         />
+
+        <View style={styles.variants}>
+          <Segmented
+            options={[{ id: 'off', label: 'LOD off' }, { id: 'on', label: 'LOD on' }]}
+            value={lodEnabled ? 'on' : 'off'}
+            onChange={(id) => {
+              setRenderSignal(null);
+              setLodEnabled(id === 'on');
+            }}
+            testIDPrefix="lod"
+            compact
+          />
+          {rendererId.startsWith('echarts') ? (
+            <Segmented
+              options={[{ id: 'default', label: 'Progressive default' }, { id: 'tuned', label: 'Progressive tuned' }]}
+              value={progressiveMode}
+              onChange={(id) => {
+                setRenderSignal(null);
+                setProgressiveMode(id as EChartsProgressiveMode);
+              }}
+              testIDPrefix="progressive"
+              compact
+            />
+          ) : (
+            <Segmented
+              options={[{ id: 'relayout', label: 'Victory relayout' }, { id: 'matrix', label: 'Victory matrix' }]}
+              value={victoryMode}
+              onChange={(id) => {
+                setRenderSignal(null);
+                setVictoryMode(id as VictoryRenderMode);
+              }}
+              testIDPrefix="victory-mode"
+              compact
+            />
+          )}
+        </View>
 
         <View style={styles.chips}>
           {scenarios.map((s, i) => (
             <Pressable
               key={s.name}
               testID={`scenario-${s.name}`}
-              onPress={() => setScenarioIndex(i)}
+              onPress={() => {
+                setRenderSignal(null);
+                setScenarioIndex(i);
+              }}
               style={[styles.chip, i === scenarioIndex && styles.chipOn]}>
               <Text style={[styles.chipText, i === scenarioIndex && styles.chipTextOn]}>
                 {s.name} · {s.intervalCount}
@@ -102,7 +167,9 @@ export default function App() {
         </View>
 
         <View style={styles.chartCard} testID="chart-card">
-          <View key={`${rendererId}-${scenario.name}-${mountKey}`} testID={`chart-${rendererId}`}>
+          <View
+            key={`${rendererId}-${scenario.name}-${mountKey}-${lodEnabled}-${progressiveMode}-${victoryMode}`}
+            testID={`chart-${rendererId}`}>
             {chart}
           </View>
         </View>
@@ -110,7 +177,11 @@ export default function App() {
         <View style={styles.stats} testID="stats">
           <Stat label="bars" value={String(scenario.intervalCount)} />
           <Stat label="build" value={`${scenario.buildMs} ms`} />
-          <Stat label="first paint" value={firstPaintMs === null ? '…' : `${firstPaintMs} ms`} testID="stat-first-paint" />
+          <Stat
+            label="render signal"
+            value={renderSignal === null ? '…' : `${renderSignal.elapsedMs} ms · ${renderSignal.source}`}
+            testID="stat-render-signal"
+          />
           <Stat label="JS fps" value={String(jsFps)} testID="stat-js-fps" />
         </View>
 
@@ -135,14 +206,16 @@ function Segmented({
   value,
   onChange,
   testIDPrefix,
+  compact = false,
 }: {
   options: { id: string; label: string }[];
   value: string;
   onChange: (id: string) => void;
   testIDPrefix: string;
+  compact?: boolean;
 }) {
   return (
-    <View style={styles.segmented}>
+    <View style={[styles.segmented, compact && styles.segmentedCompact]}>
       {options.map((o) => (
         <Pressable
           key={o.id}
@@ -199,6 +272,8 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 72 },
   title: { fontSize: 17, fontWeight: '600', color: '#0f172a' },
   segmented: { flexDirection: 'row', margin: 16, marginBottom: 8, borderRadius: 10, backgroundColor: '#f1f5f9', padding: 3 },
+  segmentedCompact: { flex: 1, margin: 4 },
+  variants: { flexDirection: 'row', marginHorizontal: 12 },
   segment: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   segmentOn: { backgroundColor: '#ffffff' },
   segmentText: { fontSize: 13, color: '#475569' },
