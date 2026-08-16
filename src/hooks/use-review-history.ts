@@ -12,30 +12,50 @@ import { useAuthStore } from '@acme/stores/authorization-states';
 const PAGE_SIZE = 50;
 
 /**
- * Behaviour types the history shows when no filter is applied.
+ * The behaviour filter — the SAME seven rows the current app offers, in the
+ * same order, with the same labels (`behavior-constants.ts` in the old repo).
  *
- * Two corrections to the current app's list, both live bugs there
- * (`Horcery_Review_History_Dev_Tickets.md`):
+ * This list is a port, not a redesign. An earlier version of this file invented
+ * a shorter list and mislabelled two ids (102 is Rolling, not "Standing"; 101
+ * is Standing Up, not "People in Stall"), which meant the filter asked the
+ * server for the wrong events. Corrected 2026-08-16 — do not edit these ids
+ * without checking them against the old repo's event-type table.
  *
- * - **Lying Down is `sitting_down` (100), not `sitting` (570).** The current
- *   screen asks for 570, a raw pose type, so an unfiltered History omits
- *   Lying Down entirely while For You — which asks for 100 — shows it.
- * - **Partial Rolling is three ids, not one.** The filter sheet collapses
- *   103/104/105 into one row; For You re-expands them before querying and
- *   History never did, so the same filter returned fewer rows here.
+ * The one deliberate correction carried over: **Partial Rolling is three ids,
+ * not one.** The current filter sheet sends 105 alone while For You expands to
+ * 103/104/105, so the same filter returns fewer rows in History than the card
+ * that linked to it (`Horcery_Review_History_Dev_Tickets.md`).
  */
 export const BEHAVIOR_EVENT_TYPES = {
-  lyingDown: [100],
+  rolling: [102],
   partialRolling: [103, 104, 105],
-  peopleInStall: [101],
-  standing: [102],
+  lyingDown: [100],
+  peoplePresent: [204],
+  peopleInteraction: [205],
+  exiting: [81],
+  entering: [80],
 } as const;
 
+/** Event type ids that are not behaviours but do belong in an unfiltered day. */
+const SPECIAL_INSTRUCTIONS = 7;
+const PEOPLE_IN_STALL = 200;
+
+/**
+ * What an unfiltered day shows — the current app's default list, with one bug
+ * fixed: it asks for `sitting` (570, a raw pose) where it means `sitting_down`
+ * (100, "Lying Down"), so Lying Down never appears in an unfiltered History
+ * there even though For You shows it.
+ */
 export const DEFAULT_EVENT_TYPES = [
-  ...BEHAVIOR_EVENT_TYPES.lyingDown,
+  SPECIAL_INSTRUCTIONS,
+  ...BEHAVIOR_EVENT_TYPES.entering,
+  ...BEHAVIOR_EVENT_TYPES.exiting,
+  ...BEHAVIOR_EVENT_TYPES.rolling,
   ...BEHAVIOR_EVENT_TYPES.partialRolling,
-  ...BEHAVIOR_EVENT_TYPES.peopleInStall,
-  ...BEHAVIOR_EVENT_TYPES.standing,
+  ...BEHAVIOR_EVENT_TYPES.lyingDown,
+  PEOPLE_IN_STALL,
+  ...BEHAVIOR_EVENT_TYPES.peoplePresent,
+  ...BEHAVIOR_EVENT_TYPES.peopleInteraction,
   // Alerts are IN by default (Inakshi, 2026-08-15). The current app excludes
   // them, so alert history lives behind a separate deep link — two screens
   // for one question.
@@ -100,7 +120,7 @@ export function useReviewHistory({
         ordering: '-start_time,-event_type',
         deleted_at__isnull: true,
         organization_id: organizationID ?? '',
-        include: 'created_by,stall_id,animal_id',
+        include: 'stall_id,animal_id',
       },
       additionalParams,
     ),

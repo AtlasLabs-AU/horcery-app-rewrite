@@ -43,7 +43,11 @@ export type IconName =
   | 'hidePassword'
   // Behaviours and animals
   | 'lyingDown'
+  | 'rolling'
   | 'peopleInStall'
+  | 'peopleInteraction'
+  | 'entering'
+  | 'exiting'
   | 'inStall'
   | 'feed'
   | 'horse';

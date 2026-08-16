@@ -50,28 +50,36 @@ import { radius, space, type } from '@/constants/tokens';
  * dimmed, per Inakshi 2026-08-15, so the whole composition can be judged.
  */
 
-type BehaviorFilter = 'all' | keyof typeof BEHAVIOR_EVENT_TYPES | 'alerts';
+type BehaviorKey = keyof typeof BEHAVIOR_EVENT_TYPES;
 
-const BEHAVIOR_OPTIONS: { id: BehaviorFilter; label: string }[] = [
-  { id: 'all', label: 'All behaviors' },
-  { id: 'lyingDown', label: 'Lying Down' },
-  { id: 'partialRolling', label: 'Partial Rolling' },
-  { id: 'peopleInStall', label: 'People in Stall' },
-  { id: 'standing', label: 'Standing' },
-  { id: 'alerts', label: 'Alerts' },
+/**
+ * The current app's seven behaviour rows, same order and same wording. Ported
+ * from `behavior-constants.ts`, not re-imagined — see the note in
+ * `use-review-history.ts`.
+ */
+const BEHAVIOR_OPTIONS: { id: BehaviorKey; label: string; icon: IconName }[] = [
+  { id: 'rolling', label: 'Rolling', icon: 'rolling' },
+  { id: 'partialRolling', label: 'Partial Rolling', icon: 'rolling' },
+  { id: 'lyingDown', label: 'Lying Down', icon: 'lyingDown' },
+  { id: 'peoplePresent', label: 'People Present', icon: 'peopleInStall' },
+  { id: 'peopleInteraction', label: 'People Interaction', icon: 'peopleInteraction' },
+  { id: 'exiting', label: 'Exiting', icon: 'exiting' },
+  { id: 'entering', label: 'Entering', icon: 'entering' },
 ];
 
 const ICON_FOR_TYPE: Record<number, IconName> = {
+  7: 'info',
+  80: 'entering',
+  81: 'exiting',
   100: 'lyingDown',
-  101: 'peopleInStall',
-  102: 'inStall',
-  103: 'alerts',
-  104: 'alerts',
-  105: 'alerts',
+  102: 'rolling',
+  103: 'rolling',
+  104: 'rolling',
+  105: 'rolling',
+  200: 'peopleInStall',
+  204: 'peopleInStall',
+  205: 'peopleInteraction',
   [EVENT_TYPE_ID.alert]: 'alerts',
-  [EVENT_TYPE_ID.stallCheck]: 'info',
-  [EVENT_TYPE_ID.waterCheck]: 'humidity',
-  [EVENT_TYPE_ID.stallCleaning]: 'info',
 };
 
 export default function ReviewHistoryScreen() {
@@ -79,17 +87,23 @@ export default function ReviewHistoryScreen() {
   const { timezone } = useForYouData();
   const now = useOrganizationNow(timezone);
   const [selectedDay, setSelectedDay] = useState<DateTime | null>(null);
-  const [behavior, setBehavior] = useState<BehaviorFilter>('all');
+  /** Multi-select, like the current app's sheet. Empty means "no filter". */
+  const [behaviors, setBehaviors] = useState<BehaviorKey[]>([]);
 
   // Default to the barn's today, and follow it if the day rolls over while
   // the screen is open.
   const day = selectedDay ?? now;
 
   const eventTypes = useMemo(() => {
-    if (behavior === 'all') return DEFAULT_EVENT_TYPES;
-    if (behavior === 'alerts') return [EVENT_TYPE_ID.alert];
-    return [...BEHAVIOR_EVENT_TYPES[behavior]];
-  }, [behavior]);
+    if (behaviors.length === 0) return DEFAULT_EVENT_TYPES;
+    return behaviors.flatMap((key) => [...BEHAVIOR_EVENT_TYPES[key]]);
+  }, [behaviors]);
+
+  const toggleBehavior = useCallback((key: BehaviorKey) => {
+    setBehaviors((current) =>
+      current.includes(key) ? current.filter((id) => id !== key) : [...current, key],
+    );
+  }, []);
 
   const {
     events,
@@ -124,13 +138,6 @@ export default function ReviewHistoryScreen() {
           blurhash: event.event_blur_hash,
           animalName: event.animal?.animal_name ?? event.animal?.registered_name,
           stallName: stall?.name,
-          reporter:
-            typeof event.created_by === 'object'
-              ? [event.created_by.first_name, event.created_by.last_name]
-                  .filter(Boolean)
-                  .join(' ')
-              : undefined,
-          note: event.description,
           isAlert,
           icon: ICON_FOR_TYPE[typeId] ?? 'info',
         };
@@ -146,13 +153,13 @@ export default function ReviewHistoryScreen() {
   const usingSample =
     PREVIEWS.sampleHistoryData && !isLoading && !isError && rows.length === 0;
   const visibleRows = usingSample
-    ? filterSample(sampleHistoryFor(day), behavior).map((row) => ({
+    ? filterSample(sampleHistoryFor(day), behaviors).map((row) => ({
         ...row,
         timeLabel: formatEventTime(row.startTime, timezone),
       }))
     : rows;
 
-  const filterActive = behavior !== 'all';
+  const filterActive = behaviors.length > 0;
 
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -179,7 +186,7 @@ export default function ReviewHistoryScreen() {
 
         <View style={styles.filterRow}>
           <Menu
-            label={BEHAVIOR_OPTIONS.find((option) => option.id === behavior)?.label ?? 'Behavior'}
+            label={filterActive ? `Behavior (${behaviors.length})` : 'Behavior'}
             accessibilityLabel="Filter by behavior"
             width={150}
             height={36}
@@ -187,8 +194,9 @@ export default function ReviewHistoryScreen() {
             actions={BEHAVIOR_OPTIONS.map((option) => ({
               id: option.id,
               label: option.label,
-              selected: option.id === behavior,
-              onPress: () => setBehavior(option.id),
+              icon: option.icon,
+              selected: behaviors.includes(option.id),
+              onPress: () => toggleBehavior(option.id),
             }))}
           />
           <DimmedChip label="Horse" />
@@ -203,7 +211,7 @@ export default function ReviewHistoryScreen() {
               } found`}
             </Text>
             <Pressable
-              onPress={() => setBehavior('all')}
+              onPress={() => setBehaviors([])}
               hitSlop={8}
               accessibilityRole="button"
               testID="history-reset-filters">
@@ -267,16 +275,14 @@ function SampleBanner() {
 }
 
 /** Sample rows honour the behavior filter, so filtering still demonstrates. */
-function filterSample(rows: HistoryEvent[], behavior: BehaviorFilter): HistoryEvent[] {
-  if (behavior === 'all') return rows;
-  if (behavior === 'alerts') return rows.filter((row) => row.isAlert);
-  const titles: Record<string, string> = {
-    lyingDown: 'Lying Down',
-    partialRolling: 'Rolling',
-    peopleInStall: 'People in Stall',
-    standing: 'Standing',
-  };
-  return rows.filter((row) => row.title === titles[behavior]);
+function filterSample(rows: HistoryEvent[], behaviors: BehaviorKey[]): HistoryEvent[] {
+  if (behaviors.length === 0) return rows;
+  const wanted = new Set(
+    behaviors.map(
+      (key) => BEHAVIOR_OPTIONS.find((option) => option.id === key)?.label ?? '',
+    ),
+  );
+  return rows.filter((row) => wanted.has(row.title));
 }
 
 /** Horse / Stall — visible so the composition reads, dimmed until built. */
