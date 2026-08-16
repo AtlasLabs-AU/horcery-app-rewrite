@@ -126,24 +126,36 @@ variants had different interaction meaning.
 
 ### Corrected Android ECharts follow-up
 
-The isolated ECharts Android Release now proves the shared full-day axis,
-10% zoom clamp, fixed-focal zoom behavior and both midnight pan boundaries.
+The final isolated ECharts Android Release now proves the shared full-day axis,
+readable truthful labels at intermediate and maximum zoom, the 10% zoom clamp,
+fixed-focal zoom behavior and both midnight pan boundaries.
 Behavioral checks also retain the exact tooltip with two-second dismissal,
 quiet-week rows, loading/error/no-data replacement states, and both selectable
 halves of the overnight interval.
 
-Release readback found and corrected an adapter accuracy defect before any
-performance scoring: ECharts generates fractional-hour ticks after zoom, but
-the adapter rounded them to the nearest hour, producing false and sometimes
-duplicate labels. A first attempt that hid fractional ticks also failed
-readback. The final adapter formats the actual time, including minutes when
-necessary, and is covered by focused tests. Both failed and passing artefacts
-are retained.
+Release readback found and corrected a sequence of adapter accuracy defects
+before any performance scoring. ECharts generates fractional-hour ticks after
+zoom, but the first adapter rounded them into false and sometimes duplicate
+labels. Later attempts either overlaid all 25 labels at full day, removed every
+label at an intermediate zoom, or let native overlap hiding remove the required
+midnight endpoints. The accepted adapter chooses the value-axis interval from
+the visible span and formats every emitted tick truthfully. Focused tests cover
+formatting and interval selection; final Release screenshots cover full day,
+intermediate zoom, the 10% floor, pan and both daylight-saving fixtures. Every
+failed build and screenshot is retained rather than overwritten.
 
-The required near-tap “Zoom to click” hint is not implemented in either
-finalist. Behavioral parity therefore remains open, as do the Victory state,
-tooltip, pan and remaining fixture captures. No renderer recommendation is
-issued.
+Android visual checks also show chart gestures winning inside the parent
+ScrollView and a clean background/foreground remount. The ECharts recorder
+could not retain an interaction video because `ffmpeg` was unavailable, so the
+parent-scroll row remains pending strict recording evidence. Memory return is
+still a protocol measurement for both finalists, not a visual claim.
+
+Victory now has retained Android evidence for tooltip dismissal, replacement
+states, quiet and overnight fixtures, both pan implementations, parent-scroll
+gesture ownership, lifecycle remount and both daylight-saving fixtures. The
+required near-tap “Zoom to click” hint is still not implemented in either
+finalist, and fall-back repeated-hour presentation remains a product decision.
+Behavioral parity therefore remains open. No renderer recommendation is issued.
 
 The final recommendation also remains blocked by the observed-heavy QA fixture
 and release-like runs on a physical mid-range Android, modern Android, iPhone

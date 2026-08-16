@@ -128,28 +128,57 @@ aggressive fixed-focal pinches, enough to cross the 10% floor repeatedly.
 ## Corrected ECharts Android axis and behavior evidence
 
 These artefacts come from isolated ECharts Android Release builds after the
-shared endpoint correction. The first build retained a fractional-tick
-rounding defect; it and its failed evidence remain indexed deliberately. The
-final build formats the actual generated tick time and is the build to use for
-subsequent measurements.
+shared endpoint correction. Four Release readbacks rejected inaccurate or
+incomplete axis strategies before the accepted zoom-aware interval build.
+Every failed APK and screenshot remains indexed deliberately. Only
+`android-release-final-zoom-aware-axis.apk` may be used for subsequent runs.
 
 | Artefact | Bytes | SHA-256 | What it proves / limitation |
 |---|---:|---|---|
 | `corrected/echarts-skia/android/android-release-pre-axis.apk` | 125,652,807 | `e84324287ca33dfbe47a786024f8d66ca517ed57772f752172ce6938f8aff4d8` | Failed-label Release retained for provenance; do not measure. |
 | `corrected/echarts-skia/android/normal-max-zoom-rounded-label-defect.png` | 451,112 | `2d91c19608af4fa2d1a8b1a0a497115d65694903d4a6cc81a18aa0cb96208306` | Failed evidence: fractional ticks were rounded into duplicate false-hour labels. |
-| `corrected/echarts-skia/android/android-release-accurate-axis.apk` | 125,652,827 | `9408cc8e795c9eecbe7dca72809123332b693b5dfa5523fd42f782e8029f3abc` | Final isolated Release with accurate fractional tick formatting. Emulator only. |
-| `corrected/echarts-skia/android/normal-100-percent.png` | 122,611 | `663b056a71e47a52dfc5dcd6edca77ac58e0cc8661a930e6ddaa3eef084268e2` | Full-day axis shows both required midnight endpoints. Captured before the fractional formatter change, which does not affect whole-hour full-day ticks. |
-| `corrected/echarts-skia/android/normal-max-zoom-accurate.png` | 458,877 | `d67e40f8749a14350f8fd90fb24cdee8fabd671c0f89b6f242a6491963b03e9f` | Final Release labels the actual fractional times at the zoom floor. |
-| `corrected/echarts-skia/android/pan-right-boundary-midnight.png` | 456,540 | `ca6dc77cecad54ab8c91491559370bba89895770ba5df8f098723d3c517b59f1` | Final Release clamps at the closing midnight with one `12 AM` endpoint. |
-| `corrected/echarts-skia/android/pan-left-boundary-midnight.png` | 451,923 | `e82df229e84095ee59042fc99771ebb87b54c975070a13a1764d26e3925b558f` | Final Release clamps at the opening midnight with one `12 AM` endpoint. |
-| `corrected/echarts-skia/android/final-zoom-pan-boundaries.mp4` | 1,132,378 | `0882e62517e148c172fcd7f16ee755ec6f02380e30d06097a977397c1c11d688` | Final fixed-focal zoom plus both pan-boundary interactions. Emulator only. |
+| `corrected/echarts-skia/android/android-release-failed-wide-span-overlap.apk` | 125,652,827 | `9408cc8e795c9eecbe7dca72809123332b693b5dfa5523fd42f782e8029f3abc` | Failed build: truthful close-zoom labels but no wide-span density control. Do not measure. |
+| `corrected/echarts-skia/android/daylight-saving-all-hour-label-overlap-defect.png` | 575,328 | `46a4a17dadc82b964f0f7a2792d8030dabae1ee03026240a184723389f799704` | Failed evidence: all 25 hourly labels overlap at full day. |
+| `corrected/echarts-skia/android/android-release-failed-intermediate-labels.apk` | 125,653,767 | `3c0598e9fc5633e7dabfbc11ac87d5cd3708a375b9df43e0080078d03093fe27` | Failed build: selected whole-hour labels disappear when ECharts offsets ticks after dataZoom. Do not measure. |
+| `corrected/echarts-skia/android/intermediate-zoom-all-labels-missing-defect.png` | 278,694 | `af93f8c5d2b51c0659318917399dc7b62f8436b307211b58a3691799dc4a1840` | Failed evidence: the chart zoomed, but the intermediate view has no x-axis labels. |
+| `corrected/echarts-skia/android/native-hide-overlap-endpoints-missing-defect.png` | 255,543 | `e926f6377edcc8ec1a55607f3d475f66d4fe448085b140086943f3f29b257119` | Failed native-overlap attempt: a readable full day that omits both required midnight endpoints. |
+| `corrected/echarts-skia/android/android-release-final-zoom-aware-axis.apk` | 125,653,103 | `79c8d2fb4b9be57add0d7b452a7ab933b92bc9249b0b010f1bf57003d1effac3` | Accepted isolated Android Release: zoom-aware tick interval and truthful formatter. Emulator only. |
+| `corrected/echarts-skia/android/normal-full-day-final-zoom-aware.png` | 255,498 | `ac1b7d3639b2a27cce102ebd8256649b441352cf78e7e9d5fdb6e3e65db2fb3f` | Accepted build: readable full day with both midnight endpoints. |
+| `corrected/echarts-skia/android/normal-intermediate-zoom-final.png` | 259,348 | `e790c449657cedeb4864878147668e5aecc27cd1a3124efadde9279fe67dc81e` | Accepted build: readable truthful labels at intermediate zoom. |
+| `corrected/echarts-skia/android/normal-max-zoom-final-zoom-aware.png` | 240,473 | `e2ead8a29047c9220eb3c5254f1856caa7c209dce5ce7eeb982934f56efd97dd` | Accepted build: truthful labels at the 10% floor. |
+| `corrected/echarts-skia/android/normal-max-zoom-pan-final.png` | 234,697 | `aaa7236676767a58eed06e4d2729d5b246416e07444bc7461db066374360f1f8` | Accepted build: truthful labels remain after horizontal pan. |
 | `corrected/echarts-skia/android/normal-tooltip.png` | 128,739 | `2fee577096195deefbe74ba4dedec98b2e0892dca2fd2e3fcc17615914be6610` | Exact legacy date/time/count tooltip text. |
 | `corrected/echarts-skia/android/tooltip-two-second-dismiss.mp4` | 236,723 | `827fc81229eb4b233e78e5dcbc12600d9713bccb9320ea40fad51459e97aec90` | Tooltip appears on item tap and dismisses after the configured two seconds. |
 | `corrected/echarts-skia/android/state-transitions.mp4` | 639,976 | `b07bf51742ffa69d2d2940dd3ce4d9214edb9206d8534d41d60875908b5889b3` | Normal → no-data → loading → error → normal clears stale chart content. |
 | `corrected/echarts-skia/android/quiet-week.png` | 481,232 | `5542c973c6463a80389b973191a75749bf696edfddb1222956fd615239569f28` | Valid all-zero response keeps seven rows and legend rather than showing no-data. |
 | `corrected/echarts-skia/android/overnight-right-edge-tooltip.png` | 131,690 | `ee04617f51471848f187cc8085cb4d52170973cb2796f26fd360dd71ae571def` | Aug 13 interval is selectable through 12:00 AM. |
 | `corrected/echarts-skia/android/overnight-left-edge-tooltip.png` | 129,716 | `60e570989e2688b53c7a1707f465a946baf98178636adf228c173f4b2d87aae2` | Aug 14 continuation begins at 12:00 AM and ends at 12:40 AM. |
+| `corrected/echarts-skia/android/daylight-saving-spring-forward-final-zoom-aware.png` | 285,784 | `0ed6778eb52f8ea093633588c203c91738bf7c4f83e43286cdbafd2bc0b2fa7b` | Accepted build keeps spring-forward rows aligned with readable labels. |
+| `corrected/echarts-skia/android/daylight-saving-fall-back-final-zoom-aware.png` | 298,879 | `70402a4389d0747eef49276143e2efac94eaa62284d81fe4a156a312e2e6cfdd` | Accepted build retains the fall-back data; repeated-hour wording remains a product decision. |
+| `corrected/echarts-skia/android/parent-scroll-pinch-pan-final.png` | 252,646 | `b5fe1e4426aaae1583d7b2550da3854077cdb4ce4d428f6154d883919b496ee0` | Live pinch and pan changed the chart while inside the parent ScrollView. Still evidence is weaker than the required recording. |
+| `corrected/echarts-skia/android/lifecycle-background-final.png` | 204,845 | `1e0e8e1122dc9e9a1851fb4e95e5c477e84621338ff1118a20796078c75af716` | Chart component visibly unmounted in harness lifecycle state. No memory claim. |
+| `corrected/echarts-skia/android/lifecycle-foreground-remount-final.png` | 256,115 | `5f2bbb3cca16d849a625478f34a3b469ba6a37f8a4fbf47102395bbeaae074d3` | Chart visibly remounted cleanly. Memory return remains unmeasured. |
 
 The near-tap hint failed live verification: tapping empty row space within one
 hour of a bar produced no “Zoom to click” message. It is not implemented in
 either adapter, so the behavioral parity gate remains open.
+
+## Corrected Victory Android behavioral evidence
+
+These checks use `android-release-overshoot-fix.apk`. They establish behavioral
+readback only; they are not cells in the randomized performance matrix.
+
+| Artefact | Bytes | SHA-256 | What it proves / limitation |
+|---|---:|---|---|
+| `corrected/victory/android/normal-tooltip.png` | 127,248 | `35e0a536feb51dc2f2a602d88003ed37528f26b6b03f29b6fe1a3ce917690519` | Exact legacy tooltip text on a selected interval. |
+| `corrected/victory/android/tooltip-two-second-dismiss.mp4` | 272,488 | `5f14c13a3d41f476de54dcaf30733421d456995cf8676f412f8d8dcb01d79252` | Tooltip dismisses after the configured two seconds. |
+| `corrected/victory/android/state-transitions.mp4` | 617,289 | `4062877085b8abf731373fecb632cdfd504d767e77aea1e3ae3da5f6d0f6c6cb` | Normal, no-data, loading and error states replace stale chart content. |
+| `corrected/victory/android/quiet-week.png` | 471,418 | `38d522359b97a567448704bb7355f15e859b425c8ea2180b128141b158ea0cbb` | Valid all-zero response keeps seven rows and legend. |
+| `corrected/victory/android/overnight-right-edge-tooltip.png` | 527,699 | `b8067eb5aa9f284dc3a6eb904c0633e519ae64fb7387cb903487a9b7e96fe6bc` | Right midnight half remains selectable. |
+| `corrected/victory/android/overnight-left-edge-tooltip.png` | 130,159 | `5704e16c68f48062f9e9bcde099ab1d50225ff2086a65aa2148333fa9e50ed72` | Left midnight continuation remains selectable. |
+| `corrected/victory/android/relayout-pan-boundaries.mp4` | 1,905,357 | `158067e1a95e928aad47c2cd7e8a5895c74a0a63bb72f8205c0b893a6563294a` | Relayout pan clamps at both day bounds. Emulator only. |
+| `corrected/victory/android/matrix-pan-boundaries.mp4` | 2,094,000 | `07600a3e23c015d2ba2d6b6a1c8355367c423533b098dc6000eedcd1ed30aa61` | Matrix pan clamps at both day bounds. Emulator only. |
+| `corrected/victory/android/parent-scroll-pinch-pan.mp4` | 767,147 | `3d33627774b9bc6168e6c0f6104e7f72887488a74e8fd865974921f5fd84156c` | Chart owns pinch and pan while nested in the parent ScrollView. |
+| `corrected/victory/android/lifecycle-background-foreground.mp4` | 343,771 | `f4da83c48ea86de33e360a4f05c11e066f1fcd7752caa57e6c6f604999b86b68` | Visual unmount/remount transition succeeds. No memory-return claim. |
+| `corrected/victory/android/daylight-saving-spring-forward.png` | 543,986 | `d24859c7c3fce94a57f2b4913e443edb9aa45ae417a8ff3b1533cd095248768b` | Spring-forward fixture retains aligned clock semantics. |
+| `corrected/victory/android/daylight-saving-fall-back.png` | 571,071 | `ea1b14d3a484b21b787e6de22ce6e663ba61168d7b075ac5971f8882fca3f63b` | Fall-back data is retained; repeated-hour bars overlap and the product decision remains open. |

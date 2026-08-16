@@ -15,6 +15,23 @@ export function clockLabelAtPosition(value: number): string {
     : `${hour12}:${String(minutes).padStart(2, '0')} ${suffix}`;
 }
 
+function maxAxisLabels(width: number): number {
+  return Math.max(2, Math.floor((width - 60) / 44));
+}
+
+function hourStep(spanHours: number, maxLabels: number): number {
+  return [1, 2, 3, 4, 6, 8, 12].find((hours) => spanHours / hours <= maxLabels) ?? 12;
+}
+
+/** Pick an ECharts value-axis interval that fits the current viewport. */
+export function axisTickInterval(
+  visible: readonly [number, number],
+  width: number,
+): number {
+  const spanHours = Math.max(1, (visible[1] - visible[0]) * 24);
+  return hourStep(spanHours, maxAxisLabels(width)) / 24;
+}
+
 /**
  * Select readable clock labels for the visible domain while retaining both
  * visible endpoints. Both finalists use this function so overlap handling
@@ -27,8 +44,8 @@ export function visibleHourTicks(
 ): readonly HourTick[] {
   const [d0, d1] = visible;
   const spanHours = Math.max(1, (d1 - d0) * 24);
-  const maxLabels = Math.max(2, Math.floor((width - 60) / 44));
-  const step = [1, 2, 3, 4, 6, 8, 12].find((hours) => spanHours / hours <= maxLabels) ?? 12;
+  const maxLabels = maxAxisLabels(width);
+  const step = hourStep(spanHours, maxLabels);
   const inView = ticks.filter((tick) => tick.position >= d0 - 1e-9 && tick.position <= d1 + 1e-9);
   const selected = inView.filter((_, index) => index % step === 0);
   const last = inView.at(-1);

@@ -26,7 +26,7 @@ import {
 } from '@/charts/occupancy-layout';
 
 import type { EChartsProgressiveMode, RendererProps, RenderSignal } from '../renderer';
-import { clockLabelAtPosition } from '../axis-ticks';
+import { axisTickInterval, clockLabelAtPosition } from '../axis-ticks';
 import { GEOMETRY, seriesColor, seriesLabel } from '../scenarios';
 
 /**
@@ -167,7 +167,7 @@ function buildOption(
       type: 'value',
       min: 0,
       max: 1,
-      interval: 1 / 24,
+      interval: axisTickInterval(visible, width),
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { show: false },
@@ -175,6 +175,8 @@ function buildOption(
         color: GEOMETRY.axisText,
         showMinLabel: true,
         showMaxLabel: true,
+        // DataZoom creates ticks offset from whole hours. Format every emitted
+        // value truthfully; axisTickInterval limits their density beforehand.
         hideOverlap: false,
         formatter: clockLabelAtPosition,
       },
