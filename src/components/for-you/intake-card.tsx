@@ -5,6 +5,7 @@ import { useTokens } from '@/hooks/use-tokens';
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import type { PreviewChartSeries } from '@/components/for-you/chart-placeholder';
 
 export type IntakeScope = 'stall' | 'horse';
 
@@ -23,11 +24,15 @@ const SCOPE_OPTIONS: { label: string; value: IntakeScope }[] = [
 export function IntakeCard({
   title,
   todayColor,
+  previewSeries,
+  previewLabels,
   testID,
 }: {
   title: string;
   /** Legend colour for today's series — blue for water, amber for feed. */
   todayColor: string;
+  previewSeries?: readonly Omit<PreviewChartSeries, 'color'>[];
+  previewLabels?: readonly string[];
   testID?: string;
 }) {
   const { colors } = useTokens();
@@ -53,6 +58,11 @@ export function IntakeCard({
           { label: 'Average', color: colors.dimmed },
           { label: 'Today', color: todayColor },
         ]}
+        previewSeries={previewSeries?.map((series) => ({
+          ...series,
+          color: series.label === 'Today' ? todayColor : colors.dimmed,
+        }))}
+        xLabels={previewLabels}
         testID={`${testID}-chart`}
       />
     </SectionCard>

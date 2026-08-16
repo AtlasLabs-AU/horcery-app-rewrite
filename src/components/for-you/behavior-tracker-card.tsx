@@ -46,9 +46,15 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
 export function BehaviorTrackerCard({
   behaviors = DEFAULT_BEHAVIORS,
   onSwitchToStalls,
+  previewTrends,
+  previewLabels,
 }: {
   behaviors?: Behavior[];
   onSwitchToStalls?: () => void;
+  previewTrends?: Readonly<
+    Record<string, Partial<Record<TrackerPeriod, readonly number[]>>>
+  >;
+  previewLabels?: readonly string[];
 }) {
   const { colors } = useTokens();
   const [period, setPeriod] = useState<TrackerPeriod>('daily');
@@ -114,7 +120,22 @@ export function BehaviorTrackerCard({
         />
       </View>
 
-      <ChartPlaceholder height={168} testID="for-you-tracker-chart" />
+      <ChartPlaceholder
+        height={168}
+        previewSeries={
+          selected
+            ? [
+                {
+                  label: selected.label,
+                  color: colors.accent,
+                  values: previewTrends?.[selected.id]?.[period] ?? [],
+                },
+              ]
+            : undefined
+        }
+        xLabels={previewLabels}
+        testID="for-you-tracker-chart"
+      />
     </SectionCard>
   );
 }

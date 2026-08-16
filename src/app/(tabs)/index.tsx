@@ -12,6 +12,7 @@ import {
 import { ForYouHeader } from '@/components/for-you/header';
 import { IntakeCard } from '@/components/for-you/intake-card';
 import { OrganizationCard } from '@/components/for-you/organization-card';
+import { ForYouPreviewBanner } from '@/components/for-you/preview-banner';
 import { ReviewCard } from '@/components/for-you/review-card';
 import { SnapshotsCard } from '@/components/for-you/snapshots-card';
 import { useAlertStatus } from '@/hooks/use-alert-status';
@@ -20,6 +21,8 @@ import { useSnapshots } from '@/hooks/use-snapshots';
 import { BottomTabInset, MaxContentWidth } from '@/constants/theme';
 import { space } from '@/constants/tokens';
 import { useTokens } from '@/hooks/use-tokens';
+import { PREVIEWS } from '@/config/previews';
+import { SAMPLE_FOR_YOU } from '@/config/sample/for-you-sample';
 
 /**
  * For You — the screen customers land on.
@@ -50,6 +53,8 @@ export default function ForYouScreen() {
   const { snapshots } = useSnapshots();
   const alertStatus = useAlertStatus(organizationID, timezone);
   const { colors } = useTokens();
+  const preview = PREVIEWS.sampleForYouData;
+  const visibleSnapshots = snapshots.length > 0 ? snapshots : preview ? SAMPLE_FOR_YOU.snapshots : [];
 
   const openMenu = useCallback(() => router.push('/menu'), []);
   const openHistory = useCallback(() => router.push('/review-history'), []);
@@ -74,39 +79,52 @@ export default function ForYouScreen() {
               tintColor={colors.accent}
             />
           }>
+          {preview ? <ForYouPreviewBanner /> : null}
           <OrganizationCard
             organizationName={organizationName}
             organizations={organizations}
             organizationID={organizationID}
             onSelectOrganization={selectOrganization}
             localTime={localTime}
+            temperature={preview ? SAMPLE_FOR_YOU.conditions.temperature : undefined}
+            humidity={preview ? SAMPLE_FOR_YOU.conditions.humidity : undefined}
             alertStatus={alertStatus}
             onSeeHistory={openHistory}
           />
 
-          <SnapshotsCard snapshots={snapshots} />
+          <SnapshotsCard snapshots={visibleSnapshots} />
 
-          <ReviewCard onSeeHistory={openHistory} />
+          <ReviewCard
+            onSeeHistory={openHistory}
+            previewEvents={preview ? SAMPLE_FOR_YOU.reviewEvents : undefined}
+          />
 
           <Deferred reserve={380}>
-            <BehaviorTrackerCard />
+            <BehaviorTrackerCard
+              previewTrends={preview ? SAMPLE_FOR_YOU.behaviorTrends : undefined}
+              previewLabels={preview ? SAMPLE_FOR_YOU.chartLabels : undefined}
+            />
           </Deferred>
 
-          {devices.hasWaterDevices ? (
+          {devices.hasWaterDevices || preview ? (
             <Deferred reserve={230}>
               <IntakeCard
                 title="Water Intake"
                 todayColor="#00B8DB"
+                previewSeries={preview ? SAMPLE_FOR_YOU.waterSeries : undefined}
+                previewLabels={preview ? SAMPLE_FOR_YOU.chartLabels : undefined}
                 testID="for-you-water-intake"
               />
             </Deferred>
           ) : null}
 
-          {devices.hasFeedDevices ? (
+          {devices.hasFeedDevices || preview ? (
             <Deferred reserve={230}>
               <IntakeCard
                 title="Feed Intake"
                 todayColor="#F0B100"
+                previewSeries={preview ? SAMPLE_FOR_YOU.feedSeries : undefined}
+                previewLabels={preview ? SAMPLE_FOR_YOU.chartLabels : undefined}
                 testID="for-you-feed-intake"
               />
             </Deferred>

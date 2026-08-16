@@ -35,4 +35,15 @@ export const PREVIEWS = {
    * says so on screen; real events always win.
    */
   sampleHistoryData: __DEV__ && optedIn,
+  /**
+   * Fills unfinished or empty For You sections with labelled sample data so
+   * the complete dashboard can be reviewed on-device. Real API data still
+   * wins wherever that read path already exists.
+   */
+  sampleForYouData: __DEV__ && optedIn,
+  /**
+   * Fills the Horses page only when the organization has no real horses, so
+   * its populated layout can be reviewed without changing backend records.
+   */
+  sampleHorsesData: __DEV__ && optedIn,
 } as const;

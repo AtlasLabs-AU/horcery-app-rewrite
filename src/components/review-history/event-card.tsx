@@ -16,23 +16,22 @@ export interface HistoryEvent {
    * ahead of the barn (caught on device, 2026-08-15).
    */
   timeLabel: string;
-  /** Behaviour events carry footage; reported ones carry a note instead. */
+  /** Supported Review events carry footage when a valid clip exists. */
   hasClip: boolean;
   posterUri?: string;
   blurhash?: string;
   durationLabel?: string;
   animalName?: string;
   stallName?: string;
-  reporter?: string;
-  note?: string;
   isAlert: boolean;
   icon: IconName;
 }
 
 /**
- * One event card, in the current app's anatomy: header row (icon, title,
- * timestamp), body (footage or an information panel), footer (who and where,
- * plus the type tag).
+ * One event card, in the retained current-app anatomy: header row (icon, title,
+ * timestamp), footage still, and footer (horse/stall plus the type tag).
+ * Legacy manually authored information panels are deliberately absent because
+ * the Record feature was removed by product decision on 2026-08-16.
  *
  * **The one deliberate departure: the body is a still, not a live player.**
  * The current app mounts an autoplaying HLS player per card and never
@@ -96,15 +95,7 @@ export function EventCard({
             </View>
           ) : null}
         </View>
-      ) : (
-        <View style={[styles.infoPanel, { backgroundColor: colors.bed }]}>
-          {event.stallName ? (
-            <InfoRow label="Stall" value={event.stallName} />
-          ) : null}
-          {event.reporter ? <InfoRow label="Reported by" value={event.reporter} /> : null}
-          {event.note ? <InfoRow label="Notes" value={event.note} /> : null}
-        </View>
-      )}
+      ) : null}
 
       <View style={styles.footerRow}>
         {event.animalName ? (
@@ -141,20 +132,6 @@ export function EventCard({
         </View>
       </View>
     </Pressable>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  const { colors } = useTokens();
-  return (
-    <View style={styles.infoRow}>
-      <Text style={[type.footnote, styles.infoLabel, { color: colors.tertiary }]}>
-        {label}
-      </Text>
-      <Text style={[type.subhead, styles.infoValue, { color: colors.foreground }]}>
-        {value}
-      </Text>
-    </View>
   );
 }
 
@@ -208,16 +185,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm,
     paddingVertical: 2,
   },
-  infoPanel: {
-    marginHorizontal: space.md,
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    padding: space.md,
-    gap: space.sm,
-  },
-  infoRow: { gap: space.xxs },
-  infoLabel: {},
-  infoValue: {},
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',

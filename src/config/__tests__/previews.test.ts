@@ -58,6 +58,9 @@ describe('preview features', () => {
     expect(flags.passwordResetCodeFlow).toBe(true);
     expect(flags.faceIdUnlock).toBe(true);
     expect(flags.socialSignInButtons).toBe(true);
+    expect(flags.sampleHistoryData).toBe(true);
+    expect(flags.sampleForYouData).toBe(true);
+    expect(flags.sampleHorsesData).toBe(true);
   });
 
   it('covers every declared flag — a new preview cannot escape this test', () => {
