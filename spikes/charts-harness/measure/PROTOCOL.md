@@ -1,4 +1,9 @@
-# Measurement protocol — People In Stall renderer spike
+# Measurement protocol — People In Stall renderer spike (Run 1 — preflight)
+
+> **Superseded for the decision (2026-08-16).** This is the Run 1 protocol:
+> one repetition, emulator/simulator only, next-animation-frame "first paint",
+> hand-transcribed numbers. It stays as the record of how Run 1 was taken.
+> The deciding protocol is `RUN2-PROTOCOL.md`.
 
 Written before the first number was taken, so the numbers cannot shape it.
 Results go in `RESULTS.md` in the same shape.

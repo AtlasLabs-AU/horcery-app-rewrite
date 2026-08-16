@@ -1,5 +1,36 @@
 # Results — People In Stall renderer spike (run 1, 2026-08-16)
 
+> ## Status of this document (corrected 2026-08-16, after review)
+>
+> **Run 1 is an instrumentation preflight, not a renderer-selection decision.**
+> Everything below the line is kept exactly as written on the day; this block
+> records what the review found wrong with how it was read.
+>
+> - **ECharts · SVG is rejected.** (Unchanged.)
+> - **ECharts · Skia remains a finalist. Victory Native remains a finalist.
+>   There is no overall leader.** §6 below said Skia "leads on this evidence";
+>   that was too strong and is withdrawn. Its low completed-frame cost
+>   (p50 17 ms dense) was measured on **50 frames in ~5 s, and 10 frames at the
+>   ceiling** — a cheap frame is not smoothness when almost no frames are
+>   produced. Frames-per-second and cost-per-frame are two different claims and
+>   Run 1 conflated them.
+> - **Victory's Run 1 numbers are contaminated by two harness defects** (mine,
+>   §2): its chart re-rendered on the stats ticker every second, and its
+>   first-paint instrumentation had been deleted, so its mount and idle-CPU
+>   figures are not comparable with the ECharts figures in the same tables.
+> - **Run 1 satisfied none of the gates:** no physical device (§10 of the
+>   catalogue: mid-range Android, modern Android, iPhone, tablet), no
+>   accessibility layer, no observed-heavy real fixture, single repetition,
+>   manually transcribed numbers, no raw evidence retained, "first paint" =
+>   next animation frame (an unproven proxy for visible presentation).
+> - **Still true and renderer-independent:** the domain layer costs 2.2–2.6 s
+>   on the emulator (§5) and is fixed before anything else in Run 2.
+>
+> Run 2's protocol supersedes `PROTOCOL.md` for the decision. See
+> `RUN2-PROTOCOL.md` when it lands.
+
+---
+
 Commit measured: `db04811` (harness) on `main`. Protocol: `PROTOCOL.md`.
 Builds: iOS **Release** on iPhone 17 Pro simulator (iOS 26.5, MacBook Air);
 Android **release** on `Horcery_Pixel` (API 36 arm64 emulator, same machine).
@@ -91,17 +122,20 @@ the Android emulator** per fixture — it calls luxon per sample (13 440 calls a
 week). Day boundaries can be computed once and samples bucketed by arithmetic.
 Must be fixed in `src/charts` before any chart ships, whatever the renderer.
 
-## 6. Reading (provisional — not a decision)
+## 6. Reading as written on the day (provisional — superseded, see the status block at the top)
 
 - **ECharts · SVG — reject.** It is what the current app uses. Main-thread
   hangs and a 900 ms p90 at the ceiling on Android, +160 MB retention on
   remount, and the fewest updates per second of the three.
-- **ECharts · Skia — leads on this evidence.** Cheapest per frame (p50 17 ms
+- **ECharts · Skia — leads on this evidence.** *[Withdrawn 2026-08-16: it is a
+  finalist, not a leader — see the status block.]* Cheapest per frame (p50 17 ms
   dense), no hangs, flat memory, fast mount, and it gives zoom limits, axis
   regeneration, overlap hiding and item tooltips for free. Against it: the
   JS-bound update rate during a pinch (~10/s here; unknown on a phone), and
   Wuba's use of Skia APIs that Skia has deprecated for removal.
-- **Victory · Skia — viable challenger, on a condition.** It is the only one
+- **Victory · Skia — viable challenger, on a condition.** *[Corrected
+  2026-08-16: a finalist on equal footing; its Run 1 mount/idle numbers are
+  contaminated by the two harness defects in §2.]* It is the only one
   that redraws continuously through a gesture, which may *feel* smoother on a
   real GPU — that is exactly what the physical Android test must answer. Its
   costs are certain: ~0.8 s mounts on the emulator, 300 ms tail at the
