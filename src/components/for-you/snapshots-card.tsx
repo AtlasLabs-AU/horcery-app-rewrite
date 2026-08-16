@@ -128,7 +128,9 @@ function SnapshotTile({ snapshot }: { snapshot: Snapshot }) {
           <Image source={snapshot.avatarUri} style={styles.avatar} />
         ) : (
           <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-            <Text style={[type.caption, styles.avatarInitials]}>{initials(snapshot.name)}</Text>
+            <Text style={[type.caption, styles.avatarInitials, { color: colors.onAccent }]}>
+              {initials(snapshot.name)}
+            </Text>
           </View>
         )}
         <Text style={[type.subhead, styles.tileName, { color: colors.foreground }]} numberOfLines={1}>
@@ -190,7 +192,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitials: {
-    color: '#FFFFFF',
     fontWeight: '700',
   },
   tileName: {

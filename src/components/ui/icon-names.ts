@@ -18,6 +18,11 @@ export type IconName =
   | 'checkFilled'
   | 'circleEmpty'
   | 'filter'
+  | 'add'
+  | 'edit'
+  | 'share'
+  | 'remove'
+  | 'group'
   // Meaning
   | 'info'
   | 'ai'
@@ -35,6 +40,15 @@ export type IconName =
   | 'support'
   | 'logOut'
   | 'feedback'
+  // Settings — on/off pairs so a row's icon can tell the truth on its own
+  | 'notificationsOff'
+  | 'wifi'
+  | 'wifiOff'
+  | 'sound'
+  | 'soundOff'
+  | 'darkMode'
+  | 'camera'
+  | 'cameraOff'
   // Auth
   | 'mail'
   | 'verified'

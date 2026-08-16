@@ -101,7 +101,7 @@ export function DayStrip({
                     type.headline,
                     {
                       color: isSelected
-                        ? '#FFFFFF'
+                        ? colors.onAccent
                         : isFuture
                           ? colors.dimmed
                           : colors.foreground,

@@ -22,6 +22,8 @@ export const palette = {
     fillTonal: '#E4E4F8',
     /** Small-emphasis accent only: links, active checkmarks, tints. */
     accent: '#615FFF',
+    /** Text/icon drawn ON an accent fill (selected day, avatar initials). */
+    onAccent: '#FFFFFF',
     /** The primary-button surface — near-black in light, flips in dark. */
     inverse: '#1C1C22',
     onInverse: '#FFFFFF',
@@ -42,6 +44,7 @@ export const palette = {
     bed: '#222234',
     fillTonal: '#2C2C48',
     accent: '#7B79FF',
+    onAccent: '#FFFFFF',
     inverse: '#F2F2F7',
     onInverse: '#111114',
     foreground: '#F2F2F7',
@@ -102,4 +105,11 @@ export const radius = {
   lg: 28,
   xl: 36,
   full: 9999,
+} as const;
+
+/** Motion durations. Components choose a named pace, never invent milliseconds. */
+export const motion = {
+  fast: 150,
+  base: 250,
+  slow: 400,
 } as const;
