@@ -30,7 +30,19 @@ export default function AppTabs() {
 
       <NativeTabs.Trigger name="horses">
         <NativeTabs.Trigger.Label>Horses</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="figure.equestrian.sports" md="pets" />
+        {/*
+          Horcery's own horse mark, not a platform symbol. SF Symbols has no
+          `horse`; the nearest is `figure.equestrian.sports` — a RIDER on a
+          horse, which reads as an equestrian sport, and Material's `pets` is a
+          paw print. This app is about stabled horses, and neither idea is
+          right (Inakshi, 2026-08-17). Rasterised from the shipping app's
+          `bottom-tabs/active.horse.svg` as a black alpha mask, so the tab
+          tints it like the other icons on both platforms.
+        */}
+        <NativeTabs.Trigger.Icon
+          src={require('@/assets/images/tabIcons/horse.png')}
+          renderingMode="template"
+        />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">

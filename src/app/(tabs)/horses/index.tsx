@@ -121,6 +121,9 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
           headerSearchBarOptions: {
             placeholder: 'Search horses',
             hideWhenScrolling: false,
+            // A horse name is not a sentence: without this iOS sends "Zzzz"
+            // for what was typed as "zzzz".
+            autoCapitalize: 'none',
             onChangeText: (event) => setSearchText(event.nativeEvent.text),
             onCancelButtonPress: () => setSearchText(''),
           },

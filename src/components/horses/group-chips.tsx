@@ -56,7 +56,11 @@ export function GroupChips({
                 style={[
                   type.subhead,
                   selected && styles.selectedText,
-                  { color: selected ? colors.onInverse : colors.foreground },
+                  // onAccent, not onInverse: the chip is filled with `accent`,
+                  // which is near-WHITE in dark mode — onInverse is also white,
+                  // so the selected chip read white-on-white (caught on device
+                  // 2026-08-17).
+                  { color: selected ? colors.onAccent : colors.foreground },
                 ]}
                 numberOfLines={1}>
                 {chip.name}

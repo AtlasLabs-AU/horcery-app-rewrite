@@ -1,6 +1,7 @@
 import { Host, Icon as UniversalIcon } from '@expo/ui';
+import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { androidDrawableFor } from '@/components/ui/icon-android-map';
 import { iosSymbolFor } from '@/components/ui/icon-ios-map';
@@ -40,9 +41,43 @@ export interface IconProps {
   style?: StyleProp<ViewStyle>;
 }
 
+/**
+ * Names Horcery draws itself, because neither platform has the right idea.
+ *
+ * `horse`: SF Symbols has no horse — its nearest is
+ * `figure.equestrian.sports`, a RIDER on a horse — and Material's is a paw
+ * print. Both are wrong for an app about stabled horses (Inakshi flagged the
+ * tab icon, 2026-08-17). This is Horcery's own mark, drawn as a tinted alpha
+ * mask so it still takes the caller's colour like any other icon.
+ */
+const CUSTOM_GLYPHS: Partial<Record<IconName, number>> = {
+  // Relative, not `@/assets/…`: tsconfig maps that alias to the ROOT assets
+  // folder, but jest-expo only knows the generic `@/` → `src/` rule, so the
+  // alias resolves in Metro and fails in every test that renders an Icon.
+  horse: require('../../../assets/images/tabIcons/horse.png'),
+};
+
 export function Icon({ name, size = 20, color, accessibilityLabel, style }: IconProps) {
   const { colors } = useTokens();
   const tint = color ?? colors.foreground;
+
+  const custom = CUSTOM_GLYPHS[name];
+  if (custom) {
+    return (
+      // The Image sits inside a sized View so the caller's View-typed `style`
+      // still applies, exactly as it does to the two platform branches below.
+      <View style={[{ width: size, height: size }, style]}>
+        <Image
+          source={custom}
+          tintColor={tint}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          accessibilityLabel={accessibilityLabel}
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+    );
+  }
 
   if (Platform.OS === 'ios') {
     return (
