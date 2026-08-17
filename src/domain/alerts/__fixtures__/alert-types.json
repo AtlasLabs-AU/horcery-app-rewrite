@@ -1,0 +1,415 @@
+[
+  {
+    "id": "8d519c8a-cb9b-4f08-8427-a859861f8211",
+    "slug": "entering-stall",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-06-18T20:24:09.883913Z",
+    "updated_at": "2026-06-18T20:24:09.883913Z",
+    "name": "Entering Stall",
+    "interval": 3600,
+    "category": 3,
+    "query_type": 1,
+    "threshold_type": 70,
+    "duration": "00:30:00",
+    "min_duration": "00:00:00",
+    "max_duration": "02:00:00",
+    "min_threshold_value": 0,
+    "max_threshold_value": 1000,
+    "AppMetaData": {},
+    "description": null,
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "Horse entering stall",
+    "event_description_template": "Horse entering stall",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  },
+  {
+    "id": "b7bf587b-2a33-4855-8045-8ac732d5d5a5",
+    "slug": "exiting-stall",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-06-18T20:24:09.883913Z",
+    "updated_at": "2026-06-18T20:24:09.883913Z",
+    "name": "Exiting Stall",
+    "interval": 3600,
+    "category": 3,
+    "query_type": 1,
+    "threshold_type": 70,
+    "duration": "00:30:00",
+    "min_duration": "00:00:00",
+    "max_duration": "02:00:00",
+    "min_threshold_value": 0,
+    "max_threshold_value": 1000,
+    "AppMetaData": {},
+    "description": null,
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "Horse exiting stall",
+    "event_description_template": "Horse exiting stall",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  },
+  {
+    "id": "21050120-22e4-11f1-9ebf-95f529bd1454",
+    "slug": "light",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-03-18T16:18:08.766203Z",
+    "updated_at": "2026-03-18T16:18:08.766203Z",
+    "name": "Light",
+    "interval": 3600,
+    "category": 1,
+    "query_type": 1,
+    "threshold_type": 80,
+    "duration": "00:15:00",
+    "min_duration": "00:00:00",
+    "max_duration": "10:00:00",
+    "min_threshold_value": 0,
+    "max_threshold_value": 5000,
+    "AppMetaData": {
+      "selectables": {
+        "0": {
+          "max": 10,
+          "name": "Low",
+          "value_type": "Range"
+        },
+        "1": {
+          "max": 5000,
+          "min": 11,
+          "name": "High",
+          "value_type": "Range"
+        }
+      },
+      "duration_scale": {
+        "0": {
+          "name": "1",
+          "value": 60,
+          "condition": "equal_to"
+        },
+        "1": {
+          "name": "5",
+          "value": 300,
+          "condition": "equal_to"
+        },
+        "2": {
+          "name": "10",
+          "value": 600,
+          "condition": "equal_to"
+        },
+        "3": {
+          "name": "20",
+          "value": 1200,
+          "condition": "equal_to"
+        },
+        "4": {
+          "name": "30",
+          "value": 1800,
+          "condition": "equal_to"
+        },
+        "value_unit": "s",
+        "display_unit": "m"
+      }
+    },
+    "description": "Monitor light levels and get notified when light levels are excessive",
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "Light was {condition} for {trigger_duration}",
+    "event_description_template": "Light level was {condition} for {trigger_duration}",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  },
+  {
+    "id": "8e5014a0-22d4-11f1-a617-074b48735031",
+    "slug": "lying-down-count",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-03-18T16:18:08.766203Z",
+    "updated_at": "2026-03-18T16:18:08.766203Z",
+    "name": "Lying Down Events",
+    "interval": 3600,
+    "category": 2,
+    "query_type": 1,
+    "threshold_type": 60,
+    "duration": "00:30:00",
+    "min_duration": "00:00:00",
+    "max_duration": "02:00:00",
+    "min_threshold_value": 1,
+    "max_threshold_value": 1000,
+    "AppMetaData": {
+      "time_expr_mode": "less_than_end_window_both",
+      "sensitivity_scale": {
+        "0": {
+          "name": "1",
+          "value": 1,
+          "condition": "equal_to"
+        },
+        "1": {
+          "name": "2",
+          "value": 2,
+          "condition": "equal_to"
+        },
+        "2": {
+          "name": "3",
+          "value": 3,
+          "condition": "equal_to"
+        },
+        "3": {
+          "name": "4",
+          "value": 4,
+          "condition": "equal_to"
+        },
+        "4": {
+          "name": "5",
+          "value": 5,
+          "condition": "equal_to"
+        }
+      }
+    },
+    "description": "Get notified of the frequency at which your horse lies down within a specified period",
+    "display_unit_singular": "time",
+    "display_unit_plural": "times",
+    "notification_description_template": "The horse lay down {condition} {threshold} {frequency}",
+    "event_description_template": "The horse lay down {condition} {threshold} {frequency}",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  },
+  {
+    "id": "1ea3a2a0-1e30-11f1-a642-4b38fec6a6ee",
+    "slug": "lying-down-time",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-03-12T16:27:22.302317Z",
+    "updated_at": "2026-03-12T16:27:22.302317Z",
+    "name": "Lying Down Time",
+    "interval": 3600,
+    "category": 2,
+    "query_type": 3,
+    "threshold_type": 40,
+    "duration": "00:30:00",
+    "min_duration": "00:01:00",
+    "max_duration": "1 00:00:00",
+    "min_threshold_value": 0,
+    "max_threshold_value": 100000,
+    "AppMetaData": {
+      "duration_scale": {
+        "0": {
+          "name": "15",
+          "value": 900,
+          "condition": "equal_to"
+        },
+        "1": {
+          "name": "30",
+          "value": 1800,
+          "condition": "equal_to"
+        },
+        "2": {
+          "name": "45",
+          "value": 2700,
+          "condition": "equal_to"
+        },
+        "3": {
+          "name": "60",
+          "value": 3600,
+          "condition": "equal_to"
+        },
+        "4": {
+          "name": "90",
+          "value": 5400,
+          "condition": "equal_to"
+        },
+        "value_unit": "s",
+        "display_unit": "m"
+      },
+      "time_expr_mode": "less_than_end_window_combined"
+    },
+    "description": "Monitor how long your horse lies down",
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "The horse lay down continuously for {condition} {trigger_duration}",
+    "event_description_template": "The horse lay down continuously for {condition} {trigger_duration}",
+    "notification_description_template_combined": "The horse lay down for a total of {condition} {threshold}",
+    "event_description_template_combined": "The horse lay down for a total of {condition} {threshold}"
+  },
+  {
+    "id": "145e4276-3e8c-4eba-b4fd-3fd04dcdb531",
+    "slug": "people-in-stall",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2025-09-27T12:20:59.203704Z",
+    "updated_at": "2025-11-06T10:16:38.978733Z",
+    "name": "People in Stall",
+    "interval": 3600,
+    "category": 3,
+    "query_type": 1,
+    "threshold_type": 70,
+    "duration": "00:00:00",
+    "min_duration": "00:00:00",
+    "max_duration": "10:00:00",
+    "min_threshold_value": 1,
+    "max_threshold_value": 100,
+    "AppMetaData": {},
+    "description": "Get notified when the number of human entries into the stall reaches a specified count.",
+    "display_unit_singular": "person",
+    "display_unit_plural": "people",
+    "notification_description_template": "A person is in the stall",
+    "event_description_template": "A person was detected in the stall",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  },
+  {
+    "id": "77f043e0-1def-11f1-9555-232dd125cf96",
+    "slug": "people-in-stall-time",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-03-12T08:46:54.994947Z",
+    "updated_at": "2026-03-12T08:46:54.994947Z",
+    "name": "People in Stall Time",
+    "interval": 3600,
+    "category": 3,
+    "query_type": 3,
+    "threshold_type": 40,
+    "duration": "00:00:00",
+    "min_duration": "00:01:00",
+    "max_duration": "1 00:00:00",
+    "min_threshold_value": 0,
+    "max_threshold_value": 100000,
+    "AppMetaData": {
+      "duration_scale": {
+        "0": {
+          "name": "5",
+          "value": 300,
+          "condition": "equal_to"
+        },
+        "1": {
+          "name": "10",
+          "value": 600,
+          "condition": "equal_to"
+        },
+        "2": {
+          "name": "15",
+          "value": 900,
+          "condition": "equal_to"
+        },
+        "3": {
+          "name": "20",
+          "value": 1200,
+          "condition": "equal_to"
+        },
+        "value_unit": "s",
+        "display_unit": "m"
+      },
+      "time_expr_mode": "less_than_end_window_combined"
+    },
+    "description": "Monitor how much time people spend in a stall",
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "A person was in the stall continuously for {condition} {trigger_duration}",
+    "event_description_template": "A person was in the stall continuously for {condition} {trigger_duration}",
+    "notification_description_template_combined": "A person was in the stall for a total of {condition} {threshold}",
+    "event_description_template_combined": "A person was in the stall for a total of {condition} {threshold}"
+  },
+  {
+    "id": "698e91e2-adf5-476a-93fa-557491555d65",
+    "slug": "temp-change",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-06-12T00:10:03.372644Z",
+    "updated_at": "2026-06-12T00:10:03.372644Z",
+    "name": "Temp. Change",
+    "interval": 3600,
+    "category": 1,
+    "query_type": 1,
+    "threshold_type": 1,
+    "duration": "00:30:00",
+    "min_duration": "00:00:00",
+    "max_duration": "02:00:00",
+    "min_threshold_value": -50,
+    "max_threshold_value": 50,
+    "AppMetaData": {
+      "sensitivity_scale": {
+        "0": {
+          "name": "5",
+          "value": 5,
+          "condition": "equal_to"
+        },
+        "1": {
+          "name": "10",
+          "value": 10,
+          "condition": "equal_to"
+        },
+        "2": {
+          "name": "15",
+          "value": 15,
+          "condition": "equal_to"
+        },
+        "3": {
+          "name": "20",
+          "value": 20,
+          "condition": "equal_to"
+        },
+        "value_unit": "C",
+        "display_unit": "C"
+      }
+    },
+    "description": null,
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "Temperature {condition} by {threshold}",
+    "event_description_template": "Temperature {condition} by {threshold} within {trigger_duration}",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  },
+  {
+    "id": "05992b3a-1c67-4f3a-8812-0026a13d855b",
+    "slug": "temperature",
+    "deleted_at": null,
+    "deleted_by_cascade": false,
+    "created_at": "2026-06-12T00:10:03.372644Z",
+    "updated_at": "2026-06-12T00:10:03.372644Z",
+    "name": "Temperature",
+    "interval": 3600,
+    "category": 1,
+    "query_type": 1,
+    "threshold_type": 1,
+    "duration": "00:30:00",
+    "min_duration": "00:00:00",
+    "max_duration": "02:00:00",
+    "min_threshold_value": -30,
+    "max_threshold_value": 80,
+    "AppMetaData": {
+      "sensitivity_scale": {
+        "0": {
+          "name": "10",
+          "value": 10,
+          "condition": "equal_to"
+        },
+        "1": {
+          "name": "20",
+          "value": 20,
+          "condition": "equal_to"
+        },
+        "2": {
+          "name": "30",
+          "value": 30,
+          "condition": "equal_to"
+        },
+        "3": {
+          "name": "40",
+          "value": 40,
+          "condition": "equal_to"
+        },
+        "value_unit": "C",
+        "display_unit": "F"
+      }
+    },
+    "description": null,
+    "display_unit_singular": null,
+    "display_unit_plural": null,
+    "notification_description_template": "Temperature {condition} {threshold}",
+    "event_description_template": "Temperature {condition} {threshold} for {trigger_duration}",
+    "notification_description_template_combined": null,
+    "event_description_template_combined": null
+  }
+]

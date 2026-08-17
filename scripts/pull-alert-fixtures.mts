@@ -87,7 +87,16 @@ async function signIn(): Promise<string> {
     body: JSON.stringify({ email: QA_EMAIL, password: PASSWORD, returnSecureToken: true }),
   });
   if (!res.ok) {
-    throw new Error(`Firebase sign-in failed: HTTP ${res.status}`);
+    // Surface Firebase's error CODE (e.g. INVALID_LOGIN_CREDENTIALS,
+    // API_KEY_INVALID) — never the credentials themselves.
+    let code = '';
+    try {
+      const body = (await res.json()) as { error?: { message?: string } };
+      code = body.error?.message ?? '';
+    } catch {
+      /* no body */
+    }
+    throw new Error(`Firebase sign-in failed: HTTP ${res.status}${code ? ` ${code}` : ''}`);
   }
   const json = (await res.json()) as { idToken?: string };
   if (!json.idToken) throw new Error('Firebase sign-in returned no idToken');
@@ -146,6 +155,9 @@ const DROP_KEYS = new Set([
   'deleted_by',
   'created_by_id',
   'updated_by_id',
+  // server-owned artefacts, never sent by the app
+  'bucket_key',
+  'rule_file_deleted_at',
 ]);
 
 function anonymiseRule(rule: Json, orgAlias: string): Json {
@@ -193,6 +205,7 @@ function anonymiseRelation(rel: Json, alias: (v: unknown) => unknown): Json {
     if (key === 'id') out[key] = relAlias(value);
     else if (key === 'object_id' || key === 'member_id') out[key] = alias(value);
     else if (key === 'alert_rule') out[key] = ruleAlias(value);
+    else if (key === 'organization_id') out[key] = 'org-qa';
     else out[key] = value;
   }
   return out;
@@ -213,7 +226,30 @@ async function main() {
   );
   writeFileSync(join(RAW_DIR, 'organizations.raw.json'), JSON.stringify(orgs, null, 2));
   if (orgs.length === 0) throw new Error('QA user has no organizations');
-  const org = orgs[0] as { id: string; name?: string; timezone?: string };
+  // The QA user belongs to several test organizations. Count rules in each
+  // (GETs) and pull fixtures from the one with the MOST rules, or the one
+  // named in QA_ORG_ID if set — the point of A0 is real rules, not an empty org.
+  const preferred = process.env.QA_ORG_ID;
+  let org = orgs[0] as { id: string; name?: string; timezone?: string };
+  if (preferred) {
+    const hit = (orgs as Array<{ id: string }>).find((o) => o.id === preferred);
+    if (!hit) throw new Error('QA_ORG_ID is not one of the user\'s organizations');
+    org = hit as typeof org;
+  } else {
+    let best = -1;
+    for (const candidate of orgs as Array<{ id: string; name?: string; timezone?: string }>) {
+      const page = await getJson<Page<Json>>(
+        token,
+        `alert_management/api/alert_handler/alert_rules/?organization_id=${candidate.id}&deleted_at__isnull=true&page=1`,
+      );
+      const n = page.meta?.count ?? (Array.isArray(page.data) ? page.data.length : 0);
+      console.log(`  ${String(candidate.name ?? candidate.id).padEnd(28)} rules: ${n}  tz: ${candidate.timezone ?? 'MISSING'}`);
+      if (n > best) {
+        best = n;
+        org = candidate;
+      }
+    }
+  }
   console.log(`Organizations: ${orgs.length}. Using "${org.name ?? org.id}" (timezone: ${org.timezone ?? 'MISSING'})`);
 
   // 2. alert types (product configuration; committed as-is)
@@ -222,7 +258,21 @@ async function main() {
     'alert_management/api/alert_handler/alert_types/?deleted_at__isnull=true&ordering=name',
   );
   writeFileSync(join(RAW_DIR, 'alert-types.raw.json'), JSON.stringify(types, null, 2));
-  writeFileSync(join(FIXTURE_DIR, 'alert-types.json'), JSON.stringify(types, null, 2) + '\n');
+  // The committed fixture drops the server-side PromQL (`prometheus_metric_name`,
+  // `AppMetaData.metric_templates`): the app never reads it, it is evaluation
+  // internals, and the architecture keeps PromQL out of everything but the
+  // data layer. Raw copy keeps it.
+  const typeFixtures = types.map((t) => {
+    const {
+      prometheus_metric_name: _pm,
+      prometheus_combined_metric_name: _pcm,
+      ...rest
+    } = t as Json & { prometheus_metric_name?: unknown; prometheus_combined_metric_name?: unknown };
+    const meta = { ...((rest.AppMetaData as Json | undefined) ?? {}) };
+    delete meta.metric_templates;
+    return { ...rest, AppMetaData: meta };
+  });
+  writeFileSync(join(FIXTURE_DIR, 'alert-types.json'), JSON.stringify(typeFixtures, null, 2) + '\n');
 
   // 3. alert rules for the QA org (anonymised)
   const rules = await getAllPages<Json>(
