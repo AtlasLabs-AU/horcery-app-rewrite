@@ -110,7 +110,7 @@ Both renderers must produce **all** of §2–§7 from the same `OccupancyTimelin
 - **Accuracy (rejection gate)** — identical input must retain timestamps, intervals,
   counts, series meaning, missing-data meaning, organization-zone/DST behavior and
   level-of-detail semantics. Accuracy cannot be traded for speed or cost.
-- **Smoothness (30 %)** — frame rate during pinch-zoom and pan under **three loads**: `normal-week` (38 bars), **observed-heavy** (the anonymised real response — see §11; not yet captured), and `worst-case` (6 720 one-sample bars, the theoretical ceiling). `dense-week` (374) is a mid-point, not a ceiling. Mount time of the seven-row chart at each load.
+- **Smoothness (30 %)** — frame rate during pinch-zoom and pan under **three loads**: `normal-week` (38 bars), **observed-heavy** (the anonymised real response — see §11; not yet captured), and `worst-case` (6 720 one-sample bars, the theoretical ceiling). The ceiling uses the approved bounded overview, then exact source intervals once the visible count is at most 1,000; rendering 6,720 literal bars at once remains a diagnostic, not a readable product state. `dense-week` (374) is a mid-point, not a ceiling. Mount time of the seven-row chart at each load.
 - **Reliability / memory (25 %)** — no leak across 50 mount/unmount cycles; no crash on `no-data` → `normal-week` → `no-data` transitions.
 - **Whole-catalogue scalability (20 %)** — representative continuous time-series
   and mixed/annotated-series slices reuse the same adapter architecture without
@@ -118,7 +118,7 @@ Both renderers must produce **all** of §2–§7 from the same `OccupancyTimelin
 - **Parity (15 %)** — the checklist above, ticked one by one; screenshots beside the current app.
 - **Cost (10 %)** — bundle delta, native build friction, licence.
 
-**Rejection gates:** cannot hit 60 fps on pan of `normal-week` on the mid-range Android; falls over (crash, >1 s frame, unbounded memory) on `worst-case`; cannot render `quiet-week` distinctly from `no-data`; cannot expose bars to the accessibility tree.
+**Rejection gates:** cannot hit 60 fps on pan of `normal-week` on the mid-range Android; cannot safely accept `worst-case`, present a useful bounded overview, or restore exact intervals on zoom; falls over (crash, >1 s interaction frame, unbounded memory); cannot render `quiet-week` distinctly from `no-data`; cannot expose bounded interval pages to the accessibility tree.
 
 **Where results count:** simulator and emulator runs establish parity, build compatibility, developer ergonomics and *large* performance differences. **They do not pick the winner.** The final acceptance is a **release build on a physical mid-range Android**; if there is no office device, borrowing or buying one is justified — the cost is trivial beside committing the whole app to the wrong chart stack.
 
@@ -128,7 +128,7 @@ screen-reader validation returns as a pre-release shipping gate.
 
 ## 11. Open items
 
-- [ ] Capture **one anonymised real response** (QA org, a busy stall, 7 days) as the **observed-heavy** load. Synthetic fixtures cannot reveal missing or irregular samples, unexpected series or metric labels, Prometheus's own quirks, or the bar counts a real barn produces. Needs the QA login and a stall's `prometheus_url`. **Does not block building the renderers; DOES block the final decision.**
+- [ ] Capture **one anonymised real response** (QA org, a busy stall, 7 days) as the **observed-heavy** load. Synthetic fixtures cannot reveal missing or irregular samples, unexpected series or metric labels, Prometheus's own quirks, or the bar counts a real barn produces. Needs the QA login and a stall's `prometheus_url`. It is a **pre-beta reversal check** for the selected Victory adapter, not a reason to keep two production renderer implementations alive.
 - [ ] Confirm the **mid-range Android** the final measurement runs on. The emulator ranks the two renderers; it cannot certify "no dropped frames on a customer's phone".
 - [ ] Token names for the two series colours (design).
 - [ ] Newest-at-top vs oldest-at-top (design; not a spike criterion).

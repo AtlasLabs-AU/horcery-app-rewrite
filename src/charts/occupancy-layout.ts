@@ -31,6 +31,32 @@ export interface OccupancyLayout {
   bars: OccupancyLayoutBar[];
 }
 
+/** One overview density cell. Coverage is the occupied share of this time bucket. */
+export interface OccupancyOverviewCell {
+  row: number;
+  seriesIndex: number;
+  x0: number;
+  x1: number;
+  /** Exact occupied duration divided by bucket duration, from 0 through 1. */
+  coverage: number;
+}
+
+export type OccupancyPresentation =
+  | { mode: 'exact'; bars: OccupancyLayoutBar[]; sourceBarCount: number }
+  | { mode: 'overview'; cells: OccupancyOverviewCell[]; sourceBarCount: number };
+
+export interface OccupancyPresentationOptions {
+  /** The visible day fraction, for example `[0, 1]` or `[0.2, 0.3]`. */
+  visibleSpan: readonly [number, number];
+  /** Exact intervals are used at or below this bounded rendering cost. */
+  maxExactBars?: number;
+  /** Fixed number of readable overview buckets across the visible day span. */
+  overviewBuckets?: number;
+}
+
+export const DEFAULT_MAX_EXACT_OCCUPANCY_BARS = 1_000;
+export const DEFAULT_OCCUPANCY_OVERVIEW_BUCKETS = 48;
+
 export interface ReduceOccupancyLayoutOptions {
   /** The visible day fraction, for example `[0, 1]` or `[0.2, 0.3]`. */
   visibleSpan: readonly [number, number];
@@ -191,4 +217,74 @@ export function windowOccupancyLayout(
   const bars = layout.bars.filter((bar) => bar.x1 >= visibleStart && bar.x0 <= visibleEnd);
 
   return bars.length === layout.bars.length ? layout : { ...layout, bars };
+}
+
+/**
+ * Chooses a readable overview or exact interval geometry for the viewport.
+ *
+ * The overview is deliberately not a set of synthetic visits. Each cell says
+ * only what share of a time bucket was occupied by one named series. The
+ * original layout stays untouched and becomes exact again as soon as the
+ * visible interval count is bounded.
+ */
+export function buildOccupancyPresentation(
+  layout: OccupancyLayout,
+  options: OccupancyPresentationOptions,
+): OccupancyPresentation {
+  const [visibleStart, visibleEnd] = options.visibleSpan;
+  const maxExactBars = options.maxExactBars ?? DEFAULT_MAX_EXACT_OCCUPANCY_BARS;
+  const overviewBuckets = options.overviewBuckets ?? DEFAULT_OCCUPANCY_OVERVIEW_BUCKETS;
+  const span = visibleEnd - visibleStart;
+  const originals = originalBars(layout);
+  const visibleBars = originals.filter((bar) => bar.x1 >= visibleStart && bar.x0 <= visibleEnd);
+
+  if (
+    visibleBars.length <= maxExactBars ||
+    !(span > 0) ||
+    !Number.isInteger(overviewBuckets) ||
+    overviewBuckets <= 0
+  ) {
+    return { mode: 'exact', bars: visibleBars, sourceBarCount: visibleBars.length };
+  }
+
+  const bucketWidth = span / overviewBuckets;
+  const occupied = new Map<string, number>();
+
+  for (const bar of visibleBars) {
+    const start = Math.max(visibleStart, bar.x0);
+    const end = Math.min(visibleEnd, bar.x1);
+    if (!(end > start)) continue;
+
+    const firstBucket = Math.max(0, Math.floor((start - visibleStart) / bucketWidth));
+    const lastBucket = Math.min(
+      overviewBuckets - 1,
+      Math.floor((end - visibleStart - Number.EPSILON) / bucketWidth),
+    );
+
+    for (let bucket = firstBucket; bucket <= lastBucket; bucket++) {
+      const bucketStart = visibleStart + bucket * bucketWidth;
+      const bucketEnd = bucketStart + bucketWidth;
+      const overlap = Math.max(0, Math.min(end, bucketEnd) - Math.max(start, bucketStart));
+      if (!(overlap > 0)) continue;
+      const key = `${bar.row}:${bar.seriesIndex}:${bucket}`;
+      occupied.set(key, (occupied.get(key) ?? 0) + overlap);
+    }
+  }
+
+  const cells: OccupancyOverviewCell[] = [];
+  for (const [key, duration] of occupied) {
+    const [row, seriesIndex, bucket] = key.split(':').map(Number) as [number, number, number];
+    const x0 = visibleStart + bucket * bucketWidth;
+    cells.push({
+      row,
+      seriesIndex,
+      x0,
+      x1: x0 + bucketWidth,
+      // Defensive clamp for malformed overlapping intervals in one series.
+      coverage: Math.max(0, Math.min(1, duration / bucketWidth)),
+    });
+  }
+
+  cells.sort((a, b) => a.seriesIndex - b.seriesIndex || a.row - b.row || a.x0 - b.x0);
+  return { mode: 'overview', cells, sourceBarCount: visibleBars.length };
 }

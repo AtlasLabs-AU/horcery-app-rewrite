@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon';
 
 import {
+  buildOccupancyPresentation,
   layoutOccupancyTimeline,
   batchOccupancyLayoutBars,
   occupancyLayoutBarIntervals,
@@ -12,6 +13,8 @@ import {
   PEOPLE_IN_STALL,
   daylightSaving,
   daylightSavingFallBack,
+  denseWeek,
+  normalWeek,
   overnight,
   worstCase,
 } from '@/charts/fixtures/people-in-stall';
@@ -72,6 +75,58 @@ describe('renderer-independent occupancy layout', () => {
     expect(viewport.bars.length).toBeLessThan(1_000);
     expect(viewport.bars).toEqual(expected);
     expect(viewport.bars.every((bar) => bar.x1 >= visibleSpan[0] && bar.x0 <= visibleSpan[1])).toBe(true);
+  });
+
+  it('turns the unreadable ceiling into an accurate 30-minute density overview', () => {
+    const layout = buildLayout(worstCase);
+    const presentation = buildOccupancyPresentation(layout, { visibleSpan: [0, 1] });
+
+    expect(presentation.mode).toBe('overview');
+    if (presentation.mode !== 'overview') throw new Error('expected overview');
+    expect(presentation.sourceBarCount).toBe(6_720);
+    expect(presentation.cells).toHaveLength(48 * 2 * 7);
+    expect(presentation.cells.every((cell) => Math.abs(cell.coverage - 0.5) < 1e-10)).toBe(true);
+    expect(new Set(presentation.cells.map((cell) => cell.seriesIndex))).toEqual(new Set([0, 1]));
+  });
+
+  it('preserves exact occupied duration for every row and series in the overview', () => {
+    const layout = buildLayout(worstCase);
+    const presentation = buildOccupancyPresentation(layout, { visibleSpan: [0, 1] });
+    if (presentation.mode !== 'overview') throw new Error('expected overview');
+
+    for (let row = 0; row < 7; row++) {
+      for (let seriesIndex = 0; seriesIndex < 2; seriesIndex++) {
+        const exactDuration = layout.bars
+          .filter((bar) => bar.row === row && bar.seriesIndex === seriesIndex)
+          .reduce((total, bar) => total + bar.x1 - bar.x0, 0);
+        const overviewDuration = presentation.cells
+          .filter((cell) => cell.row === row && cell.seriesIndex === seriesIndex)
+          .reduce((total, cell) => total + cell.coverage * (cell.x1 - cell.x0), 0);
+
+        expect(overviewDuration).toBeCloseTo(exactDuration, 10);
+      }
+    }
+  });
+
+  it('returns to exact source intervals when zoom bounds the visible work', () => {
+    const layout = buildLayout(worstCase);
+    const presentation = buildOccupancyPresentation(layout, { visibleSpan: [0, 0.1] });
+
+    expect(presentation.mode).toBe('exact');
+    if (presentation.mode !== 'exact') throw new Error('expected exact intervals');
+    expect(presentation.bars.length).toBeLessThanOrEqual(1_000);
+    expect(presentation.bars.every((bar) => !bar.merged)).toBe(true);
+    expect(presentation.bars).toEqual(
+      layout.bars.filter((bar) => bar.x1 >= 0 && bar.x0 <= 0.1),
+    );
+  });
+
+  it('keeps ordinary customer loads exact at the full-day view', () => {
+    const normal = buildOccupancyPresentation(buildLayout(normalWeek), { visibleSpan: [0, 1] });
+    const dense = buildOccupancyPresentation(buildLayout(denseWeek), { visibleSpan: [0, 1] });
+
+    expect(normal.mode).toBe('exact');
+    expect(dense.mode).toBe('exact');
   });
 
   it('is idempotent at a fixed viewport', () => {

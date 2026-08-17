@@ -3,6 +3,7 @@ import {
   matchFont,
   Path as SkiaPath,
   rect,
+  scale,
   Text as SkiaText,
 } from '@shopify/react-native-skia';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,10 +24,11 @@ import {
 } from '@/charts/occupancy-timeline';
 import {
   batchOccupancyLayoutBars,
+  buildOccupancyPresentation,
   layoutOccupancyTimeline,
   occupancyLayoutBarTooltips,
   type OccupancyLayoutBar,
-  windowOccupancyLayout,
+  type OccupancyOverviewCell,
 } from '@/charts/occupancy-layout';
 
 import type { RendererProps, VictoryRenderMode } from '../renderer';
@@ -132,9 +134,66 @@ function ExactBarPaths({
   );
 }
 
+/**
+ * Readable high-density overview: one density cell per 30-minute bucket at
+ * full day, with a separate lane for every named series. Cell height is the
+ * exact occupied share of the bucket; these are summaries, never fake visits.
+ */
+function OverviewPaths({
+  cells,
+  seriesIds,
+  rows,
+  xScale,
+  yScale,
+  bounds,
+}: {
+  cells: OccupancyOverviewCell[];
+  seriesIds: string[];
+  rows: number;
+  xScale: Scale;
+  yScale: Scale;
+  bounds?: { left: number; right: number };
+}) {
+  const started = performance.now();
+  const laneGap = 1;
+  const laneCount = Math.max(1, seriesIds.length);
+  const laneHeight = (GEOMETRY.barHeight - laneGap * (laneCount - 1)) / laneCount;
+  const minimumHeight = 1 / PixelRatio.get();
+  const paths = new Map<string, { commands: string[]; color: string }>();
+
+  for (const cell of cells) {
+    const x0 = xScale(cell.x0);
+    const x1 = xScale(cell.x1);
+    if (bounds && (x1 < bounds.left || x0 > bounds.right)) continue;
+    const cy = yScale(rows - 0.5 - cell.row);
+    const laneTop = cy - GEOMETRY.barHeight / 2 + cell.seriesIndex * (laneHeight + laneGap);
+    const height = Math.max(minimumHeight, laneHeight * cell.coverage);
+    const y = laneTop + (laneHeight - height) / 2;
+    const key = `${cell.seriesIndex}:${cell.row}`;
+    const path = paths.get(key) ?? {
+      commands: [],
+      color: seriesColor(seriesIds[cell.seriesIndex] ?? ''),
+    };
+    path.commands.push(`M${x0},${y}H${x1}V${y + height}H${x0}Z`);
+    paths.set(key, path);
+  }
+  console.log(
+    `[harness-timing] overview-paths cells=${cells.length} paths=${paths.size} ms=${(performance.now() - started).toFixed(1)}`,
+  );
+
+  return (
+    <>
+      {[...paths].map(([key, path]) => (
+        <SkiaPath key={key} path={path.commands.join('')} color={path.color} />
+      ))}
+    </>
+  );
+}
+
 /** Bars, re-laid-out from the zoomed x-scale. Lives inside the chart so it can read the transform. */
 function RelayoutBars({
   bars,
+  overviewCells,
   seriesIds,
   rows,
   xScale,
@@ -142,6 +201,7 @@ function RelayoutBars({
   bounds,
 }: {
   bars: OccupancyLayoutBar[];
+  overviewCells: OccupancyOverviewCell[];
   seriesIds: string[];
   rows: number;
   xScale: Scale;
@@ -164,14 +224,25 @@ function RelayoutBars({
 
   return (
     <Group clip={clip}>
-      <ExactBarPaths
-        bars={bars}
-        seriesIds={seriesIds}
-        rows={rows}
-        xScale={zoomed}
-        yScale={yScale}
-        bounds={bounds}
-      />
+      {overviewCells.length > 0 ? (
+        <OverviewPaths
+          cells={overviewCells}
+          seriesIds={seriesIds}
+          rows={rows}
+          xScale={zoomed}
+          yScale={yScale}
+          bounds={bounds}
+        />
+      ) : (
+        <ExactBarPaths
+          bars={bars}
+          seriesIds={seriesIds}
+          rows={rows}
+          xScale={zoomed}
+          yScale={yScale}
+          bounds={bounds}
+        />
+      )}
     </Group>
   );
 }
@@ -184,12 +255,14 @@ function RelayoutBars({
  */
 function MatrixBars({
   bars,
+  overviewCells,
   seriesIds,
   rows,
   xScale,
   yScale,
 }: {
   bars: OccupancyLayoutBar[];
+  overviewCells: OccupancyOverviewCell[];
   seriesIds: string[];
   rows: number;
   xScale: Scale;
@@ -197,7 +270,11 @@ function MatrixBars({
 }) {
   return (
     <Group>
-      <ExactBarPaths bars={bars} seriesIds={seriesIds} rows={rows} xScale={xScale} yScale={yScale} />
+      {overviewCells.length > 0 ? (
+        <OverviewPaths cells={overviewCells} seriesIds={seriesIds} rows={rows} xScale={xScale} yScale={yScale} />
+      ) : (
+        <ExactBarPaths bars={bars} seriesIds={seriesIds} rows={rows} xScale={xScale} yScale={yScale} />
+      )}
     </Group>
   );
 }
@@ -211,7 +288,14 @@ export const VictoryTimeline = memo(function VictoryTimeline({
   renderMode,
 }: RendererProps & { renderMode: VictoryRenderMode }) {
   const rows = timeline?.days.length ?? 7;
-  const layout = useMemo(() => (timeline ? layoutOccupancyTimeline(timeline) : null), [timeline]);
+  const layout = useMemo(() => {
+    const started = performance.now();
+    const next = timeline ? layoutOccupancyTimeline(timeline) : null;
+    console.log(
+      `[harness-timing] occupancy-layout bars=${next?.bars.length ?? 0} ms=${(performance.now() - started).toFixed(1)}`,
+    );
+    return next;
+  }, [timeline]);
   const labels = useMemo(
     () => (timeline ? timeline.days.map((d) => dayLabel(d, timeline.zone)) : []),
     [timeline],
@@ -248,16 +332,40 @@ export const VictoryTimeline = memo(function VictoryTimeline({
   const boundsRef = useRef({ left: 0, right: width, top: 0, bottom: height });
   const visibleRef = useRef<[number, number]>([0, 1]);
 
-  const displayedLayout = useMemo(
-    () =>
+  // The product contract resets zoom whenever the data window changes. Make
+  // that explicit: retaining the previous scenario's matrix can bypass the
+  // overview and accidentally benchmark thousands of exact bars again.
+  useEffect(() => {
+    const identity = scale(1, 1);
+    transform.matrix.value = identity;
+    transform.offset.value = identity;
+    transform.origin.value = { x: 0, y: 0 };
+    visibleRef.current = [0, 1];
+    setVisible([0, 1]);
+    // The shared values are stable for this hook instance; `transform` itself
+    // is a new wrapper object each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeline]);
+
+  const presentation = useMemo(() => {
+    const started = performance.now();
+    const next =
       layout && lodEnabled
-        ? windowOccupancyLayout(layout, visible)
-        : layout,
-    [layout, lodEnabled, visible, width],
-  );
-  const bars = displayedLayout?.bars ?? [];
+        ? buildOccupancyPresentation(layout, { visibleSpan: visible })
+        : layout
+          ? { mode: 'exact' as const, bars: layout.bars, sourceBarCount: layout.bars.length }
+          : null;
+    console.log(
+      `[harness-timing] occupancy-presentation mode=${next?.mode ?? 'none'} ` +
+        `items=${next?.mode === 'overview' ? next.cells.length : (next?.bars.length ?? 0)} ` +
+        `ms=${(performance.now() - started).toFixed(1)}`,
+    );
+    return next;
+  }, [layout, lodEnabled, visible]);
+  const bars = presentation?.mode === 'exact' ? presentation.bars : [];
+  const overviewCells = presentation?.mode === 'overview' ? presentation.cells : [];
   const sourceBars = layout?.bars ?? [];
-  const seriesIds = displayedLayout?.seriesIds ?? [];
+  const seriesIds = layout?.seriesIds ?? [];
 
   // Tap → tooltip. Pixel → day fraction through the CURRENT zoom, then row.
   const hitTest = (px: number, py: number) => {
@@ -266,6 +374,10 @@ export const VictoryTimeline = memo(function VictoryTimeline({
     if (px < b.left || px > b.right || py < b.top || py > b.bottom) return;
     const xVal = d0 + ((px - b.left) / (b.right - b.left)) * (d1 - d0);
     const row = Math.floor(((py - b.top) / (b.bottom - b.top)) * rows);
+    if (presentation?.mode === 'overview') {
+      setTooltip({ text: 'Pinch to zoom for exact visits', x: px, y: py });
+      return;
+    }
     // Hit-test originals, not reduced geometry, so LOD never changes meaning.
     const hit = sourceBars.find((bar) => bar.row === row && xVal >= bar.x0 && xVal <= bar.x1);
     if (!hit) return;
@@ -281,7 +393,7 @@ export const VictoryTimeline = memo(function VictoryTimeline({
           runOnJS(hitTest)(e.x, e.y);
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt when bars change; refs otherwise
-    [sourceBars, rows, timeline],
+    [presentation?.mode, sourceBars, rows, timeline],
   );
 
   // Victory Native's built-in cumulative pinch composes around an already
@@ -447,6 +559,7 @@ export const VictoryTimeline = memo(function VictoryTimeline({
         renderOutside={renderMode === 'relayout' ? ({ xScale, yScale, chartBounds }) => (
           <RelayoutBars
             bars={bars}
+            overviewCells={overviewCells}
             seriesIds={seriesIds}
             rows={rows}
             xScale={xScale}
@@ -456,7 +569,14 @@ export const VictoryTimeline = memo(function VictoryTimeline({
         ) : undefined}>
         {renderMode === 'matrix'
           ? ({ xScale, yScale }) => (
-              <MatrixBars bars={bars} seriesIds={seriesIds} rows={rows} xScale={xScale} yScale={yScale} />
+              <MatrixBars
+                bars={bars}
+                overviewCells={overviewCells}
+                seriesIds={seriesIds}
+                rows={rows}
+                xScale={xScale}
+                yScale={yScale}
+              />
             )
           : () => null}
       </CartesianChart>
@@ -470,6 +590,12 @@ export const VictoryTimeline = memo(function VictoryTimeline({
           </View>
         ))}
       </View>
+
+      {presentation?.mode === 'overview' ? (
+        <View style={styles.overviewHint} pointerEvents="none">
+          <Text style={styles.overviewHintText}>30 min overview · pinch for exact visits</Text>
+        </View>
+      ) : null}
 
       {tooltip ? (
         <View style={[styles.tooltip, { left: Math.min(tooltip.x, width - 240), top: Math.max(0, tooltip.y - 40) }]} pointerEvents="none">
@@ -492,4 +618,14 @@ const styles = StyleSheet.create({
   legendText: { color: GEOMETRY.legendText, fontSize: 12 },
   tooltip: { position: 'absolute', backgroundColor: '#ffffff', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 },
   tooltipText: { color: '#0f172a', fontSize: 13 },
+  overviewHint: {
+    position: 'absolute',
+    top: 2,
+    right: 8,
+    borderRadius: 10,
+    backgroundColor: '#ffffffdd',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  overviewHintText: { color: GEOMETRY.axisText, fontSize: 10 },
 });

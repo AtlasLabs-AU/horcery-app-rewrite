@@ -31,14 +31,16 @@ describe('occupancy accessibility model', () => {
     });
 
     expect(model.summary).toBe('People In Stall chart. 7 days, 38 intervals.');
-    expect(model.intervals[0]?.label).toMatch(
+    expect(occupancyA11yPage(model, 0).intervals[0]?.label).toMatch(
       /^(With Horse|Without Horse), Aug 08, \d{1,2}:\d{2} [AP]M to \d{1,2}:\d{2} [AP]M, \d+ (person|people)$/,
     );
   });
 
   it('sorts intervals by day and time rather than renderer series order', () => {
     const model = buildOccupancyA11yModel(timeline('normal-week'), { seriesLabel: labels });
-    const order = model.intervals.map((item) => `${item.dayKey}:${item.interval.enter}`);
+    const order = occupancyA11yPage(model, 0, model.intervalCount).intervals.map(
+      (item) => `${item.dayKey}:${item.interval.enter}`,
+    );
     expect(order).toEqual([...order].sort());
   });
 
@@ -47,7 +49,7 @@ describe('occupancy accessibility model', () => {
     const first = occupancyA11yPage(model, 0);
     const last = occupancyA11yPage(model, Number.MAX_SAFE_INTEGER);
 
-    expect(model.intervals).toHaveLength(6720);
+    expect(model.intervalCount).toBe(6720);
     expect(first.intervals).toHaveLength(OCCUPANCY_A11Y_PAGE_SIZE);
     expect(first.pageLabel).toBe('Interval page 1 of 336');
     expect(last.page).toBe(335);

@@ -131,6 +131,14 @@ crash/unbounded memory, missing required behaviour, any interaction freeze over
 not substantially return, or an architecture that does not scale across the
 representative chart families.
 
+**Product clarification, approved 2026-08-17:** the 6,720-interval payload must
+be accepted safely, but 6,720 literal bars are not a readable full-week user
+interface. The worst-case gate is satisfied only by an explicitly labelled,
+accuracy-preserving bounded overview that retains separate series meaning and
+restores original intervals on zoom. It is not satisfied by dropping,
+mislabeling, or visually merging series. The original raw-bar run remains a
+diagnostic comparison and cannot override this user-facing contract.
+
 Only passing finalists are scored: smoothness 30%, reliability/memory 25%,
 whole-catalogue scalability 20%, behavioural parity 15%, implementation cost
 10%. If neither passes, the outcome is "neither passed", not a forced winner.

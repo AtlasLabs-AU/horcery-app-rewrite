@@ -12,13 +12,14 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Finalist | Accuracy at 6,720 intervals | Useful-content / interaction gate | Status |
 |---|---|---|---|
 | ECharts · Skia | Exact fixture retained | Three unrecoverable interaction freezes, including LOD on | Rejected |
-| Victory · Skia | Exact alternating series retained after batching | Recovers, but initial layout remains 5.7–6.4 seconds; final bounded remediation measured 5,770 ms | Does not pass yet |
+| Victory · Skia | Overview preserves occupied duration in separate series lanes; zoom restores original bars | 140 ms overview; exact zoom updates 350–798 bars with no produced frame over 100 ms | Selected under bounded contract |
 
 An interval-merging Victory attempt is not accepted parity evidence: it loaded
-quickly only by collapsing alternating series into solid bands. The exact
-14-path implementation preserves chart meaning, but its physical Release still
-misses the delayed-content gate. The protocol outcome is therefore **neither
-passed** until the requirement or architecture is changed explicitly.
+quickly only by collapsing alternating series into solid bands. The accepted
+overview is explicitly a density summary, keeps the two series in separate
+lanes, and retains the exact source layout for zoom, tooltips and semantics.
+The raw 6,720-bar rendering remains diagnostic evidence, not a user-facing
+full-week design.
 
 | Required behaviour | ECharts · Skia | Victory · Skia | Evidence needed |
 |---|---|---|---|

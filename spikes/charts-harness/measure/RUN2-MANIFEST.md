@@ -29,9 +29,47 @@ gate evidence, not a successful optimization or renderer selection.
 | `pathbuilder-screenshot.png` | `bd749fcd315ec9176cd3bab288355024e809099a70df9b6904294441dba8ecba` | Exact path-builder attempt restored alternating geometry but still reported 5,845 ms. |
 | `RUN-LOG.md` | `572774980da9db5e79a45dc3aa6c734f6ef684b8bd1a886c084480c9f5aed09c` | Human-readable attempt history; hashes above remain authoritative. |
 
-This evidence changes the current outcome to **neither finalist passed all
-rejection gates**. ECharts remains rejected; Victory remains the more viable
-candidate but is not approved for production from this spike.
+This section records the failed literal-bar remediation and is superseded by
+the explicitly approved overview-to-exact contract below. It must not be read
+as the current decision.
+
+## Accepted overview-to-exact ceiling contract — physical Redmi Note 12
+
+Raw path:
+`physical-redmi-note-12/overview-zoom-contract/`
+
+The final Release accepts all 6,720 source intervals, presents a labelled
+30-minute density overview with separate series lanes, and restores exact
+source intervals when zoom bounds visible work to at most 1,000 bars. Unit
+tests independently prove exact occupied duration per row and series.
+
+Physical result: 140 ms Victory layout signal at overview, 171,575 KB PSS,
+then 350–798 exact bars with 6.8–11.3 ms preparation per zoom update. The zoom
+capture contains zero produced frames over 100 ms. Its p50/p95 are 31.4/51.6
+ms, so this is bounded and recoverable evidence, not a 60 fps claim for the
+pathological fixture.
+
+| Artefact | SHA-256 | What it proves / limitation |
+|---|---|---|
+| `Horcery-Victory-Overview-final.apk` | `74fb273ad1b98a47c9f0637f6559e5f670988b0decfb02e71c6ba43cf506c660` | Exact instrumented Release APK tested; package identity ends in `.victory.memory`. |
+| `overview-final.png` | `e45aa56924ac8f550d6271ac948a98d9d863619f7d94d5bc5b59025ff9bd1602` | Separate two-series density lanes, full axis, explicit overview wording and 140 ms signal. |
+| `overview-final-ui.xml` | `67d7a329f2f2010b236ce5d1dba5256144cce3e68a531def882c88f354ce738a` | Machine-readable overview state. |
+| `overview-final-logcat.txt` | `1525f4219fbd231bc43bff3e96abedff6b5c641ecd998d51246edc176e006d7d` | Stage timings and intended worst-case/LOD-on/relayout code path. |
+| `overview-final-framestats.txt` | `90589806da095417a826ba1cfc94b08cfd27e71dcccdd160d26794fb6f51756a` | Cold-start frame history; includes three >100 ms startup frames and is not an interaction score. |
+| `overview-final-meminfo.txt` | `436fea5c1aa3aee24aabedcfc171dcb0be461eaeae2a1fd0e52c49a5f18bf04d` | Settled overview snapshot: 171,575 KB PSS / 312,752 KB RSS. |
+| `exact-zoom.png` | `24828c36961885d4bc6d808e9938265b33cfd7899b31db63d9c5bdd5b1677827` | Original alternating source bars after the overview label disappears. |
+| `exact-zoom-logcat.txt` | `e40c27e2d24d3e8bbd483efad5a5633f85c26dd226b15c2a43ea09c3874e799e` | Exact-mode counts and 6.8–11.3 ms preparation updates. |
+| `exact-zoom-framestats.txt` | `3ed6a3b20359378b4ed22c1ed788bbe1b9e16e98de497b9bc1756a68f0be7418` | 120 gesture frames, max 67.5 ms, zero produced frames over 100 ms. Manual single run. |
+| `exact-zoom-meminfo.txt` | `c3a1a625a88a510ab182b28defbc28415adc70e935ae7d8f35e3b0a1131c8513` | Post-zoom snapshot: 198,991 KB PSS / 342,076 KB RSS. |
+| `RUN-LOG.md` | `33fc8c1acb999f058c0858adf7c13987b04c334bc50e0239667465f5a1cb679f` | Full protocol, invalid-attempt disclosure and decision boundary. |
+
+The earlier `1bdf4327...` APK and its blank/late captures are invalid: Gradle
+reused a stale packaged JavaScript asset. The distinct final APK hash and its
+runtime stage logs are required provenance.
+
+Decision consequence: ECharts remains rejected. Victory · Skia is selected for
+the production adapter under this bounded contract. Observed-heavy customer
+data and physical iPhone/tablet checks remain pre-beta reversal checks.
 
 ## Isolated release builds
 

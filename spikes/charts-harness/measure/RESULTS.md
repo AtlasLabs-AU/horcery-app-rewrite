@@ -1,28 +1,29 @@
-# Current renderer-decision status — 2026-08-17
+# Current renderer decision — 2026-08-17
 
-**Neither finalist currently passes every Run 2 rejection gate. Do not treat
-the earlier cost-led ECharts choice or the later provisional Victory reversal
-as a production renderer decision.**
+**Select Victory · Skia for the production chart adapter, under the explicit
+overview-to-exact data contract below.** Keep the renderer-independent domain
+seam; do not port the legacy chart package wholesale.
 
 - ECharts · Skia is rejected on the physical Redmi ceiling: three attempts
   became non-responsive and required force-stop, including with LOD enabled.
-- Victory · Skia is materially better: it recovers and remains interactive
-  after the ceiling loads. However, its repeatable 5.7–6.4 second initial
-  layout delay violates the delayed-useful-content requirement.
-- A bounded Victory remediation retained all 6,720 exact intervals while
-  reducing the React/Skia draw surface to 14 row/series paths. The final
-  physical Release still reported **5,770 ms · victory-layout**. Android's raw
-  frame log contained no produced frame over 100 ms, demonstrating again that
-  produced-frame statistics cannot reveal time in which JS submits no useful
-  chart frame.
-- A faster interval-merging attempt was rejected because it changed the
-  visible With Horse / Without Horse meaning. Accuracy remains a hard gate.
+- Rendering all 6,720 intervals as literal full-week bars is both unreadable
+  and slow: Victory repeatedly took 5.7–6.4 seconds. That remains useful
+  diagnostic evidence, but is no longer the product presentation requirement.
+- The approved approach retains every interval, renders a labelled 30-minute
+  density overview in separate With Horse / Without Horse lanes, and switches
+  back to original intervals below a 1,000-visible-bar bound.
+- On the physical Redmi Release, the 6,720-interval overview reported **140 ms
+  · victory-layout**, settled at **171,575 KB PSS**, and zoomed into 350–798
+  exact intervals with 6.8–11.3 ms preparation updates. The gesture capture
+  recorded zero produced frames over 100 ms.
+- Tests prove the overview preserves exact occupied duration independently for
+  every row and series. A merging strategy that changed series meaning remains
+  rejected. Accuracy is still a hard gate.
 
-The evidence and hashes are indexed in `RUN2-MANIFEST.md`. Per
-`RUN2-PROTOCOL.md`, the current outcome is **neither passed**, not a forced
-winner. The next decision must either (a) define and validate a bounded product
-data contract using observed-heavy data, or (b) conduct a separate rendering
-architecture spike. It must not silently relax the synthetic-ceiling gate.
+This is a medium-confidence selection from one physical mid-range Android. The
+observed-heavy anonymised response plus physical iPhone/tablet readback remain
+pre-beta reversal checks. They do not justify maintaining two production
+renderer adapters. Evidence and hashes are indexed in `RUN2-MANIFEST.md`.
 
 ---
 

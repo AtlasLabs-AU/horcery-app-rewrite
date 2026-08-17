@@ -43,6 +43,7 @@ import {
 import { GEOMETRY, loadScenarios, seriesLabel } from './src/scenarios';
 
 const MEMORY_SEQUENCE_BUILD = process.env.EXPO_PUBLIC_HORCERY_MEMORY_SEQUENCE === '1';
+const STRESS_TEST_BUILD = process.env.EXPO_PUBLIC_HORCERY_STRESS_TEST === '1';
 const REMOUNT_INTERVAL_MS = 120;
 const CHECKPOINT_HOLD_MS = 20_000;
 
@@ -65,7 +66,13 @@ export default function App() {
 
   const [rendererId, setRendererId] = useState<RendererId>(DEFAULT_RENDERER_ID);
   const [screenMode, setScreenMode] = useState<'timeline' | 'catalogue'>('timeline');
-  const [scenarioIndex, setScenarioIndex] = useState(MEMORY_SEQUENCE_BUILD ? 1 : 0);
+  const [scenarioIndex, setScenarioIndex] = useState(() =>
+    STRESS_TEST_BUILD
+      ? Math.max(0, scenarios.findIndex((scenario) => scenario.name === 'worst-case'))
+      : MEMORY_SEQUENCE_BUILD
+        ? 1
+        : 0,
+  );
   const [mountKey, setMountKey] = useState(0);
   const [renderSignal, setRenderSignal] = useState<RenderSignal | null>(null);
   const [remountSequence, setRemountSequence] = useState<RemountSequence | null>(null);
@@ -456,15 +463,30 @@ function ChartStateOverlay({ status }: { status: 'no-data' | 'loading' | 'error'
 
 function OccupancyAccessibilityOverlay({ timeline }: { timeline: NonNullable<ReturnType<typeof loadScenarios>[number]['timeline']> }) {
   const model = useMemo<OccupancyA11yModel>(
-    () =>
-      buildOccupancyA11yModel(timeline, {
+    () => {
+      const started = performance.now();
+      const next = buildOccupancyA11yModel(timeline, {
         chartLabel: 'People In Stall chart',
         seriesLabel,
-      }),
+      });
+      console.log(
+        `[harness-timing] occupancy-a11y-model intervals=${next.intervalCount} ` +
+          `ms=${(performance.now() - started).toFixed(1)}`,
+      );
+      return next;
+    },
     [timeline],
   );
   const [pageIndex, setPageIndex] = useState(0);
-  const page = occupancyA11yPage(model, pageIndex);
+  const page = useMemo(() => {
+    const started = performance.now();
+    const next = occupancyA11yPage(model, pageIndex);
+    console.log(
+      `[harness-timing] occupancy-a11y-page items=${next.intervals.length} ` +
+        `ms=${(performance.now() - started).toFixed(1)}`,
+    );
+    return next;
+  }, [model, pageIndex]);
 
   useEffect(() => setPageIndex(0), [model]);
 
