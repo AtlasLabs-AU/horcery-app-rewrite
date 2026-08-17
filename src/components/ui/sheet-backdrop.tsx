@@ -1,4 +1,5 @@
 import { BlurView } from 'expo-blur';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import {
   createContext,
   useCallback,
@@ -21,6 +22,8 @@ import { motion } from '@/constants/tokens';
  * `thin` keeps the app's own colour and lets the blur do the work.
  */
 const BLUR_INTENSITY = 45;
+const FALLBACK_OPACITY = 0.6;
+const hasNativeBlur = requireOptionalNativeModule('ExpoBlur') !== null;
 
 interface SheetBackdrop {
   /** Called when a sheet opens; balanced by `release`. */
@@ -49,7 +52,7 @@ const SheetBackdropContext = createContext<SheetBackdrop | null>(null);
  * while another is still open.
  */
 export function SheetBackdropHost({ children }: { children: ReactNode }) {
-  const { scheme } = useTokens();
+  const { colors, scheme } = useTokens();
   const [depth, setDepth] = useState(0);
   // useState, not useRef().current: reading a ref during render is what the
   // React Compiler forbids, and the lazy initialiser gives the same "created
@@ -86,11 +89,24 @@ export function SheetBackdropHost({ children }: { children: ReactNode }) {
           <Animated.View
             style={[StyleSheet.absoluteFill, { opacity: progress }]}
             pointerEvents="none">
-            <BlurView
-              intensity={BLUR_INTENSITY}
-              tint={scheme === 'dark' ? 'systemThinMaterialDark' : 'systemThinMaterialLight'}
-              style={StyleSheet.absoluteFill}
-            />
+            {hasNativeBlur ? (
+              <BlurView
+                intensity={BLUR_INTENSITY}
+                tint={scheme === 'dark' ? 'systemThinMaterialDark' : 'systemThinMaterialLight'}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : (
+              /* Native dependencies can lag JavaScript in an existing dev
+                 client. Keep the sheet usable and neutral until that binary
+                 is rebuilt; a future binary picks up the real blur without a
+                 code change. */
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: colors.background, opacity: FALLBACK_OPACITY },
+                ]}
+              />
+            )}
           </Animated.View>
         ) : null}
       </View>
