@@ -325,12 +325,12 @@ A0 + A1 together are about a day and a half of pure TypeScript with tests and no
 
 | # | Question | My recommendation |
 |---|---|---|
-| **D1** | **Where do we test writes?** The rewrite is read-only against production by rule. Alerts *is* writes. Options: (a) allow writes **only for the QA org** on production via the existing flag + an org allow-list; (b) wait for a staging API; (c) never write from the rewrite until launch (untestable). | **(a)** — the flag exists, scope it to the QA org id, keep the default off. Nothing else is testable. |
-| **D2** | **Form library:** keep `react-hook-form` + `zod` (what the shipping app uses) or a lighter `useReducer` form? | **Revised by the implementation plan (2026-08-17): NO new dependency.** The rewrite has neither installed. Form state is a typed `useReducer`; validation is a pure domain function `validate(form, descriptor, units)`, tested like the rest of the domain. Fewer deps, no ref-heavy form library for the React Compiler to fight. Inakshi may veto. |
+| **D1** | **Where do we test writes?** The rewrite is read-only against production by rule. Alerts *is* writes. | **DECIDED 2026-08-17 (Inakshi): (a) — the QA org only.** Writes pass only when the existing `EXPO_PUBLIC_ALLOW_PRODUCTION_WRITES` flag is on **and** the current organization is on `EXPO_PUBLIC_WRITE_ORG_ALLOWLIST` (QA org id). Both default off; every other organization stays untouchable. A4 is unblocked. |
+| **D2** | Form library | **DECIDED 2026-08-17: no new dependency** — typed `useReducer` + pure `validate()` in the domain layer, as the plan proposes. |
 | **D3** | **Time window UI:** two native time pickers (start/end) or a single "from–to" range control? | **Two native pickers** — universal, no custom control, matches the "native over custom" rule. |
 | **D4** | **Grouping on Manage Alerts:** flat newest-first (shipping) or grouped by category? | Flat for A2; revisit with real usage. |
 | **D5** | **Do we tell users about drift on rules saved by the OLD app** (where we can't compute it)? | Show the window, add one footnote in Configure, no badge. Don't claim what we can't know. |
-| **D6** (v2) | **Delivery (A5) — before or after authoring (A2–A4)?** Authoring is testable without delivery; delivery is what customers feel. | Authoring first (A0–A3 need no writes and no push), **A5 designed in parallel** and built right after A4 — but do not call alerts shipped until it is in. |
+| **D6** | Delivery (A5) ordering | **DECIDED 2026-08-17: authoring first (A0–A4); A5 designed in parallel and built right after A4; alerts are not called shipped until A5 is in.** |
 
 Not asking: suggested alerts (out, your call today); SMS/email (never live); the frequency chart (§6a).
 

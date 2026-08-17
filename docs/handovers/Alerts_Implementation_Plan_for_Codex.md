@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-17 · **Author:** Claude, for Inakshi · **Executor:** Codex
 **Repo:** `horcery-app-rewrite`, branch `rnd` · **Design authority:** `docs/scope/Horcery_Alerts_Architecture.md` (v2). Where this plan and the architecture disagree, the architecture wins and you tell us.
-**Status of the work:** slices **A0 → A3** are ready to build. **A4 is gated on decision D1** (where writes are tested) — do not start it. **A5 (delivery)** is not in this plan.
+**Status of the work:** slices **A0 → A4** are ready to build in order. **D1 is decided (2026-08-17): writes are tested against the QA org only** — A4 is unblocked but still comes last and only after A3 is reviewed. **A5 (delivery)** is not in this plan; its design starts in parallel with A2/A3 (D6).
 
 ---
 
@@ -24,12 +24,12 @@
 
 | # | Decision | Status | What you do |
 |---|---|---|---|
-| D1 | Where writes are tested | **OPEN** | A4 does not start. A3 ends with Save disabled-with-reason and the dev payload preview |
-| D2 | Form library | **Resolved by this plan (Inakshi may veto): NO new dependency.** The rewrite has neither `zod` nor `react-hook-form`. Form state is a typed `useReducer`; validation is a **pure domain function** `validate(form, descriptor, units)` returning `FieldErrors`. It is tested like everything else in the domain and it avoids ref-heavy form libraries the React Compiler dislikes | Build it that way |
+| D1 | Where writes are tested | **DECIDED: QA org only** (Inakshi, 2026-08-17) | A3 still ends with Save disabled-with-reason + payload preview; A4 (§6) is now real work, after A3 review |
+| D2 | Form library | **DECIDED (Inakshi, 2026-08-17): NO new dependency.** The rewrite has neither `zod` nor `react-hook-form`. Form state is a typed `useReducer`; validation is a **pure domain function** `validate(form, descriptor, units)` returning `FieldErrors`. It is tested like everything else in the domain and it avoids ref-heavy form libraries the React Compiler dislikes | Build it that way |
 | D3 | Time window UI | default: two native time pickers | Build `TimePicker` in the surface layer (A3) |
 | D4 | List grouping | default: flat, newest first | |
 | D5 | Drift on old-app rules | default: no badge, one footnote | |
-| D6 | Delivery ordering | default: authoring first; A5 later | Not in this plan |
+| D6 | Delivery ordering | **DECIDED: authoring first; A5 designed in parallel, built after A4** | Not in this plan — a separate short design for A5 will follow |
 
 ---
 
@@ -162,13 +162,13 @@ src/domain/alerts/
 - Device: create flow for at least **temperature, lying-down-time, people-in-stall-time (three time fields), entering-stall (boolean)** — screenshot each configure screen light + dark, and the payload preview for each. Edit flow for a sample rule with drift → banner shows "Re-save to fix" (disabled-with-reason in A3).
 - `no-dead-controls` extended to `alerts/*` and passing.
 
-**Stop and report.** A4 waits for D1.
+**Stop and report.** A4 begins only after Inakshi/Claude review A3.
 
 ---
 
-## 6. Slice A4 — writes on (NOT NOW; here so the shape is known)
+## 6. Slice A4 — writes on (D1 decided: QA org only) — after A3 is reviewed
 
-When Inakshi answers D1 with (a): add `EXPO_PUBLIC_WRITE_ORG_ALLOWLIST` (comma-separated org ids) read in `src/config/env`; `assertWriteAllowed` gains a second condition — writes pass only if the current org is on the list **and** the existing flag is set. Both default off. First write: create one rule on the QA org, refetch it, **assert `UNATTESTED_META_DATA.window` came back** — report the result either way (§7.3 of the architecture explains the degrade path). Then wire Save/Delete/Re-save, permission gate live, device validation on both platforms.
+Add `EXPO_PUBLIC_WRITE_ORG_ALLOWLIST` (comma-separated org ids) read in `src/config/env`; `assertWriteAllowed` gains a second condition — writes pass only if the current org is on the list **and** the existing flag is set. Both default off. First write: create one rule on the QA org, refetch it, **assert `UNATTESTED_META_DATA.window` came back** — report the result either way (§7.3 of the architecture explains the degrade path). Then wire Save/Delete/Re-save, permission gate live, device validation on both platforms.
 
 ---
 
