@@ -7,9 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
-import { radius } from '@/constants/tokens';
+import { palette, radius } from '@/constants/tokens';
 
 /**
  * How far the app shrinks behind an open sheet. MotionFlix's own value
@@ -82,7 +82,14 @@ export function SheetScaleHost({ children }: { children: ReactNode }) {
 
   return (
     <SheetScaleContext.Provider value={value}>
-      <Animated.View style={[styles.host, { transform: [{ scale }] }]}>{children}</Animated.View>
+      {/*
+        The outer view is what the scaled app reveals. Without it the window's
+        own backing shows through as a grey frame around the whole screen —
+        which is what it looked like on device before this existed.
+      */}
+      <View style={styles.recess}>
+        <Animated.View style={[styles.host, { transform: [{ scale }] }]}>{children}</Animated.View>
+      </View>
     </SheetScaleContext.Provider>
   );
 }
@@ -99,6 +106,9 @@ export function useSheetScale(): SheetScale {
 const NOOP: SheetScale = { present: () => {}, release: () => {} };
 
 const styles = StyleSheet.create({
+  // Scheme-independent, so it reads from the palette directly rather than the
+  // hook — this sits above every screen and must not re-render with the theme.
+  recess: { flex: 1, backgroundColor: palette.light.recess },
   host: {
     flex: 1,
     borderRadius: radius.lg,

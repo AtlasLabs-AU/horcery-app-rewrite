@@ -46,6 +46,13 @@ const media = {
   scrimClear: 'rgba(0,0,0,0)',
   /** Behind a frame that has not loaded (and under a video's first frame). */
   mediaWell: '#1A1D23',
+  /**
+   * Revealed behind the app when a sheet pushes it back. Black in both
+   * schemes, as iOS's own card modals are: the recession has to read as
+   * depth, and any lighter value reads as a grey frame drawn around the
+   * screen instead (caught on device, 2026-08-17).
+   */
+  recess: '#000000',
 } as const;
 
 export const palette = {
