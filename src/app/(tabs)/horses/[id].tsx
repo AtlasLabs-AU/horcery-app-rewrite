@@ -1,4 +1,5 @@
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import type { DateTime } from 'luxon';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,6 +32,7 @@ import {
   samplePassportFor,
 } from '@/config/sample/horse-detail-sample';
 import { radius, space, type } from '@/constants/tokens';
+import { stallRecordedStreamUrl } from '@/hooks/horses-data';
 import { deriveOverlay } from '@/hooks/horse-status-data';
 import { dayLabel, isToday } from '@/hooks/playhead-data';
 import { useHorseDetail } from '@/hooks/use-horse-detail';
@@ -213,9 +215,35 @@ export default function HorseDetailScreen() {
     }, [setIsFocused, setWantsLive]),
   );
 
-  const liveUri = isSample ? undefined : horse.liveUri;
-  const canStream = !!liveUri && !streamFailed;
+  /**
+   * Live when the play-head is tracking now; an hour of recorded footage from
+   * the cursor when it is not. The date bar is what moves between them, so the
+   * same tap means "watch this stall" on any day.
+   */
+  const streamUri = isSample
+    ? undefined
+    : playhead.isLive
+      ? horse.liveUri
+      : stallRecordedStreamUrl(horse.stall, playhead.cursor);
+  const canStream = !!streamUri && !streamFailed;
   const streaming = wantsLive && canStream && isFocused;
+
+  const onChangeDay = useCallback(
+    (next: DateTime) => {
+      // Stop first: the stream URL changes with the cursor, and a player left
+      // running would silently jump to a different hour.
+      setWantsLive(false);
+      setStreamFailed(false);
+      playhead.setDay(next);
+    },
+    [playhead, setWantsLive, setStreamFailed],
+  );
+
+  const onBackToToday = useCallback(() => {
+    setWantsLive(false);
+    setStreamFailed(false);
+    playhead.resetToToday();
+  }, [playhead, setWantsLive, setStreamFailed]);
 
   const onToggleLive = useCallback(() => {
     setStreamFailed(false);
@@ -294,25 +322,29 @@ export default function HorseDetailScreen() {
             <MediaTile
               posterUri={horse.row?.imageUri}
               blurhash={horse.row?.blurhash}
-              videoUri={streaming ? liveUri : undefined}
+              videoUri={streaming ? streamUri : undefined}
               live={streaming}
               onPlaybackError={() => setStreamFailed(true)}
               onPress={canStream ? onToggleLive : undefined}
               showPlayBadge={canStream && !streaming}
               tag={
                 streaming
-                  ? { label: 'LIVE', tone: 'alert' }
+                  ? playhead.isLive
+                    ? { label: 'LIVE', tone: 'alert' }
+                    : { label: `From ${playhead.cursor.toFormat('h:mm a')}` }
                   : streamFailed
-                    ? { label: 'Live unavailable' }
+                    ? { label: 'Footage unavailable' }
                     : horse.row && !horse.row.hasCamera
                       ? { label: 'No camera' }
                       : undefined
               }
               accessibilityLabel={
                 streaming
-                  ? `${name} live camera, tap to stop`
+                  ? `${name} ${playhead.isLive ? 'live camera' : 'recorded footage'}, tap to stop`
                   : canStream
-                    ? `${name} camera frame, tap to watch live`
+                    ? `${name} camera frame, tap to watch ${
+                        playhead.isLive ? 'live' : `from ${playhead.cursor.toFormat('h:mm a')}`
+                      }`
                     : `${name} camera frame`
               }
               style={styles.hero}
@@ -336,8 +368,8 @@ export default function HorseDetailScreen() {
                 day={playhead.day}
                 now={now}
                 earliest={horse.createdAt}
-                onChange={playhead.setDay}
-                onToday={playhead.resetToToday}
+                onChange={onChangeDay}
+                onToday={onBackToToday}
               />
             ) : null}
 

@@ -1,3 +1,5 @@
+import type { DateTime } from 'luxon';
+
 import type { IAnimal } from '@acme/services/api/animal-management/animal';
 import type { IStall } from '@acme/services/api/stall-monitor-management/stall';
 import { LIVE_STREAM_OFFSET } from '@acme/config/constants/date-constants';
@@ -5,6 +7,7 @@ import {
   getStallIdFromURL,
   getStallMonitorLiveStreamOffsetURL,
   getStallMonitorThumbnailURLs,
+  getStallMonitorVideoURL,
 } from '@acme/config/utils/stall-monitor-video-helper';
 
 /** One row of the Horses list, already joined and ready to draw. */
@@ -63,16 +66,55 @@ export function stallHasMetrics(stall: IStall | undefined): boolean {
  * Audio follows the stall's own setting, as the current app does.
  */
 export function stallLiveStreamUrl(stall: IStall | undefined): string | undefined {
-  if (!stall?.stall_url) return undefined;
-  const monitorId = getStallIdFromURL(stall.stall_url);
-  if (!(monitorId > 0)) return undefined;
+  const monitorId = streamableMonitorId(stall);
+  if (monitorId === undefined) return undefined;
 
   return getStallMonitorLiveStreamOffsetURL({
     stallId: monitorId,
     offset: LIVE_STREAM_OFFSET,
-    type: stall.UserMetaData?.audio_enable ? 'audio_video' : 'video',
+    type: stall?.UserMetaData?.audio_enable ? 'audio_video' : 'video',
     quality: 'low',
   });
+}
+
+/** How much footage one tap of recorded playback covers. Matches the current app. */
+export const RECORDED_WINDOW_MINUTES = 60;
+
+/**
+ * An hour of recorded footage starting at `from`.
+ *
+ * The same monitor and audio rules as live; only the endpoint and the window
+ * differ. `from` is the play-head cursor, so what you watch is the hour
+ * beginning at the moment the date bar is pointing at.
+ */
+export function stallRecordedStreamUrl(
+  stall: IStall | undefined,
+  from: DateTime,
+): string | undefined {
+  const monitorId = streamableMonitorId(stall);
+  if (monitorId === undefined) return undefined;
+
+  return getStallMonitorVideoURL({
+    stallId: monitorId,
+    startTime: from.toUnixInteger(),
+    endTime: from.plus({ minutes: RECORDED_WINDOW_MINUTES }).toUnixInteger(),
+    type: stall?.UserMetaData?.audio_enable ? 'audio_video' : 'video',
+    quality: 'low',
+  });
+}
+
+/**
+ * The monitor id a stream can be built on, or undefined.
+ *
+ * `getStallIdFromURL` returns NaN when the URL carries no `sm-<number>`
+ * segment (several stalls in a real organisation have a null `stall_url`
+ * entirely), and `NaN > 0` is false — so those correctly get nothing rather
+ * than a manifest URL built on a bad id.
+ */
+function streamableMonitorId(stall: IStall | undefined): number | undefined {
+  if (!stall?.stall_url) return undefined;
+  const monitorId = getStallIdFromURL(stall.stall_url);
+  return monitorId > 0 ? monitorId : undefined;
 }
 
 /** Pure join kept outside the hook so its behavior is cheap to characterize. */

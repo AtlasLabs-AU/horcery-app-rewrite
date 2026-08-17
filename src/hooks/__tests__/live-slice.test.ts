@@ -1,6 +1,11 @@
 import { DateTime } from 'luxon';
 
-import { cursorFor, liveSliceFor, LIVE_SLICE_SECONDS } from '@/hooks/playhead-data';
+import {
+  cursorFor,
+  liveSliceFor,
+  LIVE_SLICE_SECONDS,
+  timeOfDaySeconds,
+} from '@/hooks/playhead-data';
 
 /**
  * The guard for the worst bug in slice 2's first cut.
@@ -39,11 +44,14 @@ describe('live reading slice', () => {
     expect(later - early).toBe(LIVE_SLICE_SECONDS);
   });
 
-  it('is stable for a past day regardless of the current minute', () => {
-    // A past day's cursor is its end of day, so it must not move at all.
+  it('is stable for a past day once the time of day is held', () => {
+    // `usePlayhead` freezes the time of day on the first step away from live,
+    // so a past day's key must not move as the clock advances.
     const day = at('2026-08-14T00:00:00.000');
-    const a = liveSliceFor(cursorFor(day, at('2026-08-17T14:31:00.000')));
-    const b = liveSliceFor(cursorFor(day, at('2026-08-17T22:07:00.000')));
+    const held = timeOfDaySeconds(at('2026-08-17T14:31:00.000'));
+
+    const a = liveSliceFor(cursorFor(day, at('2026-08-17T14:31:00.000'), held));
+    const b = liveSliceFor(cursorFor(day, at('2026-08-17T22:07:00.000'), held));
 
     expect(a).toBe(b);
   });

@@ -8,6 +8,7 @@ import {
   dayLabel,
   isToday,
   latestSelectable,
+  timeOfDaySeconds,
 } from '@/hooks/playhead-data';
 
 const NOW = DateTime.fromISO('2026-08-17T14:32:00.000', { zone: 'Australia/Sydney' });
@@ -41,11 +42,37 @@ describe('cursorFor', () => {
     expect(cursor.toMillis()).toBe(latestSelectable(NOW).toMillis());
   });
 
-  it('is end-of-day on an earlier day', () => {
+  it('carries the time of day back to an earlier day', () => {
+    // The behaviour the whole date bar exists for: stepping back from 2:32pm
+    // today lands on 2:32pm three days ago, not on that day's midnight or its
+    // last minute. An earlier version returned end-of-day and claimed in a
+    // comment that this matched the current app — it did not.
     const earlier = NOW.minus({ days: 3 }).startOf('day');
-    const cursor = cursorFor(earlier, NOW);
+    const cursor = cursorFor(earlier, NOW, timeOfDaySeconds(NOW));
+
     expect(cursor.toISODate()).toBe(earlier.toISODate());
-    expect(cursor.hour).toBe(23);
+    expect(cursor.hour).toBe(NOW.hour);
+    expect(cursor.minute).toBe(NOW.minute);
+  });
+
+  it('never runs past live, even asking for a later time today', () => {
+    const endOfToday = timeOfDaySeconds(NOW.endOf('day'));
+    const cursor = cursorFor(NOW.startOf('day'), NOW, endOfToday);
+
+    expect(cursor.toMillis()).toBe(latestSelectable(NOW).toMillis());
+  });
+
+  it('is stable for a past day when the time of day is held', () => {
+    // What `usePlayhead` does: freeze the time of day on the first step away
+    // from live, so the cursor stops chasing the clock and the footage window
+    // stays put while you look at it.
+    const day = NOW.minus({ days: 2 }).startOf('day');
+    const held = timeOfDaySeconds(NOW);
+
+    const early = cursorFor(day, NOW, held);
+    const later = cursorFor(day, NOW.plus({ hours: 3 }), held);
+
+    expect(early.toMillis()).toBe(later.toMillis());
   });
 });
 

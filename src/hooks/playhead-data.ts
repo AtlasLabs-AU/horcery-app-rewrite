@@ -51,18 +51,34 @@ export function clampDay(day: DateTime, now: DateTime, earliest?: DateTime): Dat
   return clamped;
 }
 
+/** Seconds since midnight — the "time of day" the play-head keeps as days change. */
+export function timeOfDaySeconds(instant: DateTime): number {
+  return instant.diff(instant.startOf('day'), 'seconds').seconds;
+}
+
 /**
- * The instant to read metrics at.
+ * The instant to read metrics — and play footage — at.
  *
- * On today, that is live now (minus the buffer) so a reading is current. On
- * any earlier day it is the end of that day, which is what the current app
- * effectively asks for and what makes "what was happening on Tuesday" work.
+ * **The time of day is carried across a day change.** Step back from 2:32pm
+ * today and you land on 2:32pm yesterday, not on yesterday's midnight. This is
+ * the current app's behaviour (`play-head-state-slice` keeps `timeOfDay`
+ * separately from `date` and recombines them), and it is the whole point of a
+ * date bar on a monitoring page: "what was happening at this time yesterday"
+ * is the question people actually ask.
+ *
+ * An earlier version returned end-of-day for any past day, with a comment
+ * claiming that matched the current app. It did not — corrected 2026-08-17
+ * while wiring recorded playback, where the difference is the hour of footage
+ * you get.
+ *
+ * Always clamped to the latest selectable instant, so today never runs ahead
+ * of live.
  */
-export function cursorFor(day: DateTime, now: DateTime): DateTime {
+export function cursorFor(day: DateTime, now: DateTime, atSeconds?: number): DateTime {
   const latest = latestSelectable(now);
-  if (day.hasSame(latest, 'day')) return latest;
-  const endOfDay = day.endOf('day');
-  return endOfDay > latest ? latest : endOfDay;
+  const seconds = atSeconds ?? timeOfDaySeconds(latest);
+  const candidate = day.startOf('day').plus({ seconds });
+  return candidate > latest ? latest : candidate;
 }
 
 /** Is the selected day the organization's today? */
