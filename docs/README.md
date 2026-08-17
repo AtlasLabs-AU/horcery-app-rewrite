@@ -46,6 +46,12 @@ by that path.
 
 ## dev-tickets/ — findings in the SHIPPING app, for the dev team
 
+| File | Page |
+|---|---|
+| `Horcery_Horses_Dev_Tickets.md` | Horses list |
+| `Horcery_Review_History_Dev_Tickets.md` | Review History |
+| `Horcery_Manage_Alerts_Review.md` | Manage Alerts + create/edit alert flow — full review, rated 5/10, 8 tickets |
+
 Written while reviewing the old app for parity. These describe
 `84-horcery-app-react-native`, not this repo. They live here because they were
 produced by the rewrite work; when one needs to reach the dev team it goes to
