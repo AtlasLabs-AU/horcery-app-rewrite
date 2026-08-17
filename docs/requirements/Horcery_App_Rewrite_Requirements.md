@@ -632,8 +632,29 @@ Remote Config** at app start:
 
 - **The PromQL query text itself** — `STALL_OCCUPANCY_QUERY`,
   `ANIMAL_SITTING_DOWN_DETECTION_QUERY`, the `AVG_*_FEDERATED_PROM_QUERY_*` family,
-  ~25 query strings in total. The app reads the query out of Firebase and sends it
-  to Prometheus.
+  ~25 query strings in total.
+
+  > **Correction (2026-08-17, while building Horse Details slice 2).** An earlier
+  > version of this section said the app "reads the query out of Firebase". That
+  > overstated it, and the real arrangement matters to the decision:
+  >
+  > **The queries live in code** (`packages/config/src/utils/prom-utils.ts`, 43
+  > exported declarations) and Firebase Remote Config **overrides** them. Each
+  > consumer does `const fromFirebase = getRemoteString(KEY); return
+  > fromFirebase.length > 0 ? fromFirebase : theCodeQuery`. Firebase's own
+  > defaults are **empty strings** (`DEFAULT_FRC_VALUES.string = ''`), so in
+  > normal operation the reviewed code query runs.
+  >
+  > This is better than "Firebase is the only source" — an unreachable Firebase
+  > falls back to something correct rather than to nothing. **The risk in the
+  > decision below is unchanged:** typing a value into the console silently
+  > replaces the reviewed, version-controlled query fleet-wide within five
+  > minutes, with no review, no test and no history — and nothing on screen
+  > tells you it happened.
+  >
+  > The rewrite currently ships the code queries only
+  > (`src/config/constants/prometheus-queries.ts`) and says so on screen, per
+  > decision D7.
 - **Whether a chart renders at all** — the `HIDE_*` switches (stall occupancy,
   lying down, activeness, rolling, human in/near stall, climate, ambient, last 24
   hours).
