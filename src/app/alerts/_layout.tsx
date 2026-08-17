@@ -1,18 +1,49 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { AlertsPermissionsProvider } from '@/components/alerts/alerts-permissions';
+import { Icon } from '@/components/ui/icon';
+import { space } from '@/constants/tokens';
+import { useTokens } from '@/hooks/use-tokens';
 
 /**
  * The alerts stack. The permission gate lives HERE, once, for every screen
  * below it (architecture §8): read-only roles get a read-only list, no Add,
  * no Save, no Delete — visibly, with a reason.
+ *
+ * The stack is pushed OVER the tabs from More / Horse Details / For You, so
+ * its first screen needs its own way back — a nested stack's first route
+ * gets no native back button. Found the hard way (Inakshi, 2026-08-17: "I
+ * can't even leave the page").
  */
 export default function AlertsLayout() {
+  const { colors } = useTokens();
   return (
     <AlertsPermissionsProvider>
       <Stack>
-        <Stack.Screen name="index" options={{ title: 'Alerts', headerLargeTitle: true }} />
+        <Stack.Screen
+          name="index"
+          options={{
+            title: 'Alerts',
+            headerLargeTitle: true,
+            headerLeft: () => (
+              <Pressable
+                onPress={() => router.back()}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+                testID="alerts-back"
+                style={styles.back}>
+                <Icon name="back" size={20} color={colors.foreground} />
+              </Pressable>
+            ),
+          }}
+        />
       </Stack>
     </AlertsPermissionsProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  back: { minWidth: 44, minHeight: 44, justifyContent: 'center', paddingRight: space.sm },
+});
