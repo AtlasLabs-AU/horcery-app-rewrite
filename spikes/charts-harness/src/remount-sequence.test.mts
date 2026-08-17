@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { advanceRemountSequence, startRemountSequence } from './remount-sequence.mts';
+import { advanceRemountSequence, startRemountSequence } from './remount-sequence.ts';
 
 test('pauses at 10, 25 and 50 remounts without changing the process', () => {
   let sequence = startRemountSequence();

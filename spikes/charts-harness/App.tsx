@@ -39,7 +39,7 @@ import {
   advanceRemountSequence,
   startRemountSequence,
   type RemountSequence,
-} from './src/remount-sequence.mts';
+} from './src/remount-sequence';
 import { GEOMETRY, loadScenarios, seriesLabel } from './src/scenarios';
 
 const MEMORY_SEQUENCE_BUILD = process.env.EXPO_PUBLIC_HORCERY_MEMORY_SEQUENCE === '1';
