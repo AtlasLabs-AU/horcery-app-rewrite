@@ -97,7 +97,6 @@ function mixedOption(chart: MixedObservationChart) {
       trigger: 'axis',
       triggerOn: 'click',
       confine: true,
-      renderMode: 'richText',
       formatter: (params: { dataIndex?: number } | { dataIndex?: number }[]) => {
         const first = Array.isArray(params) ? params[0] : params;
         const category = chart.categories[first?.dataIndex ?? -1];
