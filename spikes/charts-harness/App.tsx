@@ -69,7 +69,10 @@ export default function App() {
   const [mountKey, setMountKey] = useState(0);
   const [renderSignal, setRenderSignal] = useState<RenderSignal | null>(null);
   const [remountSequence, setRemountSequence] = useState<RemountSequence | null>(null);
-  const [lodEnabled, setLodEnabled] = useState(false);
+  // Start this experiment in the exact, viewport-bounded mode. LOD off remains
+  // available to reproduce the original ceiling failure; this is not a
+  // production renderer decision.
+  const [lodEnabled, setLodEnabled] = useState(true);
   const [progressiveMode, setProgressiveMode] = useState<EChartsProgressiveMode>('default');
   const [victoryMode, setVictoryMode] = useState<VictoryRenderMode>('relayout');
   const [parentScroll, setParentScroll] = useState(false);

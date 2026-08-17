@@ -7,6 +7,19 @@ visual evidence only; interaction rows require a recording or platform trace.
 Raw artefacts live outside git under `spike-evidence/run2/`; stable hashes and
 paths are recorded in `RUN2-MANIFEST.md`.
 
+## Current ceiling-gate outcome — physical Redmi Note 12
+
+| Finalist | Accuracy at 6,720 intervals | Useful-content / interaction gate | Status |
+|---|---|---|---|
+| ECharts · Skia | Exact fixture retained | Three unrecoverable interaction freezes, including LOD on | Rejected |
+| Victory · Skia | Exact alternating series retained after batching | Recovers, but initial layout remains 5.7–6.4 seconds; final bounded remediation measured 5,770 ms | Does not pass yet |
+
+An interval-merging Victory attempt is not accepted parity evidence: it loaded
+quickly only by collapsing alternating series into solid bands. The exact
+14-path implementation preserves chart meaning, but its physical Release still
+misses the delayed-content gate. The protocol outcome is therefore **neither
+passed** until the requirement or architecture is changed explicitly.
+
 | Required behaviour | ECharts · Skia | Victory · Skia | Evidence needed |
 |---|---|---|---|
 | Seven rows, oldest day at top | Verified on normal week | Verified on normal week | Clean Release screenshots in manifest |

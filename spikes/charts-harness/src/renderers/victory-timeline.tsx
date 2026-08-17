@@ -1,4 +1,10 @@
-import { Group, matchFont, rect, RoundedRect, Text as SkiaText } from '@shopify/react-native-skia';
+import {
+  Group,
+  matchFont,
+  Path as SkiaPath,
+  rect,
+  Text as SkiaText,
+} from '@shopify/react-native-skia';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, Platform, StyleSheet, Text, View } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
@@ -16,10 +22,11 @@ import {
   type OccupancyTimeline,
 } from '@/charts/occupancy-timeline';
 import {
+  batchOccupancyLayoutBars,
   layoutOccupancyTimeline,
   occupancyLayoutBarTooltips,
-  reduceOccupancyLayout,
   type OccupancyLayoutBar,
+  windowOccupancyLayout,
 } from '@/charts/occupancy-layout';
 
 import type { RendererProps, VictoryRenderMode } from '../renderer';
@@ -65,6 +72,66 @@ const font = matchFont({
   fontSize: 12,
 });
 
+function ExactBarPaths({
+  bars,
+  seriesIds,
+  rows,
+  xScale,
+  yScale,
+  bounds,
+}: {
+  bars: OccupancyLayoutBar[];
+  seriesIds: string[];
+  rows: number;
+  xScale: Scale;
+  yScale: Scale;
+  bounds?: { left: number; right: number };
+}) {
+  const half = GEOMETRY.barHeight / 2;
+  // The catalogue's 1 px minimum is a physical pixel. Skia coordinates use
+  // React Native layout units, so one logical point would overpaint adjacent
+  // ceiling samples on high-density screens and erase their series meaning.
+  const minimumWidth = GEOMETRY.barMinWidth / PixelRatio.get();
+  const paths = batchOccupancyLayoutBars(bars).map((batch) => {
+    const commands: string[] = [];
+    for (const bar of batch) {
+      const x0 = xScale(bar.x0);
+      const x1 = xScale(bar.x1);
+      if (bounds && (x1 < bounds.left || x0 > bounds.right)) continue;
+      const cy = yScale(rows - 0.5 - bar.row);
+      const width = Math.max(x1 - x0, minimumWidth);
+      const height = GEOMETRY.barHeight;
+      const y = cy - half;
+      const radius = Math.min(GEOMETRY.barRadius, width / 2, height / 2);
+      const right = x0 + width;
+      const bottom = y + height;
+      commands.push(
+        `M${x0 + radius},${y}H${right - radius}` +
+          `Q${right},${y} ${right},${y + radius}` +
+          `V${bottom - radius}Q${right},${bottom} ${right - radius},${bottom}` +
+          `H${x0 + radius}Q${x0},${bottom} ${x0},${bottom - radius}` +
+          `V${y + radius}Q${x0},${y} ${x0 + radius},${y}Z`,
+      );
+    }
+    const first = batch[0]!;
+    return {
+      key: `${first.seriesIndex}:${first.row}`,
+      // One native parse per row/series replaces hundreds of JSI path-builder
+      // calls while retaining every exact rectangle, gap and rounded corner.
+      path: commands.join(''),
+      color: seriesColor(seriesIds[first.seriesIndex] ?? ''),
+    };
+  });
+
+  return (
+    <>
+      {paths.map(({ key, path, color }) => (
+        <SkiaPath key={key} path={path} color={color} />
+      ))}
+    </>
+  );
+}
+
 /** Bars, re-laid-out from the zoomed x-scale. Lives inside the chart so it can read the transform. */
 function RelayoutBars({
   bars,
@@ -94,28 +161,17 @@ function RelayoutBars({
   }, [xScale, t.k, t.tx]);
 
   const clip = rect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
-  const half = GEOMETRY.barHeight / 2;
 
   return (
     <Group clip={clip}>
-      {bars.map((b, i) => {
-        const x0 = zoomed(b.x0);
-        const x1 = zoomed(b.x1);
-        if (x1 < bounds.left || x0 > bounds.right) return null; // off-screen when zoomed
-        // Oldest row on top: row 0 → the highest y value.
-        const cy = yScale(rows - 0.5 - b.row);
-        return (
-          <RoundedRect
-            key={i}
-            x={x0}
-            y={cy - half}
-            width={Math.max(x1 - x0, GEOMETRY.barMinWidth)}
-            height={GEOMETRY.barHeight}
-            r={GEOMETRY.barRadius}
-            color={seriesColor(seriesIds[b.seriesIndex] ?? '')}
-          />
-        );
-      })}
+      <ExactBarPaths
+        bars={bars}
+        seriesIds={seriesIds}
+        rows={rows}
+        xScale={zoomed}
+        yScale={yScale}
+        bounds={bounds}
+      />
     </Group>
   );
 }
@@ -139,25 +195,9 @@ function MatrixBars({
   xScale: Scale;
   yScale: Scale;
 }) {
-  const half = GEOMETRY.barHeight / 2;
   return (
     <Group>
-      {bars.map((bar, index) => {
-        const x0 = xScale(bar.x0);
-        const x1 = xScale(bar.x1);
-        const cy = yScale(rows - 0.5 - bar.row);
-        return (
-          <RoundedRect
-            key={index}
-            x={x0}
-            y={cy - half}
-            width={Math.max(x1 - x0, GEOMETRY.barMinWidth)}
-            height={GEOMETRY.barHeight}
-            r={GEOMETRY.barRadius}
-            color={seriesColor(seriesIds[bar.seriesIndex] ?? '')}
-          />
-        );
-      })}
+      <ExactBarPaths bars={bars} seriesIds={seriesIds} rows={rows} xScale={xScale} yScale={yScale} />
     </Group>
   );
 }
@@ -211,10 +251,7 @@ export const VictoryTimeline = memo(function VictoryTimeline({
   const displayedLayout = useMemo(
     () =>
       layout && lodEnabled
-        ? reduceOccupancyLayout(layout, {
-            visibleSpan: visible,
-            plotWidthPx: width * PixelRatio.get(),
-          })
+        ? windowOccupancyLayout(layout, visible)
         : layout,
     [layout, lodEnabled, visible, width],
   );

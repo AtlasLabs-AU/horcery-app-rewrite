@@ -77,6 +77,18 @@ export function occupancyLayoutBarTooltips(bar: OccupancyLayoutBar, zone: string
   return occupancyLayoutBarIntervals(bar).map((interval) => intervalTooltip(interval, zone));
 }
 
+/** Groups exact bars into the smallest safe set of renderer draw calls. */
+export function batchOccupancyLayoutBars(bars: readonly OccupancyLayoutBar[]): OccupancyLayoutBar[][] {
+  const batches = new Map<string, OccupancyLayoutBar[]>();
+  for (const bar of bars) {
+    const key = `${bar.seriesIndex}:${bar.row}`;
+    const batch = batches.get(key);
+    if (batch) batch.push(bar);
+    else batches.set(key, [bar]);
+  }
+  return [...batches.values()];
+}
+
 function originalBars(layout: OccupancyLayout): OccupancyLayoutBar[] {
   const bars: OccupancyLayoutBar[] = [];
   for (const bar of layout.bars) {
@@ -168,4 +180,15 @@ export function reduceOccupancyLayout(
 
   if (!changed && layout.bars.every((bar) => !bar.merged)) return layout;
   return { ...layout, bars: reduced };
+}
+
+/** Removes off-screen geometry without changing or merging any interval. */
+export function windowOccupancyLayout(
+  layout: OccupancyLayout,
+  visibleSpan: readonly [number, number],
+): OccupancyLayout {
+  const [visibleStart, visibleEnd] = visibleSpan;
+  const bars = layout.bars.filter((bar) => bar.x1 >= visibleStart && bar.x0 <= visibleEnd);
+
+  return bars.length === layout.bars.length ? layout : { ...layout, bars };
 }

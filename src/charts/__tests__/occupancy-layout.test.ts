@@ -2,9 +2,11 @@ import { DateTime } from 'luxon';
 
 import {
   layoutOccupancyTimeline,
+  batchOccupancyLayoutBars,
   occupancyLayoutBarIntervals,
   occupancyLayoutBarTooltips,
   reduceOccupancyLayout,
+  windowOccupancyLayout,
 } from '@/charts/occupancy-layout';
 import {
   PEOPLE_IN_STALL,
@@ -54,6 +56,22 @@ describe('renderer-independent occupancy layout', () => {
 
     expect(zoomed.bars).toHaveLength(layout.bars.length);
     expect(zoomed.bars.every((bar) => !bar.merged)).toBe(true);
+  });
+
+  it('keeps exact ceiling geometry in 14 row/series draw batches', () => {
+    const layout = buildLayout(worstCase);
+    const visibleSpan = [0.2, 0.3] as const;
+    const batches = batchOccupancyLayoutBars(layout.bars);
+    const viewport = windowOccupancyLayout(layout, visibleSpan);
+    const expected = layout.bars.filter((bar) => bar.x1 >= visibleSpan[0] && bar.x0 <= visibleSpan[1]);
+
+    // The renderer turns each batch into one Skia path: 14 React/Skia nodes,
+    // while all 6,720 exact rectangles and their gaps remain in those paths.
+    expect(batches).toHaveLength(14);
+    expect(batches.flat()).toEqual(layout.bars);
+    expect(viewport.bars.length).toBeLessThan(1_000);
+    expect(viewport.bars).toEqual(expected);
+    expect(viewport.bars.every((bar) => bar.x1 >= visibleSpan[0] && bar.x0 <= visibleSpan[1])).toBe(true);
   });
 
   it('is idempotent at a fixed viewport', () => {

@@ -1,3 +1,31 @@
+# Current renderer-decision status — 2026-08-17
+
+**Neither finalist currently passes every Run 2 rejection gate. Do not treat
+the earlier cost-led ECharts choice or the later provisional Victory reversal
+as a production renderer decision.**
+
+- ECharts · Skia is rejected on the physical Redmi ceiling: three attempts
+  became non-responsive and required force-stop, including with LOD enabled.
+- Victory · Skia is materially better: it recovers and remains interactive
+  after the ceiling loads. However, its repeatable 5.7–6.4 second initial
+  layout delay violates the delayed-useful-content requirement.
+- A bounded Victory remediation retained all 6,720 exact intervals while
+  reducing the React/Skia draw surface to 14 row/series paths. The final
+  physical Release still reported **5,770 ms · victory-layout**. Android's raw
+  frame log contained no produced frame over 100 ms, demonstrating again that
+  produced-frame statistics cannot reveal time in which JS submits no useful
+  chart frame.
+- A faster interval-merging attempt was rejected because it changed the
+  visible With Horse / Without Horse meaning. Accuracy remains a hard gate.
+
+The evidence and hashes are indexed in `RUN2-MANIFEST.md`. Per
+`RUN2-PROTOCOL.md`, the current outcome is **neither passed**, not a forced
+winner. The next decision must either (a) define and validate a bounded product
+data contract using observed-heavy data, or (b) conduct a separate rendering
+architecture spike. It must not silently relax the synthetic-ceiling gate.
+
+---
+
 # Results — People In Stall renderer spike (run 1, 2026-08-16)
 
 > ## Status of this document (corrected 2026-08-16, after review)

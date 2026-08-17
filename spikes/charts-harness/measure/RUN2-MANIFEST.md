@@ -6,6 +6,33 @@ items below were captured from the content committed at `acbd0a7`; later
 sections name their own corrected builds and provenance. These are build and
 smoke artefacts, **not** the seven-repetition decision matrix.
 
+## Victory ceiling remediation — physical Redmi Note 12
+
+Raw path:
+`physical-redmi-note-12/decision-day/victory-ceiling-remediation/`
+
+The bounded remediation tried accuracy-preserving renderer batching after the
+original Victory ceiling run recovered but took 5.7–6.4 seconds to lay out.
+The final Release retained all 6,720 intervals in 14 row/series Skia paths, but
+the physical harness still reported `5770 ms · victory-layout`. This is failed
+gate evidence, not a successful optimization or renderer selection.
+
+| Artefact | SHA-256 | What it proves / limitation |
+|---|---|---|
+| `Horcery-Victory-SVGPath.apk` | `a40b3e94e629433fc02eac15b954d64ae4dd2b4f796379941bd1b307f413c2b0` | Exact isolated Release APK tested on the Redmi; package identity ends in `.victory.memory`. |
+| `svgpath-screenshot.png` | `635322264be50027093d4cff73d1abefab8249b7b4367796f5f36829815c5a38` | Alternating With Horse / Without Horse geometry is retained and the screen reports the 5,770 ms layout signal. |
+| `svgpath-ui.xml` | `80b272210d782bc4ddf178e8e35bfa8b679a2b9e6d5b7f67f1eb30a1ee2cb6dc` | Machine-readable UI state for the final screen. |
+| `svgpath-framestats.txt` | `3dd08014adb88f39d28ab87ce7ed29c3bfa7ebeda24117668b59d9a4cae291c4` | 13 retained produced frames: p50 35.5 ms, p95/max 43.1 ms, zero produced frames over 100 ms. It does not measure the JS/layout silence. |
+| `svgpath-meminfo.txt` | `15d2fded89fcbc72de1ae9653e2eb2440f7b085107bed4218855ef4f5bcb18ec` | One post-run snapshot: 214,472 KB PSS / 357,956 KB RSS. Not a leak or memory-return test. |
+| `svgpath-logcat.txt` | `54fa15e8e00f84d9d5db05b3bf93dc55fb5a2476f7f35ba9dfd3de298ac5c7ac` | Confirms worst-case, Victory relayout and LOD-on state in the measured process. |
+| `merged-lod-accuracy-failure.png` | `00d06448e94d54b12979185c1b2328307b19406e37038a5cec52cf5c76535e3a` | Rejected shortcut: fast solid bands erased alternating-series meaning. |
+| `pathbuilder-screenshot.png` | `bd749fcd315ec9176cd3bab288355024e809099a70df9b6904294441dba8ecba` | Exact path-builder attempt restored alternating geometry but still reported 5,845 ms. |
+| `RUN-LOG.md` | `572774980da9db5e79a45dc3aa6c734f6ef684b8bd1a886c084480c9f5aed09c` | Human-readable attempt history; hashes above remain authoritative. |
+
+This evidence changes the current outcome to **neither finalist passed all
+rejection gates**. ECharts remains rejected; Victory remains the more viable
+candidate but is not approved for production from this spike.
+
 ## Isolated release builds
 
 | Finalist | Artefact | Bytes | SHA-256 | What it proves / does not prove |
