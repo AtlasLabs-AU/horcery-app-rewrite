@@ -59,6 +59,17 @@ deferred implementation.
 
 ## 3. Who builds it and how decisions get made
 
+> **Clarified 2026-08-17 (Inakshi):** "Technically you are re-writing the app.
+> You need to be thinking about making this app that we are writing production
+> ready. We won't need the dev team." The rewrite is **the production app**, and
+> Inakshi + Claude + Codex carry it to the store; the mobile dev team is not
+> part of that path. Consequences: every slice is judged against "could this
+> ship", not "is this a good enough prototype"; release engineering (EAS
+> production profiles, store submission, OTA updates, crash reporting,
+> analytics, support/feedback paths) is in scope for the rewrite, not deferred
+> to someone else; and the rewrite documents live in the rewrite repo
+> (`docs/`), not in the dev team's Confluence, because that is who reads them.
+
 - **Inakshi + Claude** build it. The dev team continues shipping the current app
   untouched; the rewrite consumes none of their capacity.
 - **Leadership is aware and supportive.**
