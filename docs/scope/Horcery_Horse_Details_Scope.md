@@ -1,6 +1,6 @@
 # Horse Details page — scope for the rewrite
 
-**Date:** 2026-08-17 · **Author:** Claude, for Inakshi · **Status:** DRAFT for decision
+**Date:** 2026-08-17 · **Author:** Claude, for Inakshi · **Status:** SCOPED — D1–D8 decided 2026-08-17 (see §6). Scoping only; nothing implemented yet
 **Repo:** `horcery-app-rewrite`, branch `rnd` · **Route today:** `src/app/(tabs)/horses/[id].tsx`
 
 This document is the result of reading every source file behind the shipping
@@ -263,7 +263,7 @@ three, and do not attempt the whole thing in one go.**
 | V2 | **HD/SD toggle, audio on/off from stall `UserMetaData.audio_enable`** | **BUILD** — slice 4a | Small; part of V1's controls |
 | V3 | **Fullscreen with pinch-to-zoom** | **CHANGE** → native fullscreen | `expo-video`'s `VideoView` has native fullscreen on both platforms with system controls. Use it. Do not port the 749-line custom fullscreen view |
 | V4 | **Recorded playback at cursor** (60-minute window from cursor) | **BUILD** — slice 4b | Same MediaTile, `live=false`, `videoUri` = recorded URL at cursor. Cursor comes from the date toolbar (F5) initially |
-| V5 | **Horizontal scrubbable timeline** with zoom, segments, live-buffer detection, momentum | **DECIDE**, then **BUILD** — slice 4c | This is the 1,060-line widget. Options: (a) port it, universalised; (b) replace with a native scrubber — iOS has none that does day-scale timelines; (c) a simpler token-styled timeline: day strip (we have `day-strip.tsx` from Review History) + a horizontal time slider, no zoom. **Recommend (c) first**, measure whether customers scrub at all before rebuilding zoomed segments |
+| V5 | **Horizontal scrubbable timeline** with zoom, segments, live-buffer detection, momentum | **BUILD — slice 4c, FULL PORT** (D2, decided 2026-08-17) | The 1,060-line widget, ported universal. Not the simplified version Claude recommended — Inakshi chose full parity. Must run on both platforms and be measured on the Redmi Note 12 before it is called done |
 | V6 | **Create Clip** from the player | **BUILD** disabled-with-reason — slice 4a | Write side (clip creation is a mutation). But the button must exist so the composition is judged whole |
 | V7 | **"Adjust your monitor" overlay + Adjust Now** | **BUILD** — slice 4a (overlay) ; **DEFER** action | Overlay is honest state from `AppMetaData.adjustment_direction`. The action opens a reposition sheet — write side |
 | V8 | **Playback speed** | **REMOVE from live**; **BUILD in 4b (recorded)** | Shipping code wraps it in `{false && …}` with a `/* no-op */` handler — a placeholder icon, never wired. Useless on a live stream; genuinely useful on recorded playback and clips (1.5×/2× to skim the night). `expo-video` supports it natively with one property — a small addition to slice 4b, not a feature to design |
@@ -360,13 +360,13 @@ Ordered by how much the answer changes the build.
 
 | # | Question | My recommendation | Why it matters |
 |---|---|---|---|
-| D1 | **Fold the settings page into the Summary Passport card and replace the cog with a ⋮?** (G1–G4) | Yes | Removes a whole page and a navigation hop; every field is read-only anyway |
-| D2 | **Timeline scrubber: port the zoomed segment timeline, or ship a simpler day-strip + time slider first?** (V5) | Simpler first, measure | 1,060 lines of iOS-tuned gesture code; we don't know how many customers scrub vs just watch live |
-| D3 | **Do not auto-pop the "assign a stall monitor" sheet on open?** (F14) | Don't auto-pop; inline CTA instead | Interruptive; the information is identical inline |
-| D4 | **Remove the Feedback card from this page?** (S7) | Remove; consider More | It's marketing chrome inside a data page |
-| D5 | **Text-only tabs (no icons), consistent with Review History?** (F7) | Text only | Already the editorial rule |
-| D6 | **Slice order — is "honest page first, charts third, video fourth" right, or do you want video earlier because it's the premium moment?** | As proposed | Video before charts is defensible; video before the clock/status is not (the player needs the cursor). If you want video sooner, swap 3 and 4 — the dependencies allow it |
-| D7 | **Should slice 2 ship "running on default queries" if §6a-i isn't decided, with a visible label?** | Yes | It's honest, and it makes the decision unavoidable |
+| D1 | Fold the settings page into the Summary Passport card and replace the cog with a ⋮ | **DECIDED 2026-08-17: Yes** | Removes a whole page and a navigation hop; every field is read-only anyway |
+| D2 | Timeline scrubber: port the zoomed segment timeline, or ship a simpler day-strip + time slider first | **DECIDED 2026-08-17: PORT THE FULL ZOOMED TIMELINE** (Inakshi, against Claude's 'simple first' recommendation) | Full parity from day one. Consequence accepted: slice 4c is the largest single piece of iOS-tuned gesture code in the app and its Android parity is unproven — it must be built universal (gesture-handler + reanimated on both platforms) and measured on the Redmi Note 12 before it is called done |
+| D3 | Do not auto-pop the 'assign a stall monitor' sheet on open | **DECIDED 2026-08-17: don't auto-pop; inline CTA row** | Interruptive; the information is identical inline |
+| D4 | Remove the Feedback card from this page | **DECIDED 2026-08-17: remove** (consider More) | Marketing chrome inside a data page |
+| D5 | Text-only tabs (no icons), consistent with Review History | **DECIDED 2026-08-17: text only** | Already the editorial rule |
+| D6 | Slice order | **DECIDED 2026-08-17: Honest → Living → Charts → Video, as proposed** | Charts before video keeps the renderer gate honest; the live tile proves itself on For You Snapshots first |
+| D7 | Ship slice 2 on default queries if §6a-i isn't decided, with a visible label | **DECIDED 2026-08-17: yes** | Honest, and it makes the decision unavoidable |
 | D8 | ~~Special Instructions~~ | **Decided 2026-08-17: OUT** | Record-family (customer-entered text). See S1d and requirements §2 |
 
 Not asking you about: chart renderer (§6a owns it), permissions (B1, parked),
