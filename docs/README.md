@@ -26,7 +26,7 @@ Filenames are unchanged so existing references and greps keep working.
 | `Horcery_Review_History_Scope.md` | Review History |
 | `Horcery_Horses_Parity_Gaps.md` | Horses list — parity gaps A–F, decisions and priorities |
 | `Horcery_Horse_Details_Scope.md` | Horse Details — full scope, four slices, seven open decisions |
-| `Horcery_Alerts_Architecture.md` | Alerts (Manage + create/edit) — frontend architecture: domain layer, descriptors, barn-time windows + drift, permissions, four slices |
+| `Horcery_Alerts_Architecture.md` | Alerts (Manage + create/edit) — frontend architecture v2: domain layer, descriptors, barn-time windows + drift, route-level permissions, slices A0–A5 |
 | `Horcery_Localization_Agentic_Implementation_Plan.md` | i18n (requirements §4b, hardening H2) |
 
 ## handovers/ — instructions written for Codex, and reviews of what came back
@@ -40,6 +40,7 @@ Filenames are unchanged so existing references and greps keep working.
 | `Charts_Spike_Scorecard_and_Cost_Ledger.md` | Scorecard shell and cost ledger |
 | `Charts_Spike_Review_2026-08-17_physical_pass.md` | Independent review of the physical-phone pass |
 | `Horcery_Android_Emulator_Handoff.md` | Android emulator setup |
+| `Alerts_Implementation_Plan_for_Codex.md` | Alerts — slice-by-slice technical plan (A0 ground truth → A1 domain → A2 read-only list → A3 create/edit gated); A4 waits on D1 |
 
 Spike evidence (screenshots, raw logs — 1.7 GB) is **not** in git. It stays at
 `Horcery/spike-evidence/` on Inakshi's Mac; the review documents reference it
