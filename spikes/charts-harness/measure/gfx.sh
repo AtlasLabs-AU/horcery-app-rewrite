@@ -6,11 +6,10 @@
 #   measure/gfx.sh framestats <file> # retain raw per-frame timestamps
 #   measure/gfx.sh meminfo <file>    # retain the raw memory snapshot
 #
-# `dumpsys gfxinfo` reports frames the RenderThread actually produced: total,
-# how many missed their deadline ("janky"), and 50/90/95/99th-percentile frame
-# times in ms. It counts UI-thread and RenderThread work — the JS thread is
-# invisible to it, which is exactly why it is the honest smoothness measure:
-# JS can be idle while the UI stutters, and vice versa.
+# `dumpsys gfxinfo` reports frames the app actually submitted: total, how many
+# missed their deadline ("janky"), and frame-duration percentiles. It observes
+# UI-thread/RenderThread work, but not JavaScript stalls that produce no frame.
+# Treat it as one platform signal, not a complete smoothness measurement.
 set -euo pipefail
 PKG="${HORCERY_PACKAGE:-au.com.atlaslabs.horcery.chartsharness}"
 ADB="${ANDROID_HOME:-$HOME/Library/Android/sdk}/platform-tools/adb"

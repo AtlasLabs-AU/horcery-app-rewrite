@@ -46,8 +46,9 @@ function continuousOption(chart: ContinuousObservationChart) {
     color: COLORS,
     grid: { left: 52, right: 16, top: 24, bottom: 52 },
     legend: { top: 0, textStyle: { color: '#64748B' } },
-    // Native Skia has no DOM, so ECharts' HTML tooltip renderer cannot display.
-    tooltip: { trigger: 'axis', confine: true, renderMode: 'richText' },
+    // Let the native wrapper use its supported tooltip path. Skia has no DOM,
+    // and explicitly forcing HTML/rich-text rendering is unsupported upstream.
+    tooltip: { trigger: 'axis', triggerOn: 'click', confine: true },
     dataZoom: [{ type: 'inside', xAxisIndex: 0, filterMode: 'none', minSpan: 5 }],
     xAxis: {
       type: 'time',

@@ -26,6 +26,7 @@
   },
   "scripts": {
     "test:transform": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/axis-ticks.test.mts src/remount-sequence.test.mts src/renderers/victory-continuous.test.mts src/renderers/victory-transform.test.mts",
+    "test:measure": "cd measure && python3 -m unittest framestats_test.py",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
