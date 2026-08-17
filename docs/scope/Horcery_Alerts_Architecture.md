@@ -62,7 +62,7 @@ src/domain/alerts/…                  NEW: pure TypeScript, no React, fully tes
    ├─ window.ts                        barn-time ⇄ UTC HMS codec, drift detection
    ├─ payload.ts                       form → API payload; API rule → form
    ├─ scope.ts                         apply/notify tag text, id extraction
-   └─ schema.ts                        zod schema built FROM a descriptor (pure function, memoisable)
+   └─ validate.ts                      validate(form, descriptor, units) → FieldErrors (pure; replaces a schema library)
 src/hooks/alerts/…                    React Query hooks (rules, types, targets, mutations)
 src/services/…                        exists — alertRule, alertType, member/animal/stall services
 ```
@@ -222,7 +222,7 @@ Small. It composes:
 [Delete]                 edit only, red text, confirm sheet
 ```
 
-- **Form state:** `react-hook-form` + `zod`, **schema produced by `domain/schema.buildSchema(descriptor, units)`** once per descriptor — a pure memoised value, not the shipping app's `setResolver`-in-an-effect. (Decision D2 below if you'd rather avoid RHF.)
+- **Form state:** a typed `useReducer` (`use-alert-rule-form`) with **validation as a pure domain function** `validate(form, descriptor, units)` — no `react-hook-form`, no `zod` (neither is installed; D2 revised by the implementation plan). Errors, summary and payload are all derived by pure calls; the hook holds state and nothing else.
 - **Fields render from the descriptor**: `threshold.kind` picks the widget (preset segmented + custom numeric · boolean toggle · selection menu · duration with unit); `conditions` picks the comparator options; `timeValue` adds trigger/range; unknown → generic.
 - Edit path: `useAlertRule(ruleId)` → `payload.toForm(rule, descriptor, units, zone)`; save → confirm sheet showing the new summary and tags.
 - **Keyboard:** native `KeyboardAvoidingView` + `automaticallyAdjustKeyboardInsets`; no third-party keyboard controller.
@@ -298,7 +298,7 @@ Every disabled control says why. That is requirement §6b item 3, applied.
 | `domain/descriptors` | **one golden test per alert type**: given a form → expected payload; given a payload → expected form; given a rule → expected summary sentence. **Fixtures are real, anonymised rules and the real `alert_types` response from the QA org (read-only), captured in A0** — not hand-written guesses | This is where the shipping app has zero coverage and 4,800 lines of hand-logic |
 | `domain/window` | fixed-instant round-trips (NY summer/winter, Sydney, London, Kolkata); **overnight windows (21:00→06:00) and "any time" that wraps in UTC**; drift detection incl. zone change; "any time" recognition | The bug that motivated the design |
 | `domain/scope` | tag text for every apply/notify combination incl. "Me" | Cheap, prevents the row lying |
-| `domain/schema` | invalid inputs produce the right message per descriptor (min window, range bounds, distinct times) | Replaces runtime `setResolver` |
+| `domain/validate` | invalid inputs produce the right message per descriptor (min window, range bounds, distinct times) | Replaces the shipping app's runtime `setResolver` dance |
 | hooks | `useAlertRule` cache-first then fetch; write-blocked surfaces `WriteBlockedError` | Route contract |
 | components | `AlertRuleRow` renders summary + tags + drift badge; a11y label; `TargetsPicker` search filters | RNTL, async |
 | screens | `no-dead-controls` sweep extended to `alerts/*` | Standing rule |
@@ -326,7 +326,7 @@ A0 + A1 together are about a day and a half of pure TypeScript with tests and no
 | # | Question | My recommendation |
 |---|---|---|
 | **D1** | **Where do we test writes?** The rewrite is read-only against production by rule. Alerts *is* writes. Options: (a) allow writes **only for the QA org** on production via the existing flag + an org allow-list; (b) wait for a staging API; (c) never write from the rewrite until launch (untestable). | **(a)** — the flag exists, scope it to the QA org id, keep the default off. Nothing else is testable. |
-| **D2** | **Form library:** keep `react-hook-form` + `zod` (what the shipping app uses; universal; well understood) or a lighter `useReducer` form? | **Keep RHF + zod** — the schema-from-descriptor design suits it, and the React Compiler is fine with it. |
+| **D2** | **Form library:** keep `react-hook-form` + `zod` (what the shipping app uses) or a lighter `useReducer` form? | **Revised by the implementation plan (2026-08-17): NO new dependency.** The rewrite has neither installed. Form state is a typed `useReducer`; validation is a pure domain function `validate(form, descriptor, units)`, tested like the rest of the domain. Fewer deps, no ref-heavy form library for the React Compiler to fight. Inakshi may veto. |
 | **D3** | **Time window UI:** two native time pickers (start/end) or a single "from–to" range control? | **Two native pickers** — universal, no custom control, matches the "native over custom" rule. |
 | **D4** | **Grouping on Manage Alerts:** flat newest-first (shipping) or grouped by category? | Flat for A2; revisit with real usage. |
 | **D5** | **Do we tell users about drift on rules saved by the OLD app** (where we can't compute it)? | Show the window, add one footnote in Configure, no badge. Don't claim what we can't know. |
