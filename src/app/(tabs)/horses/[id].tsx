@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { HorsesError, HorsesLoading } from '@/components/horses/horses-states';
 import { MediaTile } from '@/components/media/media-tile';
@@ -11,6 +11,7 @@ import { radius, space, type } from '@/constants/tokens';
 import { queries } from '@/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 import { useTokens } from '@/hooks/use-tokens';
+import { useToast } from '@/components/ui/toast';
 import { horseSelectionKey, joinHorseRow, type HorseRow } from '@/hooks/horses-data';
 import type { SegmentedOption } from '@/components/ui/segmented-control-types';
 
@@ -35,6 +36,8 @@ export default function HorseDetailSeed() {
   const { colors } = useTokens();
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<DetailTab>('summary');
+  const [selectedDate, setSelectedDate] = useState(0);
+  const { showToast } = useToast();
   const id = value(params.id);
   const isSampleHorse = id.startsWith('sample-');
 
@@ -100,6 +103,7 @@ export default function HorseDetailSeed() {
   const name = horse?.name ?? 'Horse';
   const stallName = horse?.stallName ?? 'No stall';
   const hasImage = !!horse?.imageUri || !!horse?.blurhash;
+  const dates = ['Today', 'Yesterday', '2 days ago'];
 
   return (
     <ScrollView
@@ -111,6 +115,8 @@ export default function HorseDetailSeed() {
       <MediaTile
         posterUri={hasImage ? horse.imageUri : undefined}
         blurhash={horse.blurhash}
+        showPlayBadge={hasImage}
+        onPress={hasImage ? () => showToast('Playback is unavailable until a camera capability is authorised.') : undefined}
         accessibilityLabel={`${name} photo`}
         style={[styles.media, { backgroundColor: colors.fillTonal }]}
       />
@@ -128,14 +134,35 @@ export default function HorseDetailSeed() {
         accessibilityLabel="Horse tabs"
       />
 
-      <View style={[styles.tabPanel, { backgroundColor: colors.card }]}>
+      <View style={styles.dateRow} accessibilityLabel="Horse history dates">
+        {dates.map((date, index) => (
+          <Pressable
+            key={date}
+            onPress={() => setSelectedDate(index)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: selectedDate === index }}
+            accessibilityLabel={`Show ${date}`}
+            style={[styles.dateButton, { backgroundColor: selectedDate === index ? colors.bed : colors.card, borderColor: colors.divider }]}>
+            <Text style={[type.subhead, { color: colors.foreground, fontWeight: selectedDate === index ? '600' : '400' }]}>{date}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View
+        style={[styles.tabPanel, { backgroundColor: colors.card, borderColor: colors.divider }]}
+      >
         {activeTab === 'summary' ? (
           <>
-            <Text style={[type.title3, { color: colors.foreground }]}>Horse summary</Text>
-            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>
-              This tab currently shows card-level information only. In the rewrite, this is where
-              live in-stall / out-of-stall status, latest activity and quick metrics will live.
-            </Text>
+            <Text style={[type.title3, { color: colors.foreground }]}>Summary</Text>
+            <View style={styles.statGrid}>
+              {['In-stall status', 'Latest activity', 'Daily statistics'].map((label) => (
+                <View key={label} style={[styles.stat, { backgroundColor: colors.bed }]}>
+                  <Text style={[type.footnote, { color: colors.secondary }]}>{label}</Text>
+                  <Text style={[type.headline, { color: colors.tertiary }]}>Unavailable</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>Live status and metrics will appear here once the observation contract is connected.</Text>
             {isSampleHorse ? (
               <Text style={[type.footnote, { color: colors.accent, marginTop: space.sm }]}>Sample horse</Text>
             ) : null}
@@ -143,19 +170,31 @@ export default function HorseDetailSeed() {
         ) : activeTab === 'events' ? (
           <>
             <Text style={[type.title3, { color: colors.foreground }]}>Events</Text>
-            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>
-              This tab is intentionally scaffolded while we wire live event pages and filters.
-            </Text>
+            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>No events are available for {dates[selectedDate].toLowerCase()}.</Text>
+            <Pressable onPress={() => showToast('Event history is already up to date.')} accessibilityRole="button" accessibilityLabel="Refresh events" style={styles.textButton}><Text style={[type.headline, { color: colors.accent }]}>Refresh events</Text></Pressable>
           </>
         ) : (
           <>
             <Text style={[type.title3, { color: colors.foreground }]}>Alerts</Text>
-            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>
-              This tab is intentionally scaffolded. Alerts readout, threshold details, and action paths
-              are still to be connected.
-            </Text>
+            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>No alerts are available for this horse on {dates[selectedDate].toLowerCase()}.</Text>
+            <Pressable onPress={() => showToast('Alert history is already up to date.')} accessibilityRole="button" accessibilityLabel="Refresh alerts" style={styles.textButton}><Text style={[type.headline, { color: colors.accent }]}>Refresh alerts</Text></Pressable>
           </>
         )}
+      </View>
+
+      <View style={[styles.videoPanel, { backgroundColor: colors.card, borderColor: colors.divider }]}>
+        <View style={styles.videoHeading}>
+          <View style={styles.videoWords}>
+            <Text style={[type.title3, { color: colors.foreground }]}>Camera history</Text>
+            <Text style={[type.subhead, { color: colors.secondary }]}>Recorded clips and live playback</Text>
+          </View>
+          <Pressable onPress={() => showToast('Camera settings are not connected yet.')} accessibilityRole="button" accessibilityLabel="Open camera settings" style={styles.settingsButton}>
+            <Text style={[type.headline, { color: colors.accent }]}>Settings</Text>
+          </Pressable>
+        </View>
+        <Text style={[type.subhead, { color: colors.tertiary }]}>Playback is unavailable until this horse has an authorised camera capability.</Text>
+        <View style={[styles.scrubber, { backgroundColor: colors.fillTonal }]}><View style={[styles.scrubberTrack, { backgroundColor: colors.divider }]} /><View style={[styles.scrubberThumb, { backgroundColor: colors.accent }]} /></View>
+        <View style={styles.scrubberLabels}><Text style={[type.caption, { color: colors.tertiary }]}>00:00</Text><Text style={[type.caption, { color: colors.tertiary }]}>No clip selected</Text></View>
       </View>
     </ScrollView>
   );
@@ -173,7 +212,21 @@ const styles = StyleSheet.create({
     padding: space.md,
     borderRadius: radius.md,
     borderCurve: 'continuous',
+    borderWidth: 1,
   },
+  dateRow: { flexDirection: 'row', gap: space.sm },
+  dateButton: { minHeight: 44, flex: 1, borderWidth: 1, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xs },
+  statGrid: { gap: space.sm, marginTop: space.md },
+  stat: { minHeight: 56, borderRadius: radius.sm, padding: space.sm, justifyContent: 'center', gap: space.xxs },
+  textButton: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginTop: space.sm },
+  videoPanel: { borderRadius: radius.md, borderCurve: 'continuous', borderWidth: 1, padding: space.md, gap: space.md },
+  videoHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
+  videoWords: { flex: 1, gap: space.xs },
+  settingsButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: space.xs },
+  scrubber: { height: 16, borderRadius: radius.full, justifyContent: 'center', paddingHorizontal: space.xs },
+  scrubberTrack: { height: 4, borderRadius: radius.full, width: '100%' },
+  scrubberThumb: { position: 'absolute', left: space.xs, width: 12, height: 12, borderRadius: radius.full },
+  scrubberLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   stateShell: {
     flex: 1,
     alignItems: 'center',

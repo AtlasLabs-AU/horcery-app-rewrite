@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { MediaTile } from '@/components/media/media-tile';
 import { Icon } from '@/components/ui/icon';
@@ -51,11 +52,12 @@ export function HorseCard({ horse, onPress }: { horse: HorseRow; onPress?: () =>
             <MediaTile
               posterUri={horse.imageUri}
               blurhash={horse.blurhash}
+              tag={!horse.hasCamera ? { label: 'No camera' } : undefined}
               accessibilityLabel={`${horse.name} thumbnail`}
             />
           ) : (
             <View style={[styles.thumbFallback, { backgroundColor: colors.fillTonal }]}>
-              <Icon name="horse" size={28} color={colors.accent} />
+              <Icon name={horse.hasCamera ? 'horse' : 'cameraOff'} size={28} color={colors.accent} />
             </View>
           )}
         </View>
@@ -83,24 +85,24 @@ export function HorseCard({ horse, onPress }: { horse: HorseRow; onPress?: () =>
           {
             id: 'edit',
             label: 'Edit',
-            description: 'Coming soon — update this horse’s details.',
+            description: 'Review and update this horse’s details.',
             icon: 'edit',
-            disabled: true,
+            onPress: () => router.push({ pathname: '/horses/horse-form', params: { id: horse.id, mode: 'edit' } }),
           },
           {
             id: 'groups',
             label: 'Manage Groups',
-            description: 'Coming soon — organise horses in your organisation.',
+            description: 'Choose which groups this horse belongs to.',
             icon: 'group',
-            disabled: true,
+            onPress: () => router.push({ pathname: '/horses/horse-groups', params: { id: horse.id } }),
           },
           {
             id: 'remove',
             label: 'Remove',
-            description: 'Coming soon — remove this horse from your organisation.',
+            description: 'Review this action before removing the horse.',
             icon: 'remove',
             destructive: true,
-            disabled: true,
+            onPress: () => router.push({ pathname: '/horses/delete-horse', params: { id: horse.id, name: horse.name } }),
           },
         ]}
       />

@@ -109,7 +109,7 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
   const listHeader = error || selectedNoInternet ? null : (
     <View style={[styles.header, { backgroundColor: colors.background }]}>
       {usingSample ? <HorsesPreviewBanner /> : null}
-      <GroupChips groups={groups} selectedId={selectedGroup} onSelect={onGroupSelect} />
+      <GroupChips groups={groups} selectedId={selectedGroup} onSelect={onGroupSelect} isLoading={!usingSample && groupsQuery.isLoading} />
     </View>
   );
 

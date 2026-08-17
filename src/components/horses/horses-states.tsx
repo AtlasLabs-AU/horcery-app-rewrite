@@ -1,10 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon';
 import { CARD_HEIGHT } from '@/components/horses/horse-card';
 import { radius, space, type } from '@/constants/tokens';
 import { useTokens } from '@/hooks/use-tokens';
+import { useToast } from '@/components/ui/toast';
+import { config } from '@/config/env';
 
 export function HorsesLoading() {
   const { colors } = useTokens();
@@ -25,6 +27,10 @@ export function HorsesLoading() {
 
 export function HorsesError({ onRetry }: { onRetry: () => void }) {
   const { colors } = useTokens();
+  const { showToast } = useToast();
+  const contactSupport = () => {
+    void Linking.openURL(config.web.SUPPORT_URL).catch(() => showToast('Support could not be opened.'));
+  };
   return (
     <StateShell icon="info" title="Couldn't load horses" detail="Check your connection and try again.">
       <Pressable
@@ -38,6 +44,9 @@ export function HorsesError({ onRetry }: { onRetry: () => void }) {
         ]}>
         <Text style={[type.headline, { color: colors.onInverse }]}>Try again</Text>
       </Pressable>
+      <Pressable onPress={contactSupport} accessibilityRole="button" accessibilityLabel="Contact support" style={styles.supportButton}>
+        <Text style={[type.subhead, { color: colors.accent }]}>Contact Support</Text>
+      </Pressable>
     </StateShell>
   );
 }
@@ -50,6 +59,10 @@ export function HorsesNoInternet({
   enabled: boolean;
 }) {
   const { colors } = useTokens();
+  const { showToast } = useToast();
+  const contactSupport = () => {
+    void Linking.openURL(config.web.SUPPORT_URL).catch(() => showToast('Support could not be opened.'));
+  };
   return (
     <StateShell
       icon="wifiOff"
@@ -70,6 +83,9 @@ export function HorsesNoInternet({
         <Text style={[type.headline, { color: enabled ? colors.onInverse : colors.tertiary }]}>
           {enabled ? 'Retry' : 'Waiting for connection'}
         </Text>
+      </Pressable>
+      <Pressable onPress={contactSupport} accessibilityRole="button" accessibilityLabel="Contact support" style={styles.supportButton}>
+        <Text style={[type.subhead, { color: colors.accent }]}>Contact Support</Text>
       </Pressable>
     </StateShell>
   );
@@ -172,4 +188,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  supportButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.md },
 });

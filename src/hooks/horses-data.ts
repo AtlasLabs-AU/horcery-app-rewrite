@@ -11,6 +11,7 @@ export interface HorseRow {
   imageUri?: string;
   blurhash?: string;
   imageKind: 'camera' | 'profile' | 'none';
+  hasCamera: boolean;
 }
 
 export const horseSelectionKey = (id: string) => ['horses', 'selection', id] as const;
@@ -38,5 +39,6 @@ export function joinHorseRow(
     imageUri: frame ? `${frame}${frameVersionSuffix}` : photo,
     blurhash: (frame ? stall?.stall_blur_hash : animal.animal_blur_hash) ?? undefined,
     imageKind: frame ? 'camera' : photo ? 'profile' : 'none',
+    hasCamera: monitored,
   };
 }

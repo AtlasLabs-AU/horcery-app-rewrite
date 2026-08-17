@@ -23,6 +23,7 @@ export const SAMPLE_HORSES: SampleHorse[] = [
     stallId: 'sample-stall-1',
     blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
     imageKind: 'camera',
+    hasCamera: true,
     groupIds: ['sample-training'],
   },
   {
@@ -32,6 +33,7 @@ export const SAMPLE_HORSES: SampleHorse[] = [
     stallId: 'sample-stall-5',
     blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
     imageKind: 'camera',
+    hasCamera: true,
     groupIds: ['sample-mares'],
   },
   {
@@ -39,6 +41,7 @@ export const SAMPLE_HORSES: SampleHorse[] = [
     name: 'Juniper',
     blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4',
     imageKind: 'profile',
+    hasCamera: false,
     groupIds: ['sample-mares'],
   },
   {
@@ -48,6 +51,7 @@ export const SAMPLE_HORSES: SampleHorse[] = [
     stallId: 'sample-stall-8',
     blurhash: 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.',
     imageKind: 'camera',
+    hasCamera: true,
     groupIds: ['sample-yearlings', 'sample-training'],
   },
   {
@@ -55,6 +59,7 @@ export const SAMPLE_HORSES: SampleHorse[] = [
     name: 'Clover',
     blurhash: 'L9ASgx00~q00M{IUxv%M00%MRjxu',
     imageKind: 'profile',
+    hasCamera: false,
     groupIds: ['sample-yearlings'],
   },
   {
@@ -63,6 +68,7 @@ export const SAMPLE_HORSES: SampleHorse[] = [
     stallName: 'Stall 3',
     stallId: 'sample-stall-3',
     imageKind: 'none',
+    hasCamera: false,
     groupIds: [],
   },
 ];

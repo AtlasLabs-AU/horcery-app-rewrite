@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { Menu } from '@/components/ui/menu';
 import type { HorseGroup } from '@/hooks/use-horse-groups';
@@ -20,10 +21,12 @@ export function GroupChips({
   groups,
   selectedId,
   onSelect,
+  isLoading = false,
 }: {
   groups: HorseGroup[];
   selectedId: string;
   onSelect: (id: string) => void;
+  isLoading?: boolean;
 }) {
   const { colors } = useTokens();
   const chips = [{ id: ALL_HORSES, name: 'All Horses' }, ...groups];
@@ -35,7 +38,9 @@ export function GroupChips({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chips}
         style={styles.scroll}>
-        {chips.map((chip) => {
+        {isLoading
+          ? [0, 1, 2].map((item) => <View key={item} style={[styles.chip, styles.skeletonChip, { backgroundColor: colors.fillTonal }]} />)
+          : chips.map((chip) => {
           const selected = chip.id === selectedId;
           return (
             <Pressable
@@ -67,8 +72,20 @@ export function GroupChips({
               </Text>
             </Pressable>
           );
-        })}
+          })}
       </ScrollView>
+      <Menu
+        icon="add"
+        accessibilityLabel="Add horse or group"
+        testID="horse-add-menu"
+        width={44}
+        height={44}
+        title="Add to horses"
+        actions={[
+          { id: 'add-horse', label: 'Add Horse', description: 'Enter the horse details.', icon: 'add', onPress: () => router.push({ pathname: '/horses/horse-form', params: { mode: 'create' } }) },
+          { id: 'new-group', label: 'New Group', description: 'Create a group for organising horses.', icon: 'group', onPress: () => router.push('/horses/group-form') },
+        ]}
+      />
       <Menu
         icon="overflow"
         accessibilityLabel="Group options"
@@ -78,25 +95,11 @@ export function GroupChips({
         title="Horses and groups"
         actions={[
           {
-            id: 'add',
-            label: 'Add Horse',
-            description: 'Coming soon — add a horse to your organisation.',
-            icon: 'add',
-            disabled: true,
-          },
-          {
-            id: 'new',
-            label: 'New Group',
-            description: 'Coming soon — create a group to sort horses into.',
-            icon: 'add',
-            disabled: true,
-          },
-          {
             id: 'edit',
             label: 'Edit Groups',
-            description: 'Coming soon — rename or delete a group.',
+            description: 'Rename or remove an existing group.',
             icon: 'edit',
-            disabled: true,
+            onPress: () => router.push('/horses/group-management'),
           },
         ]}
       />
@@ -122,5 +125,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  skeletonChip: { width: 104, borderWidth: 0 },
   selectedText: { fontWeight: '600' },
 });

@@ -8,6 +8,7 @@ const horse: HorseRow = {
   name: 'Storm',
   stallName: 'Stall 1',
   imageKind: 'none',
+  hasCamera: false,
 };
 
 describe('HorseCard', () => {

@@ -8,6 +8,7 @@ import { AuthFlow } from '@/components/auth/auth-flow';
 import { AppError } from '@/components/app/app-error';
 import { LockScreen } from '@/components/auth/lock-screen';
 import { SheetBackdropHost } from '@/components/ui/sheet-backdrop';
+import { ToastHost } from '@/components/ui/toast';
 import { PREVIEWS } from '@/config/previews';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
@@ -82,18 +83,20 @@ function SessionGate() {
       Wraps the whole navigator so an open sheet blurs the ENTIRE app — tab
       bar included — rather than blurring one screen inside a sharp frame.
     */
-    <SheetBackdropHost>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="menu"
-          options={{
-            presentation: 'transparentModal',
-            animation: 'fade',
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
-        />
-      </Stack>
-    </SheetBackdropHost>
+    <ToastHost>
+      <SheetBackdropHost>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="menu"
+            options={{
+              presentation: 'transparentModal',
+              animation: 'fade',
+              contentStyle: { backgroundColor: 'transparent' },
+            }}
+          />
+        </Stack>
+      </SheetBackdropHost>
+    </ToastHost>
   );
 }
