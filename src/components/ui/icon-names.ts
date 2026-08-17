@@ -18,6 +18,7 @@ export type IconName =
   | 'checkFilled'
   | 'circleEmpty'
   | 'filter'
+  | 'play'
   | 'add'
   | 'edit'
   | 'share'

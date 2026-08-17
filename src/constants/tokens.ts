@@ -26,6 +26,28 @@
 
 import { Platform } from 'react-native';
 
+/**
+ * Media colours — the one group that is IDENTICAL in light and dark.
+ *
+ * A camera frame is a photograph, not a themed surface: it is whatever the
+ * barn looks like. So a caption over it cannot take its contrast from the
+ * scheme — the scrim below the text is what guarantees legibility, in both
+ * schemes and over any frame. Confirmed with the "overlay" tile treatment
+ * (Inakshi, 2026-08-17); see `src/components/media/media-tile.tsx`.
+ */
+const media = {
+  /** Caption text on a camera frame. */
+  onMedia: '#FFFFFF',
+  /** Secondary caption line on a camera frame. */
+  onMediaMuted: 'rgba(255,255,255,0.72)',
+  /** Bottom stop of the caption scrim. */
+  scrim: 'rgba(0,0,0,0.78)',
+  /** Top stop of the caption scrim — transparent black, so the ramp is even. */
+  scrimClear: 'rgba(0,0,0,0)',
+  /** Behind a frame that has not loaded (and under a video's first frame). */
+  mediaWell: '#1A1D23',
+} as const;
+
 export const palette = {
   light: {
     /** Canvas behind everything. */
@@ -53,6 +75,7 @@ export const palette = {
     /** Status. Red is for real alerts and validation only — never data. */
     statusOk: '#2E9E6B',
     statusAlert: '#D9484A',
+    ...media,
   },
   dark: {
     background: '#0B0B0D',
@@ -71,6 +94,7 @@ export const palette = {
     divider: '#2A2A31',
     statusOk: '#3BC08A',
     statusAlert: '#F0595E',
+    ...media,
   },
 } as const;
 

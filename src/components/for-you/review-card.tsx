@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { LinkButton } from '@/components/for-you/link-button';
+import { MediaTile } from '@/components/media/media-tile';
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
@@ -71,36 +71,28 @@ export function ReviewCard({
   );
 }
 
-/** A non-interactive visual preview until the Review vertical slice lands. */
+/**
+ * A non-interactive visual preview until the Review vertical slice lands.
+ *
+ * Now the shared `MediaTile` in the confirmed overlay treatment: horse on the
+ * frame, behaviour and stall on the second line with the behaviour's own
+ * glyph, clip length bottom-right. Previously the behaviour sat in a labelled
+ * row above the frame and the horse/stall below it — three text zones around
+ * one image.
+ */
 function ReviewPreviewTile({ event }: { event: ReviewPreviewEvent }) {
-  const { colors } = useTokens();
   return (
-    <View style={[styles.previewTile, { backgroundColor: colors.bed }]}>
-      <View style={styles.previewTitleRow}>
-        <Icon name={event.icon} size={15} color={colors.accent} />
-        <Text style={[type.footnote, styles.previewTitle, { color: colors.foreground }]} numberOfLines={1}>
-          {event.title}
-        </Text>
-      </View>
-      <View style={[styles.poster, { backgroundColor: colors.fillTonal }]}>
-        <Image
-          source={event.posterUri}
-          placeholder={event.blurhash ? { blurhash: event.blurhash } : undefined}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          accessible
-          accessibilityLabel={`${event.horseName} ${event.title} preview`}
-        />
-        <View style={[styles.duration, { backgroundColor: colors.inverse }]}>
-          <Text style={[type.caption, { color: colors.onInverse }]}>{event.durationLabel}</Text>
-        </View>
-      </View>
-      <Text style={[type.subhead, styles.horseName, { color: colors.foreground }]} numberOfLines={1}>
-        {event.horseName}
-      </Text>
-      <Text style={[type.caption, { color: colors.tertiary }]} numberOfLines={1}>
-        {`${event.stallName} · ${event.timeLabel}`}
-      </Text>
+    <View style={styles.previewTile}>
+      <MediaTile
+        posterUri={event.posterUri}
+        blurhash={event.blurhash}
+        title={event.horseName}
+        subtitle={`${event.title} · ${event.stallName}`}
+        subtitleIcon={event.icon}
+        badge={event.durationLabel}
+        accessibilityLabel={`${event.horseName}, ${event.title}, ${event.stallName}, ${event.timeLabel}`}
+        compact
+      />
     </View>
   );
 }
@@ -124,39 +116,7 @@ const styles = StyleSheet.create({
     gap: space.md,
     marginTop: space.edge,
   },
-  previewTile: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    paddingBottom: space.sm,
-  },
-  previewTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.sm,
-  },
-  previewTitle: { flex: 1, fontWeight: '600' },
-  poster: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-  },
-  duration: {
-    position: 'absolute',
-    right: space.xs,
-    bottom: space.xs,
-    borderRadius: radius.full,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.xxs,
-  },
-  horseName: {
-    paddingHorizontal: space.sm,
-    paddingTop: space.sm,
-    fontWeight: '600',
-  },
+  previewTile: { flex: 1, minWidth: 0 },
   info: {
     flexDirection: 'row',
     alignItems: 'flex-start',

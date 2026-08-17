@@ -1,6 +1,6 @@
-import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { MediaTile } from '@/components/media/media-tile';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
@@ -16,29 +16,39 @@ export interface HistoryEvent {
    * ahead of the barn (caught on device, 2026-08-15).
    */
   timeLabel: string;
-  /** Supported Review events carry footage when a valid clip exists. */
+  /** Behaviour events carry footage; reported ones carry a note instead. */
   hasClip: boolean;
   posterUri?: string;
   blurhash?: string;
   durationLabel?: string;
   animalName?: string;
   stallName?: string;
+  reporter?: string;
+  note?: string;
   isAlert: boolean;
   icon: IconName;
 }
 
 /**
- * One event card, in the retained current-app anatomy: header row (icon, title,
- * timestamp), footage still, and footer (horse/stall plus the type tag).
- * Legacy manually authored information panels are deliberately absent because
- * the Record feature was removed by product decision on 2026-08-16.
+ * One event in the history.
  *
- * **The one deliberate departure: the body is a still, not a live player.**
- * The current app mounts an autoplaying HLS player per card and never
- * releases it (its release code is commented out and its "is this visible"
- * flag is unused), so a busy day on a tablet runs many players at once.
- * Here the card shows a frame with a play badge and playback happens on tap.
- * PRINCIPLES #2, tie-break smooth over showy.
+ * **Restructured 2026-08-17** onto the shared `MediaTile` in its confirmed
+ * overlay treatment, so a clip here looks like a camera frame anywhere else
+ * in the app: 4:3 (was 3:2 — the only frame in the app that wasn't), horse
+ * and behaviour captioned ON the frame, clip length bottom-right, and the
+ * alert tag top-right where it reads against any image. The separate header
+ * row (icon well, title, timestamp) and footer row (avatar, name, tag) are
+ * gone; their content moved onto the frame.
+ *
+ * **The one deliberate departure from the current app stands:** the body is a
+ * still with a play badge, not a live player. The current app mounts an
+ * autoplaying HLS player per card and never releases it (its release code is
+ * commented out and its "is this visible" flag is unused), so a busy day on a
+ * tablet runs many players at once. PRINCIPLES #2, tie-break smooth over
+ * showy.
+ *
+ * Events with no footage — a stall check, a note — keep the written panel:
+ * there is no frame to caption.
  */
 export function EventCard({
   event,
@@ -49,100 +59,56 @@ export function EventCard({
 }) {
   const { colors } = useTokens();
 
+  if (event.hasClip) {
+    return (
+      <MediaTile
+        posterUri={event.posterUri}
+        blurhash={event.blurhash}
+        title={event.animalName ?? event.stallName ?? event.title}
+        subtitle={`${event.title} · ${event.timeLabel}`}
+        subtitleIcon={event.icon}
+        badge={event.durationLabel}
+        showPlayBadge
+        tag={event.isAlert ? { label: event.title, tone: 'alert' } : undefined}
+        onPress={onPress}
+        accessibilityLabel={`${event.title}, ${event.animalName ?? event.stallName ?? ''}, ${event.timeLabel}`}
+        testID={`history-event-${event.id}`}
+      />
+    );
+  }
+
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? `${event.title}, ${event.timeLabel}` : undefined}
-      testID={`history-event-${event.id}`}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: colors.card },
-        pressed && onPress && { opacity: 0.9 },
-      ]}>
+    <View
+      style={[styles.card, { backgroundColor: colors.card }]}
+      testID={`history-event-${event.id}`}>
       <View style={styles.headerRow}>
-        <View style={[styles.iconWell, { backgroundColor: colors.fillTonal }]}>
-          <Icon name={event.icon} size={16} color={colors.accent} />
-        </View>
-        <Text style={[type.headline, styles.title, { color: colors.foreground }]} numberOfLines={1}>
+        <Icon name={event.icon} size={18} color={colors.accent} />
+        <Text
+          style={[type.headline, styles.title, { color: colors.foreground }]}
+          numberOfLines={1}>
           {event.title}
         </Text>
-        <Text style={[type.footnote, { color: colors.tertiary }]}>
-          {event.timeLabel}
-        </Text>
+        <Text style={[type.footnote, { color: colors.tertiary }]}>{event.timeLabel}</Text>
       </View>
 
-      {event.hasClip ? (
-        <View style={[styles.still, { backgroundColor: colors.fillTonal }]}>
-          {event.posterUri ? (
-            <Image
-              source={event.posterUri}
-              placeholder={event.blurhash ? { blurhash: event.blurhash } : undefined}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={150}
-            />
-          ) : null}
-          <View style={[styles.playBadge, { backgroundColor: colors.card }]}>
-            <Icon name="spaces" size={18} color={colors.accent} />
-          </View>
-          {/* Duration is not a control, so it is a card-on-image pill, not the button colour. */}
-          {event.durationLabel ? (
-            <View style={[styles.durationPill, { backgroundColor: colors.card }]}>
-              <Text style={[type.caption, styles.durationText, { color: colors.foreground }]}>
-                {event.durationLabel}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-      <View style={styles.footerRow}>
-        {event.animalName ? (
-          <>
-            <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-              <Text style={[type.caption, styles.avatarText, { color: colors.onAccent }]}>
-                {initials(event.animalName)}
-              </Text>
-            </View>
-            <Text
-              style={[type.subhead, styles.animalName, { color: colors.foreground }]}
-              numberOfLines={1}>
-              {event.animalName}
-            </Text>
-          </>
-        ) : (
-          <Text style={[type.subhead, styles.animalName, { color: colors.tertiary }]}>
-            {event.stallName ?? ''}
-          </Text>
-        )}
-        <View
-          style={[
-            styles.tag,
-            { backgroundColor: event.isAlert ? colors.statusAlert : colors.fillTonal },
-          ]}>
-          <Text
-            style={[
-              type.caption,
-              styles.tagText,
-              { color: event.isAlert ? colors.onInverse : colors.secondary },
-            ]}>
-            {event.title}
-          </Text>
-        </View>
+      <View style={[styles.infoPanel, { backgroundColor: colors.bed }]}>
+        {event.animalName ? <InfoRow label="Horse" value={event.animalName} /> : null}
+        {event.stallName ? <InfoRow label="Stall" value={event.stallName} /> : null}
+        {event.reporter ? <InfoRow label="Reported by" value={event.reporter} /> : null}
+        {event.note ? <InfoRow label="Notes" value={event.note} /> : null}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
+function InfoRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTokens();
+  return (
+    <View style={styles.infoRow}>
+      <Text style={[type.footnote, { color: colors.tertiary }]}>{label}</Text>
+      <Text style={[type.subhead, { color: colors.foreground }]}>{value}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -150,6 +116,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     overflow: 'hidden',
+    paddingBottom: space.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -157,55 +124,13 @@ const styles = StyleSheet.create({
     gap: space.sm,
     padding: space.md,
   },
-  iconWell: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   title: { flex: 1 },
-  still: {
-    width: '100%',
-    aspectRatio: 3 / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  durationPill: {
-    position: 'absolute',
-    right: space.sm,
-    bottom: space.sm,
-    borderRadius: radius.full,
-    paddingHorizontal: space.sm,
-    paddingVertical: 2,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
+  infoPanel: {
+    marginHorizontal: space.md,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
     padding: space.md,
+    gap: space.sm,
   },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontWeight: '700' },
-  durationText: { fontWeight: '600' },
-  animalName: { flex: 1 },
-  tag: {
-    borderRadius: radius.full,
-    paddingHorizontal: space.md,
-    paddingVertical: 3,
-  },
-  tagText: { fontWeight: '600' },
+  infoRow: { gap: space.xxs },
 });

@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { snapshotPage, snapshotPageCount } from '@/components/for-you/snapshot-paging';
+import { MediaTile } from '@/components/media/media-tile';
 import { Menu } from '@/components/ui/menu';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
@@ -110,44 +110,29 @@ export function SnapshotsCard({
   );
 }
 
+/**
+ * A tile is now the shared `MediaTile` in its confirmed overlay treatment
+ * (Inakshi, 2026-08-17): the name sits on the frame over a scrim rather than
+ * on a grey strip beneath it.
+ *
+ * The horse avatar that used to sit in that strip is gone with it — a face
+ * chip on top of a camera frame is one thing too many, and the frame already
+ * shows the horse. Its `avatarUri` stays on the type for the fullscreen view
+ * (H5), where there is room for it.
+ */
 function SnapshotTile({ snapshot }: { snapshot: Snapshot }) {
-  const { colors } = useTokens();
   return (
-    <View style={[styles.tile, { backgroundColor: colors.bed }]} testID={`for-you-snapshot-${snapshot.id}`}>
-      <Image
-        style={[styles.poster, { backgroundColor: colors.fillTonal }]}
-        source={snapshot.posterUri}
-        placeholder={snapshot.blurhash ? { blurhash: snapshot.blurhash } : undefined}
-        contentFit="cover"
-        transition={150}
-        accessible
+    <View style={styles.tile}>
+      <MediaTile
+        posterUri={snapshot.posterUri}
+        blurhash={snapshot.blurhash}
+        title={snapshot.name}
         accessibilityLabel={`${snapshot.name} snapshot`}
+        testID={`for-you-snapshot-${snapshot.id}`}
+        compact
       />
-      <View style={styles.tileFooter}>
-        {snapshot.avatarUri ? (
-          <Image source={snapshot.avatarUri} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-            <Text style={[type.caption, styles.avatarInitials, { color: colors.onAccent }]}>
-              {initials(snapshot.name)}
-            </Text>
-          </View>
-        )}
-        <Text style={[type.subhead, styles.tileName, { color: colors.foreground }]} numberOfLines={1}>
-          {snapshot.name}
-        </Text>
-      </View>
     </View>
   );
-}
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 const styles = StyleSheet.create({
@@ -167,37 +152,7 @@ const styles = StyleSheet.create({
     gap: space.md,
     marginTop: space.edge,
   },
-  tile: {
-    flex: 1,
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  poster: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-  },
-  tileFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.sm,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    fontWeight: '700',
-  },
-  tileName: {
-    flex: 1,
-    fontWeight: '600',
-  },
+  tile: { flex: 1 },
   dots: {
     flexDirection: 'row',
     alignSelf: 'center',

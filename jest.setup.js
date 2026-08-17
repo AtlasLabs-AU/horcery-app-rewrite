@@ -8,6 +8,18 @@ jest.mock('expo-symbols', () => {
   };
 });
 
+// expo-video is a native module: importing it under jest-expo throws
+// ("Cannot read properties of undefined (reading 'prototype')"), which fails
+// any suite that renders MediaTile. The stub keeps the player's API surface
+// so the "only the live tile plays" effect is still exercised.
+jest.mock('expo-video', () => {
+  const React = require('react');
+  return {
+    useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn(), loop: true, muted: true }),
+    VideoView: (props) => React.createElement('VideoView', props),
+  };
+});
+
 // Silence the Reanimated startup warning in test output.
 global.__reanimatedWorkletInit = () => {};
 

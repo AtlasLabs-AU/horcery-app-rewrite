@@ -71,6 +71,12 @@ cash out in colour, and it is enforced by `src/__tests__/no-color-literals`:
 - **No custom skeuomorphic controls** (metallic toggles and the like were
   looked at and put away, 2026-08-17): the native switch, tinted, is the
   switch. Depth comes from air and hairlines.
+- **Camera frames are the one exception.** A photograph is not a themed
+  surface, so a caption on one takes its contrast from the scrim beneath it,
+  not from the scheme: white type on a gradient, identical in light and dark
+  (`onMedia` / `scrim` in tokens). Every frame in the app is 4:3 and is drawn
+  by `src/components/media/media-tile.tsx` — screens choose content, never
+  appearance.
 - Every value lives in `src/constants/tokens.ts`; light and dark carry the
   same keys. A screen that "needs" a colour literal means the palette is
   missing a role — add the role.

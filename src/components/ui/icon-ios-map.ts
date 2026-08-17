@@ -16,6 +16,7 @@ const IOS: Record<IconName, SFSymbol> = {
   checkFilled: 'checkmark.circle.fill',
   circleEmpty: 'circle',
   filter: 'line.3.horizontal.decrease',
+  play: 'play.fill',
   add: 'plus',
   edit: 'pencil',
   share: 'square.and.arrow.up',

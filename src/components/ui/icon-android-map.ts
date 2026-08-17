@@ -20,6 +20,7 @@ const ANDROID: Record<IconName, ImageSourcePropType> = {
   checkFilled: require('@expo/material-symbols/check_circle.xml'),
   circleEmpty: require('@expo/material-symbols/radio_button_unchecked.xml'),
   filter: require('@expo/material-symbols/filter_list.xml'),
+  play: require('@expo/material-symbols/play_arrow.xml'),
   add: require('@expo/material-symbols/add.xml'),
   edit: require('@expo/material-symbols/edit.xml'),
   share: require('@expo/material-symbols/share.xml'),

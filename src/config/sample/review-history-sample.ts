@@ -28,6 +28,8 @@ const TEMPLATES: Template[] = [
     icon: 'rolling',
     isAlert: true,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
     durationLabel: '38s',
     animalName: 'Storm',
     stallName: 'Stall 1',
@@ -39,6 +41,8 @@ const TEMPLATES: Template[] = [
     icon: 'lyingDown',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'L6Pj0^~q00?b~qofIUj[00xu_3t7',
     durationLabel: '42m',
     animalName: 'Claire Murphy',
     stallName: 'Stall 4',
@@ -50,6 +54,8 @@ const TEMPLATES: Template[] = [
     icon: 'rolling',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'L9AS#8%M00t7~qM{IUof00Rj_3WB',
     durationLabel: '21s',
     animalName: 'Golden Boy',
     stallName: 'Stall 2',
@@ -61,6 +67,8 @@ const TEMPLATES: Template[] = [
     icon: 'peopleInStall',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'L7B|[M00?b~q00M{IUof~qRjM{of',
     durationLabel: '3m 10s',
     animalName: 'Golden Boy',
     stallName: 'Stall 2',
@@ -72,6 +80,8 @@ const TEMPLATES: Template[] = [
     icon: 'peopleInteraction',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
     durationLabel: '1m 44s',
     animalName: 'Biscuit',
     stallName: 'Stall 3',
@@ -83,6 +93,8 @@ const TEMPLATES: Template[] = [
     icon: 'lyingDown',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'L5H2EC=PM+yV0g-mq.wG9c010J}I',
     durationLabel: '1h 12m',
     animalName: 'Willow',
     stallName: 'Stall 5',
@@ -94,6 +106,8 @@ const TEMPLATES: Template[] = [
     icon: 'rolling',
     isAlert: true,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'LNAdApj[00aymkj[t7j[4nkCMdnj',
     durationLabel: '52s',
     animalName: 'Storm',
     stallName: 'Stall 1',
@@ -105,6 +119,8 @@ const TEMPLATES: Template[] = [
     icon: 'exiting',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'L8C?xE00?b~q00M{IUof~qRjM{of',
     durationLabel: '9s',
     animalName: 'Juniper',
     stallName: 'Stall 6',
@@ -116,6 +132,8 @@ const TEMPLATES: Template[] = [
     icon: 'entering',
     isAlert: false,
     hasClip: true,
+    // Stands in for the stall's camera frame, so the tile reads as one.
+    blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
     durationLabel: '11s',
     animalName: 'Juniper',
     stallName: 'Stall 6',

@@ -1,11 +1,11 @@
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MediaTile } from '@/components/media/media-tile';
 import { Icon } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
 import type { HorseRow } from '@/hooks/use-horses';
 import { useTokens } from '@/hooks/use-tokens';
-import { motion, radius, space, type } from '@/constants/tokens';
+import { radius, space, type } from '@/constants/tokens';
 
 /** Thumbnail box: 4:3, the ratio Inakshi chose for every camera still. */
 export const THUMB_WIDTH = 120;
@@ -40,20 +40,23 @@ export function HorseCard({ horse, onPress }: { horse: HorseRow; onPress?: () =>
         accessibilityLabel={`${horse.name}, ${stallLabel}`}
         testID={`horse-card-${horse.id}`}
         style={({ pressed }) => [styles.content, pressed && onPress && { opacity: 0.9 }]}>
-        <View style={[styles.thumb, { backgroundColor: colors.fillTonal }]}>
+        {/*
+          The shared frame, WITHOUT its caption: the horse's name and stall
+          already sit beside it, and a scrim caption on a 120pt tile would be
+          unreadable. So the row gets the app's 4:3 corner-and-fallback
+          treatment and nothing else (Inakshi, 2026-08-17).
+        */}
+        <View style={styles.thumb}>
           {horse.imageUri || horse.blurhash ? (
-            <Image
-              source={horse.imageUri}
-              placeholder={horse.blurhash ? { blurhash: horse.blurhash } : undefined}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={motion.fast}
-              accessible
+            <MediaTile
+              posterUri={horse.imageUri}
+              blurhash={horse.blurhash}
               accessibilityLabel={`${horse.name} thumbnail`}
-              accessibilityIgnoresInvertColors
             />
           ) : (
-            <Icon name="horse" size={28} color={colors.accent} />
+            <View style={[styles.thumbFallback, { backgroundColor: colors.fillTonal }]}>
+              <Icon name="horse" size={28} color={colors.accent} />
+            </View>
           )}
         </View>
 
@@ -115,12 +118,12 @@ const styles = StyleSheet.create({
     padding: space.sm,
     paddingRight: 0,
   },
-  thumb: {
-    width: THUMB_WIDTH,
-    height: THUMB_HEIGHT,
+  thumb: { width: THUMB_WIDTH, height: THUMB_HEIGHT },
+  thumbFallback: {
+    width: '100%',
+    height: '100%',
     borderRadius: radius.sm,
     borderCurve: 'continuous',
-    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
