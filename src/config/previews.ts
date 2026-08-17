@@ -46,4 +46,10 @@ export const PREVIEWS = {
    * its populated layout can be reviewed without changing backend records.
    */
   sampleHorsesData: __DEV__ && optedIn,
+  /**
+   * Fills Manage Alerts only when the organization has no alert rules, so the
+   * list, tags, sentences and drift badge can be reviewed. The alert TYPES are
+   * always the real ones from the API; only the rules are invented.
+   */
+  sampleAlertsData: __DEV__ && optedIn,
 } as const;

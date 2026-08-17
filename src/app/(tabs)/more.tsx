@@ -18,11 +18,12 @@ import { BottomTabInset } from '@/constants/theme';
  * - Spaces and Manage Alerts are feature/role-gated in production; the
  *   prototype shows them unconditionally (Remote Config runs on defaults in
  *   Expo Go).
- * Destination screens don't exist in the rewrite yet, so rows press but do
- * not navigate.
+ * Rows whose destination exists navigate (Manage Alerts → /alerts, from the
+ * alerts slice A2); the rest are visibly disabled until theirs does.
  */
 export default function MoreScreen() {
   const { colors } = useTokens();
+  const openAlerts = () => router.push('/alerts');
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
@@ -64,6 +65,7 @@ export default function MoreScreen() {
               title="Manage Alerts"
               description="Global and horse-specific alerts, so you never miss anything."
               last
+              onPress={openAlerts}
               testID="more-alerts"
             />
           </View>

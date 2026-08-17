@@ -87,6 +87,7 @@ function SessionGate() {
       <SheetBackdropHost>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="alerts" />
           <Stack.Screen
             name="menu"
             options={{

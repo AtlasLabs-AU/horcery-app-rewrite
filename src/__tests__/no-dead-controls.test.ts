@@ -106,6 +106,19 @@ describe('no dead controls on the screens', () => {
     expect(stallCard).not.toContain('Pressable');
   });
 
+  it('keeps Manage Alerts (A2, read-only) free of dead controls', () => {
+    const screen = read(join('app', 'alerts', 'index.tsx'));
+    const row = read(join('components', 'alerts', 'alert-rule-row.tsx'));
+
+    // No add/edit/delete affordance exists yet — the footer SAYS so instead
+    // of a dimmed button with no reason. Nothing routes anywhere.
+    expect(screen).not.toContain('router.push');
+    expect(screen).toContain('arrives with the next slice');
+    // A row is a button only when a press is wired.
+    expect(row).toMatch(/accessibilityRole=\{onPress \? 'button' : undefined\}/);
+    expect(row).toMatch(/disabled=\{!onPress\}/);
+  });
+
   it('keeps the date bar arrows honest at the ends of the range', () => {
     const bar = read(join('components', 'horses', 'horse-date-bar.tsx'));
 
