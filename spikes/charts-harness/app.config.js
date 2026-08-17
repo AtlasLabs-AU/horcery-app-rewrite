@@ -5,11 +5,13 @@ if (renderer && renderer !== 'echarts-skia' && renderer !== 'victory') {
 
 const isolated = Boolean(renderer);
 const suffix = renderer === 'echarts-skia' ? 'echarts' : renderer;
-const identifier = `au.com.atlaslabs.horcery.chartsharness${suffix ? `.${suffix}` : ''}`;
+const memorySequence = process.env.EXPO_PUBLIC_HORCERY_MEMORY_SEQUENCE === '1';
+const buildSuffix = [suffix, memorySequence ? 'memory' : null].filter(Boolean).join('.');
+const identifier = `au.com.atlaslabs.horcery.chartsharness${buildSuffix ? `.${buildSuffix}` : ''}`;
 
 module.exports = {
   expo: {
-    name: `Horcery Charts Harness${suffix ? ` — ${suffix}` : ''}`,
+    name: `Horcery Charts Harness${suffix ? ` — ${suffix}` : ''}${memorySequence ? ' memory' : ''}`,
     slug: 'horcery-charts-harness',
     version: '1.0.0',
     orientation: 'portrait',
@@ -30,7 +32,7 @@ module.exports = {
       package: identifier,
     },
     web: { favicon: './assets/favicon.png' },
-    scheme: `horcery-charts-harness${suffix ? `-${suffix}` : ''}`,
+    scheme: `horcery-charts-harness${buildSuffix ? `-${buildSuffix.replaceAll('.', '-')}` : ''}`,
     newArchEnabled: true,
     plugins: isolated ? [] : ['expo-dev-client'],
   },

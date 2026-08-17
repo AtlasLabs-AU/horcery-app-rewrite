@@ -35,7 +35,16 @@ import {
   type VictoryRenderMode,
 } from './src/renderer';
 import { CatalogueRendererHost, RendererHost } from './src/renderer-host';
+import {
+  advanceRemountSequence,
+  startRemountSequence,
+  type RemountSequence,
+} from './src/remount-sequence.mts';
 import { GEOMETRY, loadScenarios, seriesLabel } from './src/scenarios';
+
+const MEMORY_SEQUENCE_BUILD = process.env.EXPO_PUBLIC_HORCERY_MEMORY_SEQUENCE === '1';
+const REMOUNT_INTERVAL_MS = 120;
+const CHECKPOINT_HOLD_MS = 20_000;
 
 /**
  * §6a chart renderer harness — People In Stall.
@@ -56,10 +65,10 @@ export default function App() {
 
   const [rendererId, setRendererId] = useState<RendererId>(DEFAULT_RENDERER_ID);
   const [screenMode, setScreenMode] = useState<'timeline' | 'catalogue'>('timeline');
-  const [scenarioIndex, setScenarioIndex] = useState(0);
+  const [scenarioIndex, setScenarioIndex] = useState(MEMORY_SEQUENCE_BUILD ? 1 : 0);
   const [mountKey, setMountKey] = useState(0);
   const [renderSignal, setRenderSignal] = useState<RenderSignal | null>(null);
-  const [remounting, setRemounting] = useState<number | null>(null);
+  const [remountSequence, setRemountSequence] = useState<RemountSequence | null>(null);
   const [lodEnabled, setLodEnabled] = useState(false);
   const [progressiveMode, setProgressiveMode] = useState<EChartsProgressiveMode>('default');
   const [victoryMode, setVictoryMode] = useState<VictoryRenderMode>('relayout');
@@ -88,20 +97,24 @@ export default function App() {
     return () => console.log('[harness] App UNMOUNTED');
   }, []);
 
-  // Remount loop for the reliability/memory check.
+  // Remount loop for the reliability/memory check. Measurement builds pause
+  // at exact same-process checkpoints so external ADB PSS reads do not have to
+  // race a seven-second ECharts loop.
   useEffect(() => {
-    if (remounting === null) return;
-    if (remounting >= 50) {
-      setRemounting(null);
-      return;
-    }
+    if (remountSequence === null) return;
+    if (remountSequence.phase === 'checkpoint' && remountSequence.count === 50) return;
+
+    const delay = remountSequence.phase === 'checkpoint' ? CHECKPOINT_HOLD_MS : REMOUNT_INTERVAL_MS;
     const id = setTimeout(() => {
-      setRenderSignal(null);
-      setMountKey((k) => k + 1);
-      setRemounting(remounting + 1);
-    }, 120);
+      const next = advanceRemountSequence(remountSequence);
+      if (next.count !== remountSequence.count) {
+        setRenderSignal(null);
+        setMountKey((k) => k + 1);
+      }
+      setRemountSequence(next);
+    }, delay);
     return () => clearTimeout(id);
-  }, [remounting]);
+  }, [remountSequence]);
 
   // The stats ticker intentionally re-renders App once a second. Keeping this
   // element referentially stable makes that instrumentation invisible to both
@@ -266,11 +279,17 @@ export default function App() {
 
         <View style={styles.actions}>
           <Pressable
-            testID="remount-50"
-            onPress={() => setRemounting(0)}
-            disabled={remounting !== null}
-            style={[styles.button, remounting !== null && styles.buttonBusy]}>
-            <Text style={styles.buttonText}>{remounting === null ? 'Remount ×50' : `Remounting ${remounting}/50`}</Text>
+            testID="remount-sequence"
+            onPress={() => setRemountSequence(startRemountSequence())}
+            disabled={remountSequence !== null}
+            style={[styles.button, remountSequence !== null && styles.buttonBusy]}>
+            <Text testID="remount-sequence-status" style={styles.buttonText}>
+              {remountSequence === null
+                ? 'Remount 0 → 10 → 25 → 50'
+                : remountSequence.phase === 'checkpoint'
+                  ? `Checkpoint ${remountSequence.count}/50`
+                  : `Remounting ${remountSequence.count}/50`}
+            </Text>
           </Pressable>
         </View>
 
