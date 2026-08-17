@@ -1,6 +1,11 @@
 import type { IAnimal } from '@acme/services/api/animal-management/animal';
 import type { IStall } from '@acme/services/api/stall-monitor-management/stall';
-import { getStallMonitorThumbnailURLs } from '@acme/config/utils/stall-monitor-video-helper';
+import { LIVE_STREAM_OFFSET } from '@acme/config/constants/date-constants';
+import {
+  getStallIdFromURL,
+  getStallMonitorLiveStreamOffsetURL,
+  getStallMonitorThumbnailURLs,
+} from '@acme/config/utils/stall-monitor-video-helper';
 
 /** One row of the Horses list, already joined and ready to draw. */
 export interface HorseRow {
@@ -40,6 +45,34 @@ export function stallHasFrame(stall: IStall | undefined): boolean {
 /** A monitor whose metrics we can query. Absent `prometheus_url` is not "no camera". */
 export function stallHasMetrics(stall: IStall | undefined): boolean {
   return stallHasMonitor(stall) && !!stall?.prometheus_url;
+}
+
+/**
+ * The stall's live HLS manifest, or undefined when it has nothing to stream.
+ *
+ * One definition, used by both For You's Snapshots and the horse's own page —
+ * the same lesson as `stallHasMonitor` above: two callers deriving "can this
+ * stream" separately is how one surface offers live video and the other
+ * silently does not.
+ *
+ * `getStallIdFromURL` returns NaN when the URL carries no `sm-<number>`
+ * segment (several stalls in a real organisation have a null `stall_url`
+ * entirely), and `NaN > 0` is false — so those correctly get nothing rather
+ * than a manifest URL built on a bad id.
+ *
+ * Audio follows the stall's own setting, as the current app does.
+ */
+export function stallLiveStreamUrl(stall: IStall | undefined): string | undefined {
+  if (!stall?.stall_url) return undefined;
+  const monitorId = getStallIdFromURL(stall.stall_url);
+  if (!(monitorId > 0)) return undefined;
+
+  return getStallMonitorLiveStreamOffsetURL({
+    stallId: monitorId,
+    offset: LIVE_STREAM_OFFSET,
+    type: stall.UserMetaData?.audio_enable ? 'audio_video' : 'video',
+    quality: 'low',
+  });
 }
 
 /** Pure join kept outside the hook so its behavior is cheap to characterize. */

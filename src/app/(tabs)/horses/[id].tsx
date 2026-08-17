@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -107,6 +107,14 @@ export default function HorseDetailScreen() {
   const timezone = useOrganizationTimezone();
   const now = useOrganizationNow(timezone);
   const [activeTab, setActiveTab] = useState<DetailTab>('summary');
+  /**
+   * The hero streams only when asked, and only while this screen is on top.
+   * Slice 4a proved the tile on For You's Snapshots first; the horse page
+   * inherits it rather than being the place it runs for the first time.
+   */
+  const [wantsLive, setWantsLive] = useState(false);
+  const [streamFailed, setStreamFailed] = useState(false);
+  const [isFocused, setIsFocused] = useState(true);
 
   const isSample = PREVIEWS.sampleHorsesData && id.startsWith('sample-');
   const horse = useHorseDetail(id);
@@ -192,6 +200,28 @@ export default function HorseDetailScreen() {
     if (active.hasNextPage && !active.isFetchingNextPage) void active.fetchNextPage();
   }, [activeTab, isSample, active]);
 
+  // Navigating away releases the player; coming back shows the still again
+  // and you opt in deliberately.
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+        setWantsLive(false);
+      };
+      // Setters are stable, but the React Compiler requires them declared.
+    }, [setIsFocused, setWantsLive]),
+  );
+
+  const liveUri = isSample ? undefined : horse.liveUri;
+  const canStream = !!liveUri && !streamFailed;
+  const streaming = wantsLive && canStream && isFocused;
+
+  const onToggleLive = useCallback(() => {
+    setStreamFailed(false);
+    setWantsLive((current) => !current);
+  }, [setStreamFailed, setWantsLive]);
+
   const headerRight = useCallback(() => <HorseOverflowMenu name={name} />, [name]);
 
   const screen = (
@@ -264,8 +294,27 @@ export default function HorseDetailScreen() {
             <MediaTile
               posterUri={horse.row?.imageUri}
               blurhash={horse.row?.blurhash}
-              tag={horse.row && !horse.row.hasCamera ? { label: 'No camera' } : undefined}
-              accessibilityLabel={`${name} camera frame`}
+              videoUri={streaming ? liveUri : undefined}
+              live={streaming}
+              onPlaybackError={() => setStreamFailed(true)}
+              onPress={canStream ? onToggleLive : undefined}
+              showPlayBadge={canStream && !streaming}
+              tag={
+                streaming
+                  ? { label: 'LIVE', tone: 'alert' }
+                  : streamFailed
+                    ? { label: 'Live unavailable' }
+                    : horse.row && !horse.row.hasCamera
+                      ? { label: 'No camera' }
+                      : undefined
+              }
+              accessibilityLabel={
+                streaming
+                  ? `${name} live camera, tap to stop`
+                  : canStream
+                    ? `${name} camera frame, tap to watch live`
+                    : `${name} camera frame`
+              }
               style={styles.hero}
             />
 

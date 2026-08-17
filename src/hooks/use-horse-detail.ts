@@ -5,7 +5,12 @@ import { useCallback, useMemo, useState } from 'react';
 import type { IStall } from '@acme/services/api/stall-monitor-management/stall';
 import { queries } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
-import { horseSelectionKey, joinHorseRow, type HorseRow } from '@/hooks/horses-data';
+import {
+  horseSelectionKey,
+  joinHorseRow,
+  stallLiveStreamUrl,
+  type HorseRow,
+} from '@/hooks/horses-data';
 import { buildPassport, type PassportField } from '@/hooks/horse-detail-data';
 import { useHorseGroups } from '@/hooks/use-horse-groups';
 
@@ -23,6 +28,8 @@ export interface HorseDetail {
   stallId?: string;
   /** The full stall record — slice 2 reads its Prometheus URL and monitor. */
   stall: IStall | undefined;
+  /** Live HLS manifest for this horse's stall, when it has a camera to stream. */
+  liveUri: string | undefined;
   /** The horse's first day in the system — the date bar's earliest bound. */
   createdAt: DateTime | undefined;
   /** True once we know the horse exists and has no stall — not while loading. */
@@ -87,7 +94,39 @@ export function useHorseDetail(id: string): HorseDetail {
 
   const animal = animalQuery.data;
 
+  /**
+   * The horse's stall — a SEPARATE request, because `animal.detail` does not
+   * carry the relation.
+   *
+   * Slice 1 assumed `animal.stall` would be populated and it never is: on
+   * device, a horse the list showed in "SM-93 Test 7" opened to a detail page
+   * claiming "No stall" and "No stall monitor" (caught 2026-08-17). The list
+   * gets its stalls from an organisation-wide `animalStall` + `stall` join;
+   * the current app fetches this same link per horse. One small filtered
+   * request is the right cost here — reusing the list's org-wide reads would
+   * be free on arrival from the list but expensive on a deep link.
+   */
+  const linkQuery = useQuery({
+    ...queries.animalStall.list(
+      {
+        organization_id: organizationID ?? '',
+        deleted_at__isnull: true,
+        include: 'stall',
+      },
+      [{ key: 'animal_id', value: id }],
+    ),
+    enabled,
+  });
+
+  const stall = useMemo<IStall | undefined>(() => {
+    // The API expands `stall` when asked; a string means it did not.
+    const link = (linkQuery.data?.data ?? []).find((row) => !row.deleted_at);
+    const expanded = link && typeof link.stall !== 'string' ? link.stall : undefined;
+    return expanded ?? animal?.stall;
+  }, [linkQuery.data, animal?.stall]);
+
   const { groupsFor, refetch: refetchGroups } = groupsQuery;
+  const { refetch: refetchLink } = linkQuery;
   const groupNames = useMemo(
     () => groupsFor(id).map((group) => group.name),
     [groupsFor, id],
@@ -98,14 +137,14 @@ export function useHorseDetail(id: string): HorseDetail {
     // prove a value pulled out of the query cache stays unmutated, and
     // hoisting it costs the component its memoization.
     if (animal) {
-      return joinHorseRow(animal, animal.stall, quantisedEpoch(refreshToken));
+      return joinHorseRow(animal, stall, quantisedEpoch(refreshToken));
     }
     return queryClient.getQueryData<HorseRow>(horseSelectionKey(id)) ?? null;
-  }, [animal, queryClient, id, refreshToken]);
+  }, [animal, stall, queryClient, id, refreshToken]);
 
   const passport = useMemo(
-    () => buildPassport({ animal, stall: animal?.stall, groupNames, isMetric }),
-    [animal, groupNames, isMetric],
+    () => buildPassport({ animal, stall, groupNames, isMetric }),
+    [animal, stall, groupNames, isMetric],
   );
 
   // Memoised on the raw string: built inline, this handed a new DateTime to
@@ -126,26 +165,29 @@ export function useHorseDetail(id: string): HorseDetail {
     // cached frame — the reason the epoch is quantised at all.
     setRefreshToken((token) => token + 1);
     try {
-      await Promise.all([animalQuery.refetch(), refetchGroups()]);
+      await Promise.all([animalQuery.refetch(), refetchLink(), refetchGroups()]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [animalQuery, refetchGroups]);
+  }, [animalQuery, refetchLink, refetchGroups]);
 
   const retry = useCallback(() => {
     void animalQuery.refetch();
+    void refetchLink();
     void refetchGroups();
-  }, [animalQuery, refetchGroups]);
+  }, [animalQuery, refetchLink, refetchGroups]);
 
   return {
     row,
     passport,
-    stallId: animal?.stall?.id,
-    stall: animal?.stall,
+    stallId: stall?.id,
+    stall,
+    liveUri: stallLiveStreamUrl(stall),
     createdAt,
-    hasNoStall: !!animal && !animal.stall,
-    hasResolvedStall: animalQuery.isSuccess,
-    detailsFailed: animalQuery.isError,
+    hasNoStall: linkQuery.isSuccess && !stall,
+    // Both must have landed: the animal alone cannot tell us about the stall.
+    hasResolvedStall: animalQuery.isSuccess && linkQuery.isSuccess,
+    detailsFailed: animalQuery.isError || linkQuery.isError,
     isLoading: animalQuery.isPending && enabled && !row,
     isError: animalQuery.isError,
     notFound: enabled && animalQuery.isSuccess && !animal,
