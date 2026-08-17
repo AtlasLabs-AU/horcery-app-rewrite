@@ -17,19 +17,19 @@ describe('deriveInStallStatus', () => {
     // A horse with no monitor has nothing to be "loading" or "unavailable" —
     // those words would imply a reading is coming.
     expect(
-      deriveInStallStatus({ value: undefined, hasCamera: false, isLoading: true, isError: true }),
+      deriveInStallStatus({ value: undefined, hasMonitor: false, canQuery: false, isLoading: true, isError: true }),
     ).toBe('no-camera');
   });
 
   it('distinguishes loading from unavailable from a genuine reading', () => {
     expect(
-      deriveInStallStatus({ value: undefined, hasCamera: true, isLoading: true, isError: false }),
+      deriveInStallStatus({ value: undefined, hasMonitor: true, canQuery: true, isLoading: true, isError: false }),
     ).toBe('loading');
     expect(
-      deriveInStallStatus({ value: undefined, hasCamera: true, isLoading: false, isError: true }),
+      deriveInStallStatus({ value: undefined, hasMonitor: true, canQuery: true, isLoading: false, isError: true }),
     ).toBe('unavailable');
     expect(
-      deriveInStallStatus({ value: undefined, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: undefined, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('unavailable');
   });
 
@@ -38,28 +38,44 @@ describe('deriveInStallStatus', () => {
     // all — indistinguishable from a horse that is simply fine. This is the
     // bug the five-state model exists to fix.
     expect(
-      deriveInStallStatus({ value: 0.3, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 0.3, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('unsure');
     expect(
-      deriveInStallStatus({ value: 0.5, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 0.5, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('unsure');
     expect(
-      deriveInStallStatus({ value: 0.7, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 0.7, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('unsure');
+  });
+
+  it('calls a monitor it cannot query "unavailable", not "no camera"', () => {
+    // A stall can carry a monitor and no `prometheus_url`. Calling that "No
+    // camera" contradicted the tile directly above it, which decides the same
+    // question from `stall_url` (review, 2026-08-17). A monitor we cannot
+    // reach is unreachable, not absent.
+    expect(
+      deriveInStallStatus({
+        value: undefined,
+        hasMonitor: true,
+        canQuery: false,
+        isLoading: false,
+        isError: false,
+      }),
+    ).toBe('unavailable');
   });
 
   it('calls in or out just outside the exclusion band', () => {
     expect(
-      deriveInStallStatus({ value: 0.71, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 0.71, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('in-stall');
     expect(
-      deriveInStallStatus({ value: 0.29, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 0.29, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('out-of-stall');
     expect(
-      deriveInStallStatus({ value: 1, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 1, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('in-stall');
     expect(
-      deriveInStallStatus({ value: 0, hasCamera: true, isLoading: false, isError: false }),
+      deriveInStallStatus({ value: 0, hasMonitor: true, canQuery: true, isLoading: false, isError: false }),
     ).toBe('out-of-stall');
   });
 });
@@ -144,5 +160,33 @@ describe('deriveOverlay', () => {
 
   it('is none for a normal, fully-resolved stall', () => {
     expect(deriveOverlay({ stall: stall(), hasResolvedStall: true, now: NOW })).toBe('none');
+  });
+
+  it('never claims "no stall" when the details request simply failed', () => {
+    // The regression this replaces: `hasResolvedStall` was `isSuccess ||
+    // isError`, so a failed fetch with a cached row rendered "No stall
+    // monitor" as a statement of fact about a horse that may well have one.
+    // An error is not an answer.
+    expect(
+      deriveOverlay({
+        stall: undefined,
+        hasResolvedStall: false,
+        detailsFailed: true,
+        now: NOW,
+      }),
+    ).toBe('details-unavailable');
+  });
+
+  it('prefers "unknown" over any stall-derived message when the fetch failed', () => {
+    // Even if a stale stall object is still in hand, a failed refresh means we
+    // cannot vouch for any of it.
+    expect(
+      deriveOverlay({
+        stall: stall({ hide_metrics_till: '2026-08-17T13:00:00.000Z' }),
+        hasResolvedStall: true,
+        detailsFailed: true,
+        now: NOW,
+      }),
+    ).toBe('details-unavailable');
   });
 });

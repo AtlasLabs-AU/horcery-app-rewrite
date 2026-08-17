@@ -18,14 +18,10 @@ import {
   noiseCategory,
   type InStallStatus,
 } from '@/hooks/horse-status-data';
+import { stallHasMetrics, stallHasMonitor } from '@/hooks/horses-data';
+import { liveSliceFor } from '@/hooks/playhead-data';
 import { firstPointValue, metricPointValue } from '@/services/prometheus/horse-readings';
 
-/**
- * How often a live reading re-asks. The current app uses ten minutes for the
- * in-stall query; the same number here, but the query is also keyed by the
- * cursor, so moving the date bar re-reads at once rather than waiting.
- */
-const LIVE_REFRESH_MS = 10 * 60 * 1000;
 
 export interface HorseReading {
   label: string;
@@ -35,8 +31,8 @@ export interface HorseReading {
 export interface HorseStatus {
   status: InStallStatus;
   readings: HorseReading[];
-  /** Whether this stall has a monitor fitted at all — separate from `enabled`. */
-  hasCamera: boolean;
+  /** Whether a stall monitor is fitted at all — separate from `enabled`. */
+  hasMonitor: boolean;
   isLoading: boolean;
   isError: boolean;
   refetch: () => void;
@@ -65,47 +61,49 @@ export function useHorseStatus({
 }): HorseStatus {
   const isMetric = useAuthStore((s) => s.userPreferences?.isMetric ?? true);
 
-  const prometheusUrl = stall?.prometheus_url;
-  const hasCamera = !!prometheusUrl && !!stall?.current_stall_monitor_deviceinstance;
-  const active = enabled && hasCamera;
-  // Whole seconds: a millisecond-precision cursor would mint a new query key
-  // on every render, so nothing would ever hit cache.
-  const atSeconds = Math.floor(cursor.toSeconds());
+  const hasMonitor = stallHasMonitor(stall);
+  const canQuery = stallHasMetrics(stall);
+  const active = enabled && canQuery;
+  // Never interpolate an absent URL: `${undefined}/` is a real string, and it
+  // would become a shared cache key across every stall-less horse — and a real
+  // request the moment anything widened `enabled`.
+  const baseUrl = canQuery ? `${stall?.prometheus_url}/` : '';
+  // Quantised, NOT the raw cursor — see `liveSliceFor`. The raw cursor moves
+  // every minute and would mint a new query key each time.
+  const atSeconds = liveSliceFor(cursor);
 
   const inStall = useQuery({
-    ...queries.prometheus.query(`${prometheusUrl}/`, ANIMAL_IN_STALL, [
+    ...queries.prometheus.query(baseUrl, ANIMAL_IN_STALL, [
       { key: 'time', value: `${atSeconds}` },
     ]),
     enabled: active,
-    refetchInterval: LIVE_REFRESH_MS,
   });
 
   const sensors = useQuery({
-    ...queries.prometheus.query(`${prometheusUrl}/`, STATISTICS_CARD_DATA, [
+    ...queries.prometheus.query(baseUrl, STATISTICS_CARD_DATA, [
       { key: 'time', value: `${atSeconds}` },
     ]),
     enabled: active,
-    refetchInterval: LIVE_REFRESH_MS,
   });
 
   const activeness = useQuery({
-    ...queries.prometheus.query(`${prometheusUrl}/`, ACTIVENESS_STATISTICS_DATA, [
+    ...queries.prometheus.query(baseUrl, ACTIVENESS_STATISTICS_DATA, [
       { key: 'time', value: `${atSeconds}` },
       { key: 'step', value: '15' },
     ]),
     enabled: active,
-    refetchInterval: LIVE_REFRESH_MS,
   });
 
   const status = useMemo(
     () =>
       deriveInStallStatus({
         value: firstPointValue(inStall.data),
-        hasCamera,
+        hasMonitor,
+        canQuery,
         isLoading: inStall.isPending && active,
         isError: inStall.isError,
       }),
-    [inStall.data, inStall.isPending, inStall.isError, hasCamera, active],
+    [inStall.data, inStall.isPending, inStall.isError, hasMonitor, canQuery, active],
   );
 
   const readings = useMemo<HorseReading[]>(() => {
@@ -143,7 +141,7 @@ export function useHorseStatus({
   return {
     status,
     readings,
-    hasCamera,
+    hasMonitor,
     isLoading: active && (inStall.isPending || sensors.isPending),
     isError: inStall.isError || sensors.isError,
     refetch,

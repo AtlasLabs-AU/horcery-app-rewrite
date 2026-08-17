@@ -117,21 +117,30 @@ export default function HorseDetailScreen() {
   // fictional horse has live readings.
   const overlay = isSample
     ? 'none'
-    : deriveOverlay({ stall: horse.stall, hasResolvedStall: horse.hasResolvedStall, now });
+    : deriveOverlay({
+        stall: horse.stall,
+        hasResolvedStall: horse.hasResolvedStall,
+        detailsFailed: horse.detailsFailed,
+        now,
+      });
   const status = useHorseStatus({
     stall: horse.stall,
     cursor: playhead.cursor,
     enabled: !isSample && overlay === 'none',
   });
 
+  // Both follow the date bar. The bar sits in the page frame, above the tabs,
+  // so the day it selects governs every tab — the same place the current app
+  // puts its date toolbar. Scoping the bar to Summary alone left the other two
+  // tabs quietly showing a different period (review, 2026-08-17).
   const events = useReviewHistory({
-    day: now,
+    day: playhead.day,
     animalId: id,
     windowDays: EVENT_WINDOW_DAYS,
     enabled: !isSample && activeTab === 'events',
   });
   const alerts = useReviewHistory({
-    day: now,
+    day: playhead.day,
     animalId: id,
     eventTypes: ALERT_EVENT_TYPES,
     windowDays: EVENT_WINDOW_DAYS,
@@ -166,6 +175,10 @@ export default function HorseDetailScreen() {
   const tabError = activeTab !== 'summary' && !isSample && active.isError;
 
   const name = horse.row?.name ?? 'Horse';
+  /** One phrase for the window, so the header and the empty state agree. */
+  const windowLabel = isToday(playhead.day, now)
+    ? `Last ${EVENT_WINDOW_DAYS} days`
+    : `${EVENT_WINDOW_DAYS} days to ${dayLabel(playhead.day, now)}`;
 
   const onRefresh = useCallback(() => {
     void horse.refresh();
@@ -263,6 +276,22 @@ export default function HorseDetailScreen() {
               </Text>
             </View>
 
+            {/*
+              Page frame, not the Summary tab: the selected day governs the
+              readings AND both event lists, so the control that sets it has to
+              be visible from all three. This is where the current app puts its
+              date toolbar too.
+            */}
+            {!isSample ? (
+              <HorseDateBar
+                day={playhead.day}
+                now={now}
+                earliest={horse.createdAt}
+                onChange={playhead.setDay}
+                onToday={playhead.resetToToday}
+              />
+            ) : null}
+
             <SegmentedControl<DetailTab>
               options={TABS}
               value={activeTab}
@@ -275,40 +304,29 @@ export default function HorseDetailScreen() {
             {activeTab === 'summary' ? (
               <View style={styles.summary}>
                 {!isSample ? (
-                  <>
-                    <HorseDateBar
-                      day={playhead.day}
-                      now={now}
-                      earliest={horse.createdAt}
-                      onChange={playhead.setDay}
-                      onToday={playhead.resetToToday}
-                    />
-                    {overlay !== 'none' ? (
-                      <HorseDetailNotice overlay={overlay} />
-                    ) : (
-                      <>
-                        <HorseStatusStrip
-                          status={status.status}
-                          readings={status.readings}
-                          atLabel={
-                            isToday(playhead.day, now)
-                              ? 'Live'
-                              : `${dayLabel(playhead.day, now)}, end of day`
-                          }
-                        />
-                        {status.hasCamera ? <BuiltInSettingsNote /> : null}
-                      </>
-                    )}
-                  </>
+                  overlay !== 'none' ? (
+                    <HorseDetailNotice overlay={overlay} />
+                  ) : (
+                    <>
+                      <HorseStatusStrip
+                        status={status.status}
+                        readings={status.readings}
+                        atLabel={
+                          isToday(playhead.day, now)
+                            ? 'Live'
+                            : `${dayLabel(playhead.day, now)}, end of day`
+                        }
+                      />
+                      {status.hasMonitor ? <BuiltInSettingsNote /> : null}
+                    </>
+                  )
                 ) : null}
                 <HorseStallCard stallName={horse.row?.stallName} />
                 <HorsePassport fields={passport} />
               </View>
             ) : (
               <View style={styles.tabIntro}>
-                <Text style={[type.footnote, { color: colors.tertiary }]}>
-                  {`Last ${EVENT_WINDOW_DAYS} days`}
-                </Text>
+                <Text style={[type.footnote, { color: colors.tertiary }]}>{windowLabel}</Text>
                 {activeTab === 'alerts' ? <ManageAlertsRow /> : null}
                 {isSample ? <SampleNote /> : null}
               </View>
@@ -323,7 +341,7 @@ export default function HorseDetailScreen() {
           ) : tabError ? (
             <HorsesError onRetry={() => void active.refetch()} />
           ) : (
-            <EmptyTab tab={activeTab} />
+            <EmptyTab tab={activeTab} windowLabel={windowLabel} />
           )
         }
         ListFooterComponent={
@@ -414,16 +432,21 @@ function SampleNote() {
   );
 }
 
-function EmptyTab({ tab }: { tab: DetailTab }) {
+function EmptyTab({ tab, windowLabel }: { tab: DetailTab; windowLabel: string }) {
   const { colors } = useTokens();
   const isAlerts = tab === 'alerts';
   return (
     <View style={[styles.state, { backgroundColor: colors.bed }]} testID={`horse-${tab}-empty`}>
       <Icon name={isAlerts ? 'alerts' : 'info'} size={20} color={colors.accent} />
       <Text style={[type.subhead, styles.stateText, { color: colors.secondary }]}>
+        {/*
+          Uses the same window phrase as the header. Hard-coding "the last 10
+          days" here contradicted the header the moment the date bar moved off
+          today (caught on device, 2026-08-17).
+        */}
         {isAlerts
-          ? `No alerts for this horse in the last ${EVENT_WINDOW_DAYS} days.`
-          : `Nothing recorded for this horse in the last ${EVENT_WINDOW_DAYS} days.`}
+          ? `No alerts for this horse — ${windowLabel.toLowerCase()}.`
+          : `Nothing recorded for this horse — ${windowLabel.toLowerCase()}.`}
       </Text>
     </View>
   );

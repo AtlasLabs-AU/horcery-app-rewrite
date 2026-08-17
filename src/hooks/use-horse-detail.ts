@@ -27,8 +27,17 @@ export interface HorseDetail {
   createdAt: DateTime | undefined;
   /** True once we know the horse exists and has no stall — not while loading. */
   hasNoStall: boolean;
-  /** True once the animal query has settled, success or not — not "we have a stall". */
+  /**
+   * True only when the horse's details actually LOADED.
+   *
+   * Deliberately NOT `isSuccess || isError`: an errored request tells us
+   * nothing about the stall, and treating it as resolved made the page state
+   * "No stall monitor" as a fact about a horse that may well have one
+   * (review, 2026-08-17).
+   */
   hasResolvedStall: boolean;
+  /** The details request failed. Callers must say "unknown", never guess. */
+  detailsFailed: boolean;
   isLoading: boolean;
   isError: boolean;
   notFound: boolean;
@@ -99,6 +108,18 @@ export function useHorseDetail(id: string): HorseDetail {
     [animal, groupNames, isMetric],
   );
 
+  // Memoised on the raw string: built inline, this handed a new DateTime to
+  // `usePlayhead` on every render, whose own memo then recomputed the day and
+  // cursor every render for no change in value.
+  // Bound to a local first: with `animal?.created_at` read inside the memo,
+  // the React Compiler infers a dependency on the whole `animal` object and
+  // refuses to preserve the memoization at all.
+  const createdAtISO = animal?.created_at;
+  const createdAt = useMemo(
+    () => (createdAtISO ? DateTime.fromISO(createdAtISO) : undefined),
+    [createdAtISO],
+  );
+
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
     // Bump only on an explicit pull, so repeat renders keep reusing the
@@ -121,9 +142,10 @@ export function useHorseDetail(id: string): HorseDetail {
     passport,
     stallId: animal?.stall?.id,
     stall: animal?.stall,
-    createdAt: animal?.created_at ? DateTime.fromISO(animal.created_at) : undefined,
+    createdAt,
     hasNoStall: !!animal && !animal.stall,
-    hasResolvedStall: animalQuery.isSuccess || animalQuery.isError,
+    hasResolvedStall: animalQuery.isSuccess,
+    detailsFailed: animalQuery.isError,
     isLoading: animalQuery.isPending && enabled && !row,
     isError: animalQuery.isError,
     notFound: enabled && animalQuery.isSuccess && !animal,

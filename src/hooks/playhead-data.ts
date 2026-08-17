@@ -73,6 +73,29 @@ export function canGoBack(day: DateTime, earliest?: DateTime): boolean {
   return day.startOf('day') > earliest.setZone(day.zone).startOf('day');
 }
 
+/**
+ * Live readings are asked for on a 5-minute grid, not at the exact instant.
+ *
+ * **This is what makes the metrics queries cacheable.** `useOrganizationNow`
+ * ticks every minute and the cursor follows it, so feeding the raw cursor into
+ * a query key minted a new key every 60 seconds: React Query saw a brand-new
+ * query each minute and refetched immediately — roughly 180 requests an hour
+ * instead of 18, with the `refetchInterval` meant to pace them never surviving
+ * long enough to fire (review, 2026-08-17).
+ *
+ * Flooring onto a slice means the key only moves on a boundary, and that
+ * movement *is* the refresh. Same 300s grid the camera frames already use in
+ * `useHorses`, `useSnapshots` and `useHorseDetail`.
+ *
+ * 5 minutes of staleness is proportionate: the underlying PromQL is itself a
+ * 90-second average, and the current app polls this every 10 minutes.
+ */
+export const LIVE_SLICE_SECONDS = 300;
+
+export function liveSliceFor(cursor: DateTime): number {
+  return Math.floor(cursor.toSeconds() / LIVE_SLICE_SECONDS) * LIVE_SLICE_SECONDS;
+}
+
 /** "Today", "Yesterday", or a written date — never a bare number. */
 export function dayLabel(day: DateTime, now: DateTime): string {
   if (isToday(day, now)) return 'Today';

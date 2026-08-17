@@ -32,18 +32,30 @@ export type InStallStatus =
 export interface InStallInput {
   /** Raw Prometheus value, or undefined when the query returned nothing. */
   value: number | undefined;
-  hasCamera: boolean;
+  /** Is a stall monitor fitted at all? */
+  hasMonitor: boolean;
+  /**
+   * Can that monitor's metrics actually be queried?
+   *
+   * Separate from `hasMonitor` deliberately. A stall can have a monitor and no
+   * `prometheus_url`, and calling that "No camera" contradicted the tile above
+   * it, which reads a different field (review, 2026-08-17). A monitor we
+   * cannot reach is unavailable, not absent.
+   */
+  canQuery: boolean;
   isLoading: boolean;
   isError: boolean;
 }
 
 export function deriveInStallStatus({
   value,
-  hasCamera,
+  hasMonitor,
+  canQuery,
   isLoading,
   isError,
 }: InStallInput): InStallStatus {
-  if (!hasCamera) return 'no-camera';
+  if (!hasMonitor) return 'no-camera';
+  if (!canQuery) return 'unavailable';
   if (isError) return 'unavailable';
   if (isLoading) return 'loading';
   if (value == null || Number.isNaN(value)) return 'unavailable';
@@ -111,16 +123,35 @@ export function isMetricsHidden(hideUntilISO: string | undefined, now: DateTime)
 }
 
 /** The page-wide "we cannot show readings" message, if any applies. */
-export type DetailOverlay = 'none' | 'no-stall' | 'metrics-hidden' | 'unsupported';
+export type DetailOverlay =
+  | 'none'
+  | 'no-stall'
+  | 'metrics-hidden'
+  | 'unsupported'
+  | 'details-unavailable';
 
 export interface OverlayInput {
   stall: IStall | undefined;
-  /** False while the horse is still loading — say nothing rather than guess. */
+  /**
+   * True only when the horse's details actually LOADED. An errored request is
+   * not a resolved one: treating it as such made a failed fetch render
+   * "No stall monitor" as a statement of fact about a horse that may well have
+   * one (review, 2026-08-17).
+   */
   hasResolvedStall: boolean;
+  /** The details request failed. We do not know, and must not guess. */
+  detailsFailed?: boolean;
   now: DateTime;
 }
 
-export function deriveOverlay({ stall, hasResolvedStall, now }: OverlayInput): DetailOverlay {
+export function deriveOverlay({
+  stall,
+  hasResolvedStall,
+  detailsFailed,
+  now,
+}: OverlayInput): DetailOverlay {
+  // Checked first: everything below reads fields we do not have.
+  if (detailsFailed) return 'details-unavailable';
   if (!hasResolvedStall) return 'none';
 
   // Checked before "no stall": an unsupported monitor is a more specific and
@@ -153,5 +184,10 @@ export const OVERLAY_COPY: Record<
     title: 'This view is not supported',
     detail:
       'The monitor in this stall cannot produce these readings. Support can tell you what it does cover.',
+  },
+  'details-unavailable': {
+    title: 'Readings unavailable',
+    detail:
+      "We couldn't load this horse's details, so we can't say what its monitor is reporting. Pull down to try again.",
   },
 };

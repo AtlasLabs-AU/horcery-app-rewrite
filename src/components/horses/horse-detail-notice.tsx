@@ -37,6 +37,7 @@ const ICON = {
   'no-stall': 'cameraOff',
   'metrics-hidden': 'clock',
   unsupported: 'info',
+  'details-unavailable': 'wifiOff',
 } as const;
 
 /**
