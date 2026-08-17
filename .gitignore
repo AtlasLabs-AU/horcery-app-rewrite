@@ -47,3 +47,6 @@ example
 # in fb17a7d5d but still recoverable). Not repeating that here.
 GoogleService-Info.plist
 google-services.json
+
+# Alerts A0 raw API pulls (never commit)
+scratch/
