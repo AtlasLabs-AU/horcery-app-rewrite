@@ -11,16 +11,12 @@
 import { AlertApplicationTypes } from '@/config/enums/alert-application-types';
 import { AlertFilter } from '@/config/enums/alert-filter';
 
-import type { RuleScope, Selection } from './types';
+import type { RuleScope, Selection, ServerRelation } from './types';
 
-interface RelationLike {
-  object_id?: string;
-  member_id?: string;
-  id?: string;
-  deleted_at?: string | null;
-}
+type RelationLike = ServerRelation;
 
-interface RuleLike {
+/** The subset of a server rule that scope reads. */
+export interface RuleLike {
   apply_type?: number | string | null;
   apply_condition?: number | string | null;
   notify_condition?: number | string | null;

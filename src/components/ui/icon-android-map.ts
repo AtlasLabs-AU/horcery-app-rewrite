@@ -31,6 +31,7 @@ const ANDROID: Record<IconName, ImageSourcePropType> = {
   settings: require('@expo/material-symbols/settings.xml'),
   clock: require('@expo/material-symbols/schedule.xml'),
   temperature: require('@expo/material-symbols/thermostat.xml'),
+  light: require('@expo/material-symbols/light_mode.xml'),
   humidity: require('@expo/material-symbols/water_drop.xml'),
   account: require('@expo/material-symbols/person.xml'),
   organization: require('@expo/material-symbols/apartment.xml'),

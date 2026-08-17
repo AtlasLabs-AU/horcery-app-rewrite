@@ -14,90 +14,125 @@ import type { IconName } from '@/components/ui/icon-names';
 /** Which measurement system the user prefers; drives display units. */
 export type Units = 'metric' | 'imperial';
 
+// ------------------------------------------------------------ server shapes (input)
+
+/**
+ * The parts of the API's alert type / alert rule the domain reads. Declared
+ * here rather than imported from `src/services` so this layer stays free of
+ * service imports (plan §3). Field names are the API's.
+ */
+export interface ServerAlertType {
+  id?: string;
+  slug?: string;
+  name: string;
+  category?: number;
+  threshold_type?: number;
+  display_unit_singular?: string | null;
+  display_unit_plural?: string | null;
+  AppMetaData?: unknown;
+}
+
+export interface ServerRelation {
+  id?: string;
+  object_id?: string;
+  member_id?: string;
+  deleted_at?: string | null;
+}
+
+export interface ServerAlertRule {
+  id?: string;
+  alert_type: string | { id?: string; slug?: string };
+  organization_id?: string | null;
+  condition?: string | null;
+  threshold_value?: number | string | null;
+  display_value?: number | null;
+  is_custom?: boolean;
+  is_custom_duration?: boolean;
+  trigger_duration?: string | null;
+  query_range_duration?: string | null;
+  query_type?: number | string | null;
+  evaluation_start_time?: string | null;
+  evaluation_end_time?: string | null;
+  apply_type?: number | string | null;
+  apply_condition?: number | string | null;
+  notify_condition?: number | string | null;
+  is_push?: boolean;
+  is_sms?: boolean;
+  is_email?: boolean;
+  rule_application_ids?: string[] | null;
+  rule_notification_ids?: string[] | null;
+  alert_application_rules?: ServerRelation[] | null;
+  alert_notification_rules?: ServerRelation[] | null;
+  UNATTESTED_META_DATA?: Record<string, unknown> | null;
+}
+
 // ------------------------------------------------------------ descriptors
 
 export type ThresholdKind =
-  | 'duration'
-  | 'count'
-  | 'degrees'
-  | 'luminance'
-  | 'decibels'
-  | 'percentage'
-  | 'number'
-  | 'boolean'
-  | 'selection';
+  | 'degrees' // temperature, temp-change — °C stored, user's units shown
+  | 'count' // lying-down-count
+  | 'duration' // lying-down-time, people-in-stall-time — minutes shown; storage shape by `basedOn`
+  | 'selection' // light — index into options
+  | 'boolean' // entering/exiting/people-in-stall
+  | 'number'; // generic fallback
+
+export type DescriptorCategory = 'behavioural' | 'environmental' | 'presence' | 'general';
 
 export interface ThresholdPreset {
-  /** Human label, e.g. "Low" / "Medium" / "High" or "30 min". */
+  /** Human label, e.g. "30" or "Low". */
   label: string;
-  /** Value in DISPLAY units for the given `Units`. */
+  /** Value in DISPLAY units of the form (degrees in the user's units, minutes, count, or option value). */
   value: number;
 }
 
 export interface SelectionOption {
   label: string;
-  value: number | string;
-}
-
-export interface DurationUnitLabel {
-  /** Storage/display unit token. */
-  unit: 'min' | 'h';
+  value: number;
 }
 
 /**
- * One alert type, as data. The registry supplies the parts the server does
- * not; `resolveDescriptor` merges the two (server wins for presets/defaults).
+ * One alert type, as data. The registry supplies what the server does not
+ * (kind, comparators, icon, window rules, sentence); `resolveDescriptor`
+ * merges the server's `AppMetaData` scales in as presets/options.
+ * Ground truth: docs/handovers/Alerts_A0_Ground_Truth.md.
  */
 export interface AlertTypeDescriptor {
-  /** Stable key, e.g. 'lying-down-time'. `generic` when unknown. */
   slug: string;
-  /** Server id, present once resolved against an IAlertType. */
-  id?: string;
-  /** Display name (server's `name`). */
+  /** Server id, once resolved. */
+  id: string;
+  /** Server display name. */
   name: string;
-  category: 'behavioural' | 'environmental' | 'general';
+  category: DescriptorCategory;
   icon: IconName;
 
   threshold: {
     kind: ThresholdKind;
-    /** Unit label per system, e.g. { metric: '°C', imperial: '°F' }. */
+    /** Unit label per system for `degrees` (°C / °F). Others are unitless or minutes. */
     unit?: { metric: string; imperial: string };
-    /** Validation bounds in DISPLAY units per system. */
-    range?: { metric?: [number, number]; imperial?: [number, number] };
-    /** Sensitivity presets in DISPLAY units per system. */
-    presets?: { metric: ThresholdPreset[]; imperial: ThresholdPreset[] };
+    /** Presets in DISPLAY units. For degrees the SAME numbers apply in either system (A0 §1.1). */
+    presets?: ThresholdPreset[];
     /** Options when kind === 'selection'. */
     options?: SelectionOption[];
     allowCustom: boolean;
   };
 
-  /** "for more than N" → `trigger_duration`. */
-  triggerDuration?: {
-    presets?: number[];
-    unit: 'min' | 'h';
-    allowCustom: boolean;
-  };
-  /** "within any N" → `query_range_duration`. */
-  queryRange?: {
-    required: boolean;
-    unit: 'min' | 'h';
-  };
-  /** "based on" → `query_type` (1 single, 2 combined). */
+  /**
+   * "for N minutes" → `trigger_duration`, on types whose THRESHOLD is not
+   * itself a duration (light, boolean presence). Duration-kind types store
+   * their time via `basedOn` instead.
+   */
+  triggerDuration?: { presetsMinutes?: number[]; allowCustom: boolean };
+  /** "within any N" → `query_range_duration`, in minutes. */
+  queryRange?: { required: boolean; presetsMinutes: number[] };
+  /** "based on" → `query_type`. 1 = single/continuous, 2 = combined/total. */
   basedOn?: SelectionOption[];
 
-  /** Comparators that make sense for this type. */
+  /** Comparators the form offers. Reading is always faithful to what is stored. */
   conditions: AlertCondition[];
 
-  /** Notify-window rules. */
-  window: {
-    minMinutes: number;
-    requireDistinct: boolean;
-  };
+  window: { minMinutes: number; requireDistinct: boolean };
 
-  /**
-   * True when the descriptor was NOT found in the registry and the generic
-   * fallback is in use — the UI says so ("showing basic settings").
-   */
+  /** True when built from the generic fallback — the UI says so. */
   isGeneric: boolean;
 }
 
@@ -152,25 +187,35 @@ export interface RuleScope {
 // ------------------------------------------------------------ form
 
 /**
- * What the Configure screen edits. Flat, typed, DISPLAY units. `payload.ts`
- * converts to and from the API's storage shape.
+ * What the Configure screen edits — flat, typed, DISPLAY units. It is also
+ * what `payload.toForm` produces from an API rule, so it must be able to
+ * carry every stored shape faithfully (A0 §2.1), even ones the new form
+ * would not author. `payload.toPayload` converts back.
  */
 export interface AlertRuleForm {
   alertTypeId: string;
   slug: string;
   condition: AlertCondition | null;
-  /** Threshold in display units; null when a preset drives it. */
+  /** degrees (user's units) · count · selection option value · null when unset. */
   thresholdValue: number | null;
-  /** Index into descriptor.threshold.presets[units]; null when custom. */
-  presetIndex: number | null;
-  /** Selection option value when threshold.kind === 'selection'. */
-  selectionValue: number | string | null;
-  /** Boolean state when threshold.kind === 'boolean'. */
+  /** boolean kinds: detected (true) or not (false). */
   booleanValue: boolean | null;
-  triggerDuration: number | null; // in descriptor.triggerDuration.unit
-  triggerCustom: boolean;
-  queryRange: number | null; // in descriptor.queryRange.unit
-  basedOn: number | string | null;
+  /** `is_custom` — the user left the preset scale. */
+  isCustom: boolean;
+  /**
+   * Minutes. For duration-kind types this IS the threshold ("for more than
+   * 60 min"); for trigger types it is "for N min". Storage shape depends on
+   * the descriptor and `basedOn`.
+   */
+  durationMinutes: number | null;
+  /** `is_custom_duration`. */
+  isCustomDuration: boolean;
+  /** `query_type` — 1 single, 2 combined; null when the type has none. */
+  basedOn: number | null;
+  /** `query_range_duration` in minutes. */
+  queryRangeMinutes: number | null;
+  /** `is_push`. Always true for new rules; read faithfully. */
+  pushEnabled: boolean;
   window: AlertWindow;
   scope: RuleScope;
 }
@@ -179,10 +224,9 @@ export type FieldErrors = Partial<
   Record<
     | 'condition'
     | 'thresholdValue'
-    | 'selectionValue'
     | 'booleanValue'
-    | 'triggerDuration'
-    | 'queryRange'
+    | 'durationMinutes'
+    | 'queryRangeMinutes'
     | 'basedOn'
     | 'window'
     | 'scope',

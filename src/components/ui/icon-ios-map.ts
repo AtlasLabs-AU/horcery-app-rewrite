@@ -27,6 +27,7 @@ const IOS: Record<IconName, SFSymbol> = {
   settings: 'gearshape.fill',
   clock: 'clock',
   temperature: 'thermometer.medium',
+  light: 'sun.max',
   humidity: 'drop',
   account: 'person.crop.circle',
   organization: 'building.2',

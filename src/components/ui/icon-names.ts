@@ -30,6 +30,7 @@ export type IconName =
   | 'settings'
   | 'clock'
   | 'temperature'
+  | 'light'
   | 'humidity'
   // Menu / More destinations
   | 'account'
