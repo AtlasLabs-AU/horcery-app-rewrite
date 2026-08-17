@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import type { MenuAction, MenuProps } from '@/components/ui/menu-types';
-import { useSheetScale } from '@/components/ui/sheet-scale';
+import { useSheetBackdrop } from '@/components/ui/sheet-backdrop';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -38,10 +38,10 @@ export type { MenuAction, MenuProps } from '@/components/ui/menu-types';
  * the look but had no gesture at all, and hand-writing drag physics is
  * exactly where "smooth over showy" goes wrong.
  *
- * The one thing the native sheet does not do is move the app behind it, and
- * that recession is the part of the MotionFlix transition Inakshi picked. It
- * lives in `SheetScaleHost`, wrapped around the root navigator — see the note
- * there for why that is the only hand-animated piece.
+ * The one thing the native sheet does not do is change the app behind it. A
+ * soft blur does that — see `SheetBackdropHost`, wrapped around the root
+ * navigator. (An earlier version shrank the app instead; Inakshi rejected it
+ * on device, and the note there says why.)
  *
  * Content is ordinary React Native, so the rows take the design tokens like
  * everything else. This file has no platform fork at all — the previous
@@ -61,15 +61,15 @@ export function Menu({
   const { colors } = useTokens();
   const [open, setOpen] = useState(false);
   const empty = actions.length === 0;
-  const sheetScale = useSheetScale();
+  const backdrop = useSheetBackdrop();
 
-  // The app recedes while the sheet is up, and comes back when it goes —
-  // including when the sheet is DRAGGED away rather than dismissed by us.
+  // The app blurs while the sheet is up, and clears when it goes — including
+  // when the sheet is DRAGGED away rather than dismissed by us.
   useEffect(() => {
     if (!open) return undefined;
-    sheetScale.present();
-    return () => sheetScale.release();
-  }, [open, sheetScale]);
+    backdrop.present();
+    return () => backdrop.release();
+  }, [open, backdrop]);
 
   const runAction = useCallback(
     (action: MenuAction) => {

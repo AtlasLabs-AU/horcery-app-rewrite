@@ -6,7 +6,7 @@ import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
 import { AuthFlow } from '@/components/auth/auth-flow';
 import { LockScreen } from '@/components/auth/lock-screen';
-import { SheetScaleHost } from '@/components/ui/sheet-scale';
+import { SheetBackdropHost } from '@/components/ui/sheet-backdrop';
 import { PREVIEWS } from '@/config/previews';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
@@ -74,12 +74,10 @@ function SessionGate() {
 
   return (
     /*
-      Wraps the whole navigator so an open sheet pushes the ENTIRE app back —
-      tab bar included — rather than shrinking a screen inside a stationary
-      frame. See `SheetScaleHost` for why this is the one hand-animated part
-      of the sheet.
+      Wraps the whole navigator so an open sheet blurs the ENTIRE app — tab
+      bar included — rather than blurring one screen inside a sharp frame.
     */
-    <SheetScaleHost>
+    <SheetBackdropHost>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -91,6 +89,6 @@ function SessionGate() {
           }}
         />
       </Stack>
-    </SheetScaleHost>
+    </SheetBackdropHost>
   );
 }
