@@ -35,6 +35,15 @@ function unitsFor(rule: ServerAlertRule): Units {
 }
 
 const toMinute = (hms: string | null | undefined) => (hms ?? '').slice(0, 5);
+const minutesOf = (hms: string | null | undefined) => {
+  const [h = 0, m = 0] = (hms ?? '').split(':').map(Number);
+  return h * 60 + m;
+};
+const isWholeDayPair = (start: string | null | undefined, end: string | null | undefined) => {
+  let diff = minutesOf(end) - minutesOf(start);
+  if (diff < 0) diff += 24 * 60;
+  return diff >= 24 * 60 - 2;
+};
 
 describe('A0 fixtures', () => {
   it('has the nine server types and 31 rules', () => {
@@ -80,8 +89,15 @@ describe('golden: toForm → toPayload reproduces every stored rule', () => {
     } else {
       expect(payload.query_type).toBeUndefined();
     }
-    expect(toMinute(payload.evaluation_start_time)).toBe(toMinute(rule.evaluation_start_time));
-    expect(toMinute(payload.evaluation_end_time)).toBe(toMinute(rule.evaluation_end_time));
+    // Windows compare to the minute — except a whole-day pair, which may
+    // legitimately re-save anchored to the BARN day (00:00–23:59 UTC written by
+    // the old app reads as any time and comes back as Chicago's whole day).
+    if (isWholeDayPair(rule.evaluation_start_time, rule.evaluation_end_time)) {
+      expect(isWholeDayPair(payload.evaluation_start_time, payload.evaluation_end_time)).toBe(true);
+    } else {
+      expect(toMinute(payload.evaluation_start_time)).toBe(toMinute(rule.evaluation_start_time));
+      expect(toMinute(payload.evaluation_end_time)).toBe(toMinute(rule.evaluation_end_time));
+    }
     expect(payload.apply_type).toBe(Number(rule.apply_type));
     expect(payload.apply_condition).toBe(Number(rule.apply_condition));
     expect(payload.notify_condition).toBe(Number(rule.notify_condition));

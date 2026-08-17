@@ -142,11 +142,16 @@ function clockMinutes(t: ClockTime): number {
   return t.hour * 60 + t.minute;
 }
 
+/**
+ * A window that covers the whole day IS "any time" wherever it starts:
+ * 00:00 → 23:59, but also 19:00 → 18:59 — which is exactly what an old-app
+ * rule stored as 00:00–23:59 UTC reads as in Chicago (found on device,
+ * A2). Length-based, with a minute of slack for the `:59` second.
+ */
 function isWholeDay(start: ClockTime, end: ClockTime): boolean {
-  const s = clockMinutes(start);
-  const e = clockMinutes(end);
-  // 00:00 → 23:59, allowing a minute of slack either side.
-  return s <= 1 && e >= 23 * 60 + 58;
+  let diff = clockMinutes(end) - clockMinutes(start);
+  if (diff < 0) diff += 24 * 60;
+  return diff >= 24 * 60 - 2;
 }
 
 /** True when the window is (or reads as) the whole barn day. */

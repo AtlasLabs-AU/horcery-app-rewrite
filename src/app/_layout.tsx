@@ -10,6 +10,7 @@ import { LockScreen } from '@/components/auth/lock-screen';
 import { SheetBackdropHost } from '@/components/ui/sheet-backdrop';
 import { ToastHost } from '@/components/ui/toast';
 import { PREVIEWS } from '@/config/previews';
+import { useMembershipSync } from '@/hooks/use-membership-sync';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
 import { initRemoteConfig } from '@acme/config/firebase-remote-config';
@@ -42,6 +43,8 @@ export function ErrorBoundary(props: Parameters<typeof AppError>[0]) {
  */
 function SessionGate() {
   const { status } = useSession();
+  // Role for the current organization (memberType / memberId) — see the hook.
+  useMembershipSync();
 
   /**
    * Face ID gate (front-end preview): lock only when a session was RESTORED

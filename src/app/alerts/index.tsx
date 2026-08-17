@@ -1,7 +1,6 @@
-import { FlashList } from '@shopify/flash-list';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { AlertRuleRow } from '@/components/alerts/alert-rule-row';
 import { useAlertsPermissions } from '@/components/alerts/alerts-permissions';
@@ -9,7 +8,12 @@ import { AlertsPreviewBanner } from '@/components/alerts/alerts-preview-banner';
 import { ErrorState, ListSkeleton, NoInternetState, StateShell } from '@/components/app/page-states';
 import { Icon } from '@/components/ui/icon';
 import { PREVIEWS } from '@/config/previews';
-import { SAMPLE_ALERT_RULES, SAMPLE_ALERT_TYPES, SAMPLE_CURRENT_MEMBER_ID } from '@/config/sample/alerts-sample';
+import {
+  SAMPLE_ALERT_RULES,
+  SAMPLE_ALERT_TYPES,
+  SAMPLE_BARN_ZONE,
+  SAMPLE_CURRENT_MEMBER_ID,
+} from '@/config/sample/alerts-sample';
 import { radius, space, type } from '@/constants/tokens';
 import type { ServerAlertRule, Units } from '@/domain/alerts/types';
 import { describeRule, type AlertRuleView } from '@/domain/alerts/view';
@@ -53,6 +57,10 @@ export default function ManageAlertsScreen() {
 
   const source: ServerAlertRule[] = usingSample ? SAMPLE_ALERT_RULES : rules.rules;
   const currentMemberId = usingSample ? SAMPLE_CURRENT_MEMBER_ID : memberId;
+  // Sample rules are authored in the sample barn's zone; reading them in the
+  // real organization's zone would (correctly) flag every one as drifted.
+  const zone = usingSample ? SAMPLE_BARN_ZONE : barn.zone;
+  const zoneFallback = usingSample ? false : barn.fallback;
 
   const views = useMemo<AlertRuleView[]>(
     () =>
@@ -61,14 +69,14 @@ export default function ManageAlertsScreen() {
           describeRule(rule, {
             descriptorsById: types.byId,
             units,
-            zone: barn.zone,
-            zoneFallback: barn.fallback,
+            zone,
+            zoneFallback,
             now,
             currentMemberId,
           }),
         )
         .filter((v): v is AlertRuleView => v !== null),
-    [source, types.byId, units, barn.zone, barn.fallback, now, currentMemberId],
+    [source, types.byId, units, zone, zoneFallback, now, currentMemberId],
   );
 
   const loading = !usingSample && (rules.isLoading || types.isLoading || barn.isLoading);
@@ -106,7 +114,7 @@ export default function ManageAlertsScreen() {
           </Text>
         </View>
       ) : null}
-      {barn.fallback && !loading ? (
+      {zoneFallback && !loading ? (
         <View style={[styles.note, { backgroundColor: colors.bed }]} testID="alerts-zone-fallback-note">
           <Icon name="clock" size={15} color={colors.accent} />
           <Text style={[type.footnote, styles.noteText, { color: colors.secondary }]}>
@@ -131,12 +139,20 @@ export default function ManageAlertsScreen() {
   );
 
   return (
-    <View style={[styles.page, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: 'Alerts', headerLargeTitle: true, headerTransparent: true }} />
-      <FlashList
+    <>
+      {/*
+        The list is the screen's DIRECT child, and a plain FlatList: iOS only
+        collapses a large title when the scroll view is the top-level view of
+        the screen. Inside a wrapper View (and FlashList's own wrapper) the
+        title floated over the content on scroll — seen on device, A2.
+        Not headerTransparent either: the native header owns its background.
+      */}
+      <Stack.Screen options={{ title: 'Alerts', headerLargeTitle: true }} />
+      <FlatList
+        style={[styles.page, { backgroundColor: colors.background }]}
+        contentInsetAdjustmentBehavior="automatic"
         data={views}
         keyExtractor={(item) => item.id}
-        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={rules.isRefreshing} onRefresh={() => void rules.refresh()} />
@@ -175,7 +191,7 @@ export default function ManageAlertsScreen() {
         }}
         onEndReachedThreshold={0.5}
       />
-    </View>
+    </>
   );
 }
 

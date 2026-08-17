@@ -66,7 +66,8 @@ export function describeRule(rule: ServerAlertRule, ctx: DescribeContext): Alert
 
 /** Human line for a drift badge / banner. */
 export function driftLabel(drift: Drift): string {
-  if (drift.kind === 'zone') return `Barn timezone changed (${drift.from} → ${drift.to})`;
+  // Short enough for a badge; Configure shows the from → to zones in full.
+  if (drift.kind === 'zone') return 'Barn timezone changed since saved';
   const h = Math.abs(drift.minutes) / 60;
   const amount = Number.isInteger(h) ? `${h} h` : `${Math.abs(drift.minutes)} min`;
   return `Shifted ${amount} since the clocks changed`;

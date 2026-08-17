@@ -143,3 +143,6 @@ export const SAMPLE_ALERT_RULES: ServerAlertRule[] = [
 
 /** The member id that makes the "Me" tag appear in sample mode. */
 export const SAMPLE_CURRENT_MEMBER_ID = 'sample-member-me';
+
+/** The sample barn's timezone; the rules above are authored in it. */
+export const SAMPLE_BARN_ZONE = 'America/Chicago';
