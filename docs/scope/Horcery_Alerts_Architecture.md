@@ -1,0 +1,301 @@
+# Alerts — frontend architecture for the rewrite
+
+**Date:** 2026-08-17 · **Author:** Claude, for Inakshi · **Status:** DRAFT — architecture only, nothing built
+**Input:** `Horcery_Manage_Alerts_Review.md` (the shipping app, rated 5/10) · requirements §2, §4d, §6b · `PRINCIPLES.md`
+**Constraint:** **frontend only.** The API is what it is today. Where the backend limits us, this document says so and designs around it rather than waiting.
+
+---
+
+## 0. In one paragraph
+
+Alerts is the reason people buy a stall monitor, and it is a **write** feature — the first one the rewrite takes on properly. The shipping app's ideas are good (plain-English summary, sensitivity presets, All/Selected/Excluded scoping, confirm-on-edit); its code is not (2,400-line screen, per-type logic by string matching, device-timezone bug, no permission gate on create, no tests). This design keeps every idea and none of the code. It has **five layers** — services (exist) → query hooks → an **alert domain** (a descriptor per alert type, a summary formatter, a window codec) → thin forms → screens on the surface layer. Every alert type is **data, not code**. The time window is stored **in barn time**, using the organization's zone, and the app **detects and shows** when a stored window has drifted after a clock change. Create/edit/delete are **role-gated at the route**, and the whole thing runs behind the existing production write gate until Inakshi lifts it.
+
+---
+
+## 1. Scope
+
+### In
+- **Manage Alerts** list (rules for the org, summary sentence, scope tags, add, edit, delete).
+- **Create/Edit** flow: choose type → configure (condition, sensitivity/threshold, time value, window, apply-to, send-to) → save; edit path confirms.
+- **Targets picker** (horses / stalls / members; All · Selected · Excluded; **with search**).
+- **Alerts tab on Horse (and later Stall) details** — the alert *list* part; the frequency chart is a chart and waits for §6a.
+- Timezone-correct windows; permission gating; honest states; tests.
+
+### Out (recorded so nobody "restores" them)
+- **Suggested alerts** — Inakshi, 2026-08-17: leave for now. No `suggestedAlert` query, no route, no empty-state carousel. Kept in the services layer only because it exists there already; nothing calls it.
+- **Chat notifications** toggle (dev-only in the shipping app).
+- **SMS / email** channels (`is_sms`, `is_email` always false in the shipping app; the field stays in the payload as false).
+- The **alert frequency chart** (renderer decision §6a).
+- **Backend changes** — see §7 for what we would ask for, and what we do meanwhile.
+
+---
+
+## 2. Principles applied to this feature
+
+| Principle | What it forces here |
+|---|---|
+| Universal components; platform forks only in `src/components/ui` | Native segmented control for All/Selected/Excluded, native date/time picker for the window, native bottom sheet for pickers and confirms; nothing iOS-only in a screen |
+| Native over custom | Header search in the picker (`headerSearchBarOptions`), native `Switch`/Toggle, native time picker — not the shipping app's custom keyboard-aware form scaffolding |
+| Clean, minimalist, editorial palette | One card per concern; ink and grey; purple only on Save/Complete; status red only for Delete and validation |
+| Explained and reversible | Every control has a description; edit confirms with the summary; delete confirms and names the alert |
+| Honest states | Loading / empty / error / offline per screen; **"window has shifted since clocks changed"** is a first-class state, not a silent one |
+| Tokens never literals | Enforced by `no-color-literals` |
+| Read-only against production **until lifted** | All mutations go through `GenericService`'s `assertWriteAllowed`; the form is complete and testable; Save is disabled-with-reason while writes are blocked |
+| Measured not asserted | Request count on open (target ≤ 2), and a golden test per alert type |
+| Accessible by default | Row label = the summary sentence; one button per row; pickers announce selection counts |
+
+---
+
+## 3. Layers
+
+```
+src/app/alerts/…                     screens (thin; compose hooks + components)
+src/components/alerts/…              feature components (rule row, scope tags, insight card, field widgets)
+src/components/ui/…                  surface layer (segmented, sheet, time-picker, toggle, menu) — platform forks live ONLY here
+src/domain/alerts/…                  NEW: pure TypeScript, no React, fully tested
+   ├─ descriptor.ts                    AlertTypeDescriptor registry + merge with server AppMetaData
+   ├─ summary.ts                       ruleSummary(rule, descriptor, units, zone) → string
+   ├─ window.ts                        barn-time ⇄ UTC HMS codec, drift detection
+   ├─ payload.ts                       form → API payload; API rule → form
+   ├─ scope.ts                         apply/notify tag text, id extraction
+   └─ schema.ts                        zod schema built FROM a descriptor (pure function, memoisable)
+src/hooks/alerts/…                    React Query hooks (rules, types, targets, mutations)
+src/services/…                        exists — alertRule, alertType, member/animal/stall services
+```
+
+The domain layer is the point of the design. It is where every alert type's behaviour lives, it has no React in it, and it is what the golden tests exercise. Screens become small.
+
+---
+
+## 4. Domain model
+
+### 4.1 `AlertTypeDescriptor` — one alert type, as data
+
+The shipping app scatters per-type behaviour across four files by matching on `slug` strings. The backend already sends *part* of the description in `AlertType.AppMetaData` (`sensitivity_scale`, `duration_scale`, `selectables`, defaults). We make one object:
+
+```ts
+interface AlertTypeDescriptor {
+  slug: string;                       // 'lying-down-time'
+  category: 'behavioural' | 'environmental' | 'general';
+  icon: IconName;
+  threshold: {
+    kind: 'duration' | 'count' | 'degrees' | 'luminance' | 'boolean' | 'selection';
+    unit?: { metric: string; imperial: string };     // '°C' / '°F', 'min' / 'min'
+    range?: { min: number; max: number };            // validation bounds (display units)
+    presets?: Array<{ label: string; value: number }>;  // sensitivity scale, DISPLAY units
+    allowCustom: boolean;
+  };
+  timeValue?: { kind: 'trigger' | 'range'; presets?: number[]; unit: 'min' | 'h' };
+  conditions: AlertCondition[];        // which comparators make sense: temp → > <, boolean → ==
+  window: { minMinutes: number; requireDistinct: boolean };  // notify-window rules
+  summary: (ctx: SummaryContext) => string;   // the plain-English sentence
+}
+```
+
+**Registry:** `src/domain/alerts/descriptors/*.ts`, one file per slug, plus `generic.ts` for any slug the server sends that we don't know — it renders a plain threshold + condition + window form and a generic sentence, so **a new backend alert type never breaks the app**. `resolveDescriptor(alertType)` = registry[slug] merged over `AppMetaData` (server values win for presets/defaults where present).
+
+**Why:** adding an alert type becomes one file and one golden test. Nothing else changes.
+
+### 4.2 `AlertWindow` — the time window, in barn time
+
+```ts
+interface AlertWindow {
+  mode: 'any' | 'custom';
+  start?: { hour: number; minute: number };   // barn local
+  end?:   { hour: number; minute: number };
+  zone: string;                                // IANA, from the organization
+}
+```
+
+See §7 for the codec and drift model.
+
+### 4.3 `RuleScope`
+
+```ts
+interface RuleScope { target: 'horses' | 'stalls'; apply: Selection; notify: Selection; }
+type Selection = { mode: 'all' } | { mode: 'include' | 'exclude'; ids: string[] };
+```
+
+`scope.ts` produces the tag text ("All Horses" / "3 Stalls" / "All except 2" / "Me" / "Everyone").
+
+### 4.4 `AlertRuleForm` (what the form edits)
+
+Flat, typed, in **display units**; `payload.ts` converts to the API's storage units both ways. Every conversion is a pure function with a test.
+
+---
+
+## 5. Data & hooks (`src/hooks/alerts`)
+
+| Hook | Query | Notes |
+|---|---|---|
+| `useAlertTypes()` | `alertType.listComplete` | Cached long (`staleTime` 1h); resolves each into a descriptor once |
+| `useAlertRules(orgId)` | `alertRule.infiniteList` with `include=alert_application_rules,alert_notification_rules` | The one paginated list. `enabled: !!orgId` |
+| `useAlertRule(id)` | reads the list cache first, else `alertRule.detail(id)` | **Rule by id, never rule-in-URL** |
+| `useTargets(kind)` | `member/animal/stall.listComplete` | Only the kind the picker is open for; all pages |
+| `useSaveAlertRule()` | `create` / `updatePatch` | Invalidates `alertRule.infiniteList`; optimistic row update on edit |
+| `useDeleteAlertRule()` | `delete` | Invalidates; navigates back |
+
+**Request budget on opening Manage Alerts: 2** (types, rules) — the shipping app fires 3 including the dead suggested-alerts query. Measured and reported per §2.
+
+**Write gate:** every mutation goes through `GenericService`, which throws when pointed at production without `EXPO_PUBLIC_ALLOW_PRODUCTION_WRITES`. The hooks surface that as a typed `WriteBlockedError` so the UI can say *"Saving is switched off in this build"* rather than a generic failure.
+
+---
+
+## 6. Navigation & screens
+
+### 6.1 Routes (`src/app/alerts/`)
+
+```
+alerts/_layout.tsx        native Stack, headerLargeTitle on index
+alerts/index.tsx          Manage Alerts (list)
+alerts/new.tsx            step 1: choose type
+alerts/configure.tsx      step 2: configure (params: typeId)  — also EDIT with params: ruleId
+```
+
+Pickers and confirms are **sheets** (surface `Menu`/bottom sheet), not routes. Entry points: More menu row, Horse/Stall Alerts tab row, For You alert cards — all `router.push('/alerts')`; edit is `router.push({ pathname: '/alerts/configure', params: { ruleId } })`.
+
+**Permission gate lives in `alerts/_layout.tsx`**: reads `memberType`; VIEWER/GUEST/RESTRICTED get a read-only list (rows open a read-only detail sheet), no Add, no Save, no Delete — visibly, with a reason ("Only editors and admins can change alerts"). Not per-button. Not per-entry-row.
+
+### 6.2 Manage Alerts (`alerts/index.tsx`)
+
+- Native large title "Alerts", header `+` (hidden for read-only roles).
+- List of `AlertRuleRow`: icon · type name · **summary sentence** (`domain/summary`) · two `ScopeTag`s · **drift badge** when §7 says the window has shifted.
+- Row `accessibilityLabel` = `"${typeName}. ${summary}. ${applyTag}, ${notifyTag}"`. One pressable per row.
+- Sections? No — one list, newest first, as shipping. (Grouping by type is a later nicety.)
+- States: skeleton (3 rows) · empty ("No alerts yet. Alerts tell you when something needs a look." + Add) · error + retry + Contact Support · offline.
+- Pull-to-refresh with own `refreshing`.
+- Notification-permission banner (reuse the pattern; **with an Enable button** — the shipping app's banner has none).
+
+### 6.3 Choose type (`alerts/new.tsx`)
+
+- Grouped list (Behavioural / Environmental / General) of `AlertTypeCard`s from descriptors; tap → configure. Not a "select then Next" grid — one tap fewer.
+- Read-only roles never reach it.
+
+### 6.4 Configure (`alerts/configure.tsx`) — the important screen
+
+Small. It composes:
+
+```
+<InsightCard>            live summary + scope tags (updates on every field change)
+<AlertDetailsCard>       fields chosen by descriptor.threshold / timeValue / conditions
+<WindowCard>             Any time | Custom (native time pickers, barn zone shown: "Times are in barn time (America/New_York)")
+<ScopeRow apply>         → TargetsPicker sheet
+<ScopeRow notify>        → TargetsPicker sheet
+[Save / Complete]        purple; disabled with reason when invalid, when write-blocked, or when read-only
+[Delete]                 edit only, red text, confirm sheet
+```
+
+- **Form state:** `react-hook-form` + `zod`, **schema produced by `domain/schema.buildSchema(descriptor, units)`** once per descriptor — a pure memoised value, not the shipping app's `setResolver`-in-an-effect. (Decision D2 below if you'd rather avoid RHF.)
+- **Fields render from the descriptor**: `threshold.kind` picks the widget (preset segmented + custom numeric · boolean toggle · selection menu · duration with unit); `conditions` picks the comparator options; `timeValue` adds trigger/range; unknown → generic.
+- Edit path: `useAlertRule(ruleId)` → `payload.toForm(rule, descriptor, units, zone)`; save → confirm sheet showing the new summary and tags.
+- **Keyboard:** native `KeyboardAvoidingView` + `automaticallyAdjustKeyboardInsets`; no third-party keyboard controller.
+
+### 6.5 Targets picker (sheet)
+
+- Native sheet with **header search** (the shipping picker has none), a segmented **All · Selected · Excluded**, and the list of `TargetRow`s (avatar/thumb, name, checkbox). Footer: "N selected · Done".
+- One kind at a time; `useTargets(kind)`; loading/empty/error inside the sheet.
+
+---
+
+## 7. The timezone design (frontend-only)
+
+### 7.1 The problem, precisely
+The API stores `evaluation_start_time` / `evaluation_end_time` as **`HH:MM:SS` in UTC**, no date, no zone. The backend evaluates that fixed UTC time. The shipping app converts from **device** local. Two failures: device zone ≠ barn zone; and DST — a fixed UTC time is a *different* barn time after the clocks change.
+
+### 7.2 What we can fix entirely on the frontend
+**Device ≠ barn.** Convert using the **organization's IANA zone** (`organization.timezone`, already used by `useOrganizationNow`), never the device's. `window.ts`:
+
+```ts
+toStorage(window: AlertWindow, on: DateTime): { start: 'HH:MM:SS', end: 'HH:MM:SS' }   // barn local → UTC using zone offset at `on`
+fromStorage(start, end, zone, on): AlertWindow                                           // UTC → barn local using zone offset at `on`
+```
+
+Both pure, both tested against fixed instants (a summer date and a winter date for New York, Sydney, London; and a half-hour zone).
+
+### 7.3 What we cannot fix without the backend — and what we do instead
+**DST drift.** Once stored, the UTC time is fixed; after a clock change the barn-time window is off by the DST delta until re-saved. Frontend cannot change what the backend evaluates. So we make it **visible and one-tap-fixable**:
+
+- On save, write into the rule's free-form `UNATTESTED_META_DATA` (a field the app owns):
+  `{ window: { zone, start_local: '21:00', end_local: '06:00', saved_offset_min: -240 } }`
+- On read, `window.ts` compares `saved_offset_min` with the zone's **current** offset. If they differ → `drift = { minutes: 60, direction }`.
+- Manage Alerts row shows a **drift badge** ("Shifted 1h since clocks changed"); Configure shows a banner with **"Re-save to fix"** — which simply re-runs `toStorage` with today's offset and PATCHes. Read-only roles see the badge, not the button.
+- Rules saved by the shipping app have no `window` metadata → we show the window derived from storage with the current offset and **no drift claim** (we cannot know); a footnote "saved before barn-time windows" once, in Configure.
+
+This is honest (the user is told exactly what happened), reversible (one tap), and needs nothing from the backend. It also gives us the data to make the backend ask precise later: *store the zone and evaluate in it*. That ask is recorded in requirements §7 as an open item, **not** a blocker.
+
+### 7.4 "Any time"
+Stored as `00:00:00`–`23:59:59` **barn** local → UTC. Displayed as "Any time" when the stored pair, converted back, spans the barn day (±1 min).
+
+---
+
+## 8. Permissions
+
+- Source of truth: `memberType` from the auth store (ADMIN / EDITOR / VIEWER / GUEST / RESTRICTED), the same enum the shipping `usePermissions` uses. Port **the mapping**, not the hook: `domain/alerts/permissions.ts` → `canManageAlerts(memberType): { create, edit, delete }`.
+- Enforced **at the route layout** (§6.1) and mirrored in the UI (no dead controls; disabled-with-reason).
+- The backend enforces too; when it refuses, the toast names the reason ("You don't have permission to change alerts") not "Failed to save".
+- This is B1 from the Horses parity doc arriving early because alerts cannot ship without it. Same `permissions.ts` will serve Horses later.
+
+---
+
+## 9. Honest states — the full list per screen
+
+| Screen | Loading | Empty | Error | Offline | Special |
+|---|---|---|---|---|---|
+| Manage Alerts | 3-row skeleton | copy + Add (or read-only note) | retry + support | wifi.slash + waiting | notification-permission banner with Enable; drift badges |
+| Choose type | skeleton grid | "No alert types available" (server) | retry | offline | — |
+| Configure | skeleton card while descriptor/rule resolve | n/a | rule not found → back | offline: form usable, Save disabled "You're offline" | write-blocked: Save disabled "Saving is switched off in this build"; drift banner + Re-save; unknown type → generic form + "This alert type is new; showing basic settings" |
+| Targets picker | in-sheet skeleton | "No horses yet" | in-sheet retry | — | search-empty "No horses match" |
+
+Every disabled control says why. That is requirement §6b item 3, applied.
+
+---
+
+## 10. Testing
+
+| Layer | Test | Why |
+|---|---|---|
+| `domain/descriptors` | **one golden test per alert type**: given a form → expected payload; given a payload → expected form; given a rule → expected summary sentence | This is where the shipping app has zero coverage and 4,800 lines of hand-logic |
+| `domain/window` | fixed-instant round-trips (NY summer/winter, Sydney, London, Kolkata); drift detection; "any time" recognition | The bug that motivated the design |
+| `domain/scope` | tag text for every apply/notify combination incl. "Me" | Cheap, prevents the row lying |
+| `domain/schema` | invalid inputs produce the right message per descriptor (min window, range bounds, distinct times) | Replaces runtime `setResolver` |
+| hooks | `useAlertRule` cache-first then fetch; write-blocked surfaces `WriteBlockedError` | Route contract |
+| components | `AlertRuleRow` renders summary + tags + drift badge; a11y label; `TargetsPicker` search filters | RNTL, async |
+| screens | `no-dead-controls` sweep extended to `alerts/*` | Standing rule |
+| device | Manage Alerts open = 2 requests; light + dark; VoiceOver reads the row sentence | Measured, not asserted |
+
+---
+
+## 11. Build order (each a usable slice)
+
+| # | Slice | Delivers | Blocked by |
+|---|---|---|---|
+| **A1** | **Domain layer** | descriptors for the ~10 known slugs + generic; summary; window codec + drift; scope; payload; schema; golden tests | nothing |
+| **A2** | **Manage Alerts, read-only** | list with summaries, tags, drift badges, all states, permission-aware; entry points wired (More, Horse Alerts tab); read-only detail sheet | A1 |
+| **A3** | **Create/Edit UI, save gated** | choose type, configure, targets picker with search, confirm sheets; Save/Delete disabled-with-reason while writes are blocked; fully testable end-to-end without touching production | A1, A2 |
+| **A4** | **Writes on** | flip the gate for a QA org (Inakshi's call, D1); permission gate live; drift Re-save live; device validation | A3, D1 |
+
+A1 alone is a day of pure TypeScript with tests and no UI, and it de-risks everything after it.
+
+---
+
+## 12. Decisions for Inakshi
+
+| # | Question | My recommendation |
+|---|---|---|
+| **D1** | **Where do we test writes?** The rewrite is read-only against production by rule. Alerts *is* writes. Options: (a) allow writes **only for the QA org** on production via the existing flag + an org allow-list; (b) wait for a staging API; (c) never write from the rewrite until launch (untestable). | **(a)** — the flag exists, scope it to the QA org id, keep the default off. Nothing else is testable. |
+| **D2** | **Form library:** keep `react-hook-form` + `zod` (what the shipping app uses; universal; well understood) or a lighter `useReducer` form? | **Keep RHF + zod** — the schema-from-descriptor design suits it, and the React Compiler is fine with it. |
+| **D3** | **Time window UI:** two native time pickers (start/end) or a single "from–to" range control? | **Two native pickers** — universal, no custom control, matches the "native over custom" rule. |
+| **D4** | **Grouping on Manage Alerts:** flat newest-first (shipping) or grouped by category? | Flat for A2; revisit with real usage. |
+| **D5** | **Do we tell users about drift on rules saved by the OLD app** (where we can't compute it)? | Show the window, add one footnote in Configure, no badge. Don't claim what we can't know. |
+
+Not asking: suggested alerts (out, your call today); SMS/email (never live); the frequency chart (§6a).
+
+---
+
+## 13. What the backend would need, later (recorded, not blocking)
+
+- Store the window **with a zone** (or as barn-local + zone) and evaluate in it. Removes the drift class entirely; §7.3 becomes unnecessary.
+- Return `alert_types` with a complete `AppMetaData` contract (documented keys) so the client registry can shrink to icons + summary templates.
+- Return the member's permissions on the org (`can_manage_alerts`) so the client mapping isn't the source of truth.
+
+Filed under requirements §7 open items when this design is accepted.

@@ -26,6 +26,7 @@ Filenames are unchanged so existing references and greps keep working.
 | `Horcery_Review_History_Scope.md` | Review History |
 | `Horcery_Horses_Parity_Gaps.md` | Horses list — parity gaps A–F, decisions and priorities |
 | `Horcery_Horse_Details_Scope.md` | Horse Details — full scope, four slices, seven open decisions |
+| `Horcery_Alerts_Architecture.md` | Alerts (Manage + create/edit) — frontend architecture: domain layer, descriptors, barn-time windows + drift, permissions, four slices |
 | `Horcery_Localization_Agentic_Implementation_Plan.md` | i18n (requirements §4b, hardening H2) |
 
 ## handovers/ — instructions written for Codex, and reviews of what came back
