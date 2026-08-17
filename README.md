@@ -3,8 +3,9 @@
 Ground-up rewrite of the Horcery companion app (iOS + Android), replacing
 `fin-84-horcery-app-react-native`.
 
-**Read first:** `Horcery_App_Rewrite_Requirements.md` (kept in the Horcery working
-folder) is the authoritative requirements document. Every architectural decision
+**Read first:** [`docs/requirements/Horcery_App_Rewrite_Requirements.md`](docs/requirements/Horcery_App_Rewrite_Requirements.md)
+is the authoritative requirements document (index of all rewrite documents:
+[`docs/README.md`](docs/README.md)). Every architectural decision
 here traces back to it.
 
 ---

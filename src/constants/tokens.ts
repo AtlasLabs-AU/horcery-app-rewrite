@@ -1,6 +1,6 @@
 /**
  * Design tokens — the R3 system from the UI design brief
- * (Horcery_App_UI_Design_Requirements.md). Structure adapted from Clarity
+ * (docs/requirements/Horcery_App_UI_Design_Requirements.md). Structure adapted from Clarity
  * (https://github.com/SchroederNathan/clarity, MIT); values are Horcery's.
  *
  * COLOUR — the "editorial" palette, decided by Inakshi 2026-08-17 after
