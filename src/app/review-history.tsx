@@ -191,6 +191,11 @@ export default function ReviewHistoryScreen() {
             <Menu
               label={filterActive ? `Behavior (${behaviors.length})` : 'Behavior'}
               accessibilityLabel="Filter by behavior"
+              title="Filter by behaviour"
+              // The sheet stays open while you tick: the dropdown this
+              // replaced closed on every tap, so choosing three behaviours
+              // meant opening it three times (Inakshi, 2026-08-17).
+              multiSelect
               width={150}
               height={36}
               testID="history-behavior-filter"

@@ -12,8 +12,20 @@ import { radius, space, type } from '@/constants/tokens';
  * destinations do not exist yet — see the note on `Menu` below.
  */
 const SNAPSHOT_MENU_ACTIONS = [
-  { id: 'playback-speed', label: 'Playback speed', disabled: true },
-  { id: 'go-live', label: 'Go live', disabled: true },
+  {
+    id: 'playback-speed',
+    label: 'Playback speed',
+    description: 'Coming soon — choose how fast the timelapse runs.',
+    icon: 'play' as const,
+    disabled: true,
+  },
+  {
+    id: 'go-live',
+    label: 'Go live',
+    description: 'Coming soon — switch from timelapse to the live camera.',
+    icon: 'spaces' as const,
+    disabled: true,
+  },
 ];
 
 export interface Snapshot {

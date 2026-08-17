@@ -75,10 +75,29 @@ export function GroupChips({
         testID="horse-groups-menu"
         width={44}
         height={44}
+        title="Horses and groups"
         actions={[
-          { id: 'add', label: 'Add Horse — coming soon', icon: 'add', disabled: true },
-          { id: 'new', label: 'New Group — coming soon', icon: 'add', disabled: true },
-          { id: 'edit', label: 'Edit Groups — coming soon', icon: 'edit', disabled: true },
+          {
+            id: 'add',
+            label: 'Add Horse',
+            description: 'Coming soon — add a horse to your organisation.',
+            icon: 'add',
+            disabled: true,
+          },
+          {
+            id: 'new',
+            label: 'New Group',
+            description: 'Coming soon — create a group to sort horses into.',
+            icon: 'add',
+            disabled: true,
+          },
+          {
+            id: 'edit',
+            label: 'Edit Groups',
+            description: 'Coming soon — rename or delete a group.',
+            icon: 'edit',
+            disabled: true,
+          },
         ]}
       />
     </View>

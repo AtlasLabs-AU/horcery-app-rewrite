@@ -78,17 +78,26 @@ export function HorseCard({ horse, onPress }: { horse: HorseRow; onPress?: () =>
         testID={`horse-options-${horse.id}`}
         width={44}
         height={44}
+        title={horse.name}
         actions={[
-          { id: 'edit', label: 'Edit — coming soon', icon: 'edit', disabled: true },
+          {
+            id: 'edit',
+            label: 'Edit',
+            description: 'Coming soon — update this horse’s details.',
+            icon: 'edit',
+            disabled: true,
+          },
           {
             id: 'groups',
-            label: 'Manage Groups — coming soon',
+            label: 'Manage Groups',
+            description: 'Coming soon — organise horses in your organisation.',
             icon: 'group',
             disabled: true,
           },
           {
             id: 'remove',
-            label: 'Remove — coming soon',
+            label: 'Remove',
+            description: 'Coming soon — remove this horse from your organisation.',
             icon: 'remove',
             destructive: true,
             disabled: true,
