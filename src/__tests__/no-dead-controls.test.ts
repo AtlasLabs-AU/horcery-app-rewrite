@@ -106,6 +106,19 @@ describe('no dead controls on the screens', () => {
     expect(stallCard).not.toContain('Pressable');
   });
 
+  it('keeps the date bar arrows honest at the ends of the range', () => {
+    const bar = read(join('components', 'horses', 'horse-date-bar.tsx'));
+
+    // At the first day of the horse's life and at today, the arrows cannot
+    // act. They must lose the button role rather than announce a button that
+    // does nothing, and they must say WHY they are disabled — a bare dimmed
+    // chevron leaves the reader guessing whether the app is broken.
+    expect(bar).toMatch(/accessibilityRole=\{enabled \? 'button' : undefined\}/);
+    expect(bar).toContain('disabled={!enabled}');
+    expect(bar).toContain('No earlier days for this horse');
+    expect(bar).toContain('Today is the latest day');
+  });
+
   it('does not reintroduce the removed surfaces on Horse Details', () => {
     const detail = read(join('app', '(tabs)', 'horses', '[id].tsx'));
     // D4 no feedback card, D8 no Special Instructions, D1 no settings cog —

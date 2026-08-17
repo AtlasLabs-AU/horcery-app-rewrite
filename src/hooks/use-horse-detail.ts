@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
 import { useCallback, useMemo, useState } from 'react';
 
+import type { IStall } from '@acme/services/api/stall-monitor-management/stall';
 import { queries } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 import { horseSelectionKey, joinHorseRow, type HorseRow } from '@/hooks/horses-data';
@@ -20,8 +21,14 @@ export interface HorseDetail {
   row: HorseRow | null;
   passport: PassportField[];
   stallId?: string;
+  /** The full stall record — slice 2 reads its Prometheus URL and monitor. */
+  stall: IStall | undefined;
+  /** The horse's first day in the system — the date bar's earliest bound. */
+  createdAt: DateTime | undefined;
   /** True once we know the horse exists and has no stall — not while loading. */
   hasNoStall: boolean;
+  /** True once the animal query has settled, success or not — not "we have a stall". */
+  hasResolvedStall: boolean;
   isLoading: boolean;
   isError: boolean;
   notFound: boolean;
@@ -113,7 +120,10 @@ export function useHorseDetail(id: string): HorseDetail {
     row,
     passport,
     stallId: animal?.stall?.id,
+    stall: animal?.stall,
+    createdAt: animal?.created_at ? DateTime.fromISO(animal.created_at) : undefined,
     hasNoStall: !!animal && !animal.stall,
+    hasResolvedStall: animalQuery.isSuccess || animalQuery.isError,
     isLoading: animalQuery.isPending && enabled && !row,
     isError: animalQuery.isError,
     notFound: enabled && animalQuery.isSuccess && !animal,

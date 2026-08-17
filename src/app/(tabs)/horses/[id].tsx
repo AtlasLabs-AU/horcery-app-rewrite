@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 
 import { EVENT_TYPE_ID } from '@acme/config/constants/event-types';
+import { HorseDateBar } from '@/components/horses/horse-date-bar';
+import { BuiltInSettingsNote, HorseDetailNotice } from '@/components/horses/horse-detail-notice';
 import { HorsePassport } from '@/components/horses/horse-passport';
 import { HorseStallCard } from '@/components/horses/horse-stall-card';
+import { HorseStatusStrip } from '@/components/horses/horse-status-strip';
 import { HorsesError, HorsesLoading, HorsesNoInternet } from '@/components/horses/horses-states';
 import { MediaTile } from '@/components/media/media-tile';
 import { EventCard, type HistoryEvent } from '@/components/review-history/event-card';
@@ -28,39 +31,47 @@ import {
   samplePassportFor,
 } from '@/config/sample/horse-detail-sample';
 import { radius, space, type } from '@/constants/tokens';
+import { deriveOverlay } from '@/hooks/horse-status-data';
+import { dayLabel, isToday } from '@/hooks/playhead-data';
 import { useHorseDetail } from '@/hooks/use-horse-detail';
+import { useHorseStatus } from '@/hooks/use-horse-status';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useOrganizationNow } from '@/hooks/use-organization-now';
 import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
+import { usePlayhead } from '@/hooks/use-playhead';
 import { useReviewHistory } from '@/hooks/use-review-history';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
- * Horse Details — slice 1, "the honest page"
- * (`docs/scope/Horcery_Horse_Details_Scope.md`).
+ * Horse Details — slices 1 and 2 (`docs/scope/Horcery_Horse_Details_Scope.md`).
  *
- * What this page is, and deliberately is not:
+ * **Slice 1, "the honest page":** the horse's frame, its name and stall,
+ * everything the API already knows about it, and its recent events and
+ * alerts. Every write action is present and dimmed with a reason, so the
+ * composition can be judged and nothing pretends to work.
  *
- * - **Is:** the horse's frame, its name and stall, everything the API already
- *   knows about it, and its recent events and alerts. Every write action is
- *   present and dimmed with a reason, so the composition can be judged and
- *   nothing pretends to work.
- * - **Is not (yet):** charts, the video player, the date bar and the live
- *   In-Stall status. Those are slices 2–4 and each is gated on a decision that
- *   has not been taken — the chart renderer (§6a) and where chart queries live
- *   (§6a-i). Nothing here is blocked on either, which is why it went first.
+ * **Slice 2, "the living page":** the date bar, the live In/Out-of-Stall
+ * status, and the temperature/noise/activeness readings — all read at the
+ * play-head instant, which follows the barn's own clock rather than freezing
+ * at whenever the page happened to mount (the bug parity gap C7 exists to
+ * design out).
  *
- * Decisions this page implements, all 2026-08-17:
- * - **D1** the settings cog is gone; its four fields moved into the passport
- *   and its Delete moved into the header ⋮.
- * - **D4** no feedback card.
- * - **D5** tabs are text, no icons.
- * - **D8** no Special Instructions.
+ * **Still not here:** charts and the video player (slices 3–4), each gated on
+ * a decision not yet taken — the chart renderer (§6a) and where chart
+ * configuration lives (§6a-i). Slice 2 ships ahead of that decision on the
+ * queries baked into the repo, and says so on screen (`BuiltInSettingsNote`,
+ * decision D7) rather than quietly answering with whatever those turn out to
+ * be.
  *
- * Request budget on a cold open: the animal (1), the organization for its
- * timezone (1, usually cached by For You), the group list (1, usually cached
- * by the Horses list), and one event page for whichever tab you open. The
- * current app's Summary tab costs ~30 (scope §1.7).
+ * Decisions implemented, all 2026-08-17: D1 no settings cog (folded into the
+ * passport and the header ⋮), D4 no feedback card, D5 text-only tabs, D7 the
+ * built-in-settings note, D8 no Special Instructions.
+ *
+ * Request budget on a cold open of Summary: the animal (1), the organization
+ * for its timezone (1, usually cached by For You), the group list (1, usually
+ * cached by the Horses list), and — only for a horse with a monitor — the
+ * in-stall and sensor queries (2). The current app's Summary tab costs ~30
+ * (scope §1.7).
  */
 
 type DetailTab = 'summary' | 'events' | 'alerts';
@@ -99,6 +110,19 @@ export default function HorseDetailScreen() {
 
   const isSample = PREVIEWS.sampleHorsesData && id.startsWith('sample-');
   const horse = useHorseDetail(id);
+  const playhead = usePlayhead(now, horse.createdAt);
+
+  // Sample horses have no Prometheus data to honestly show — the Summary
+  // tab stays exactly as slice 1 left it for them, rather than pretending a
+  // fictional horse has live readings.
+  const overlay = isSample
+    ? 'none'
+    : deriveOverlay({ stall: horse.stall, hasResolvedStall: horse.hasResolvedStall, now });
+  const status = useHorseStatus({
+    stall: horse.stall,
+    cursor: playhead.cursor,
+    enabled: !isSample && overlay === 'none',
+  });
 
   const events = useReviewHistory({
     day: now,
@@ -145,9 +169,10 @@ export default function HorseDetailScreen() {
 
   const onRefresh = useCallback(() => {
     void horse.refresh();
+    if (activeTab === 'summary') status.refetch();
     if (activeTab === 'events') void events.refetch();
     if (activeTab === 'alerts') void alerts.refetch();
-  }, [horse, activeTab, events, alerts]);
+  }, [horse, activeTab, status, events, alerts]);
 
   const onEndReached = useCallback(() => {
     if (activeTab === 'summary' || isSample) return;
@@ -249,6 +274,33 @@ export default function HorseDetailScreen() {
 
             {activeTab === 'summary' ? (
               <View style={styles.summary}>
+                {!isSample ? (
+                  <>
+                    <HorseDateBar
+                      day={playhead.day}
+                      now={now}
+                      earliest={horse.createdAt}
+                      onChange={playhead.setDay}
+                      onToday={playhead.resetToToday}
+                    />
+                    {overlay !== 'none' ? (
+                      <HorseDetailNotice overlay={overlay} />
+                    ) : (
+                      <>
+                        <HorseStatusStrip
+                          status={status.status}
+                          readings={status.readings}
+                          atLabel={
+                            isToday(playhead.day, now)
+                              ? 'Live'
+                              : `${dayLabel(playhead.day, now)}, end of day`
+                          }
+                        />
+                        {status.hasCamera ? <BuiltInSettingsNote /> : null}
+                      </>
+                    )}
+                  </>
+                ) : null}
                 <HorseStallCard stallName={horse.row?.stallName} />
                 <HorsePassport fields={passport} />
               </View>

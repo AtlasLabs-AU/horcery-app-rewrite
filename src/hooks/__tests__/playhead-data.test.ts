@@ -1,0 +1,78 @@
+import { DateTime } from 'luxon';
+
+import {
+  canGoBack,
+  canGoForward,
+  clampDay,
+  cursorFor,
+  dayLabel,
+  isToday,
+  latestSelectable,
+} from '@/hooks/playhead-data';
+
+const NOW = DateTime.fromISO('2026-08-17T14:32:00.000', { zone: 'Australia/Sydney' });
+const CREATED = DateTime.fromISO('2026-08-10T09:00:00.000', { zone: 'Australia/Sydney' });
+
+describe('clampDay', () => {
+  it('leaves an in-range day untouched', () => {
+    const middle = DateTime.fromISO('2026-08-14', { zone: 'Australia/Sydney' });
+    expect(clampDay(middle, NOW, CREATED).toISODate()).toBe('2026-08-14');
+  });
+
+  it('never selects a day after today', () => {
+    const future = NOW.plus({ days: 5 });
+    expect(clampDay(future, NOW, CREATED).toISODate()).toBe(NOW.toISODate());
+  });
+
+  it('never selects a day before the horse existed', () => {
+    const before = CREATED.minus({ days: 10 });
+    expect(clampDay(before, NOW, CREATED).toISODate()).toBe(CREATED.toISODate());
+  });
+
+  it('has no floor when the horse has no known creation date', () => {
+    const before = CREATED.minus({ days: 100 });
+    expect(clampDay(before, NOW, undefined).toISODate()).toBe(before.toISODate());
+  });
+});
+
+describe('cursorFor', () => {
+  it('is live-now-minus-buffer on today, so a reading is current', () => {
+    const cursor = cursorFor(NOW.startOf('day'), NOW);
+    expect(cursor.toMillis()).toBe(latestSelectable(NOW).toMillis());
+  });
+
+  it('is end-of-day on an earlier day', () => {
+    const earlier = NOW.minus({ days: 3 }).startOf('day');
+    const cursor = cursorFor(earlier, NOW);
+    expect(cursor.toISODate()).toBe(earlier.toISODate());
+    expect(cursor.hour).toBe(23);
+  });
+});
+
+describe('isToday / canGoForward / canGoBack', () => {
+  it('agrees with itself: today cannot go forward', () => {
+    expect(isToday(NOW, NOW)).toBe(true);
+    expect(canGoForward(NOW, NOW)).toBe(false);
+  });
+
+  it('an earlier day can go forward, a future-clamped day cannot exceed today', () => {
+    expect(canGoForward(NOW.minus({ days: 1 }), NOW)).toBe(true);
+  });
+
+  it('cannot go back past the horse\'s first day, but can with no floor', () => {
+    expect(canGoBack(CREATED, CREATED)).toBe(false);
+    expect(canGoBack(CREATED.plus({ days: 1 }), CREATED)).toBe(true);
+    expect(canGoBack(CREATED.minus({ days: 500 }), undefined)).toBe(true);
+  });
+});
+
+describe('dayLabel', () => {
+  it('names today and yesterday in words', () => {
+    expect(dayLabel(NOW, NOW)).toBe('Today');
+    expect(dayLabel(NOW.minus({ days: 1 }), NOW)).toBe('Yesterday');
+  });
+
+  it('falls back to a written date for anything else', () => {
+    expect(dayLabel(NOW.minus({ days: 5 }), NOW)).toMatch(/^\w{3} \d+ \w{3}$/);
+  });
+});
