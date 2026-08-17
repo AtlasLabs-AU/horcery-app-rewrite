@@ -495,6 +495,14 @@ types removed in §2.
 
 ## 6. Explicitly out of scope / parked
 
+- **Show Me (global cross-entity search over horses, stalls and behaviours) —
+  RETIRED (Inakshi, 2026-08-17).** Replaced by per-page search (e.g. the Horses
+  header search bar). No `/show-me` route, no header magnifier that leaves the
+  page. Parity passes must treat it as intentionally dropped.
+- **Role-based permissions on the Horses/Horse Details pages — PARKED
+  (re-confirmed 2026-08-17).** All write actions are disabled-with-reason for
+  every user until the write side; permissions gate them before any goes live.
+
 - **Charts renderer choice** — deferred to a measured spike, NOT to opinion.
   See §6a for the agreed approach and §9 for the correction that produced it.
 - The old app's codebase is **read-only reference** — never edited by this project
