@@ -36,8 +36,15 @@ export const BEHAVIOR_EVENT_TYPES = {
   entering: [80],
 } as const;
 
-/** Event type ids that are not behaviours but do belong in an unfiltered day. */
-const SPECIAL_INSTRUCTIONS = 7;
+/**
+ * Event type ids that are not behaviours but do belong in an unfiltered day.
+ *
+ * Special Instructions (type 7) is deliberately NOT here. The shipping app
+ * requests it by default; it is a manually-typed note and therefore part of
+ * the Record family the rewrite removed (requirements §2; Inakshi, 2026-08-17:
+ * "special instructions is part of the record feature where we expect the
+ * customer to enter text"). Do not add it back.
+ */
 const PEOPLE_IN_STALL = 200;
 
 /**
@@ -47,7 +54,6 @@ const PEOPLE_IN_STALL = 200;
  * there even though For You shows it.
  */
 export const DEFAULT_EVENT_TYPES = [
-  SPECIAL_INSTRUCTIONS,
   ...BEHAVIOR_EVENT_TYPES.entering,
   ...BEHAVIOR_EVENT_TYPES.exiting,
   ...BEHAVIOR_EVENT_TYPES.rolling,

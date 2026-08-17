@@ -49,6 +49,11 @@ deferred implementation.
 - Existing backend records remain untouched. Any future requirement for an
   administrative archive/export is a separately scoped read-only capability;
   it must not reintroduce Record into the customer app by accident.
+- **Special Instructions (event type 7) is part of this removal** (Inakshi,
+  2026-08-17, while scoping Horse Details). It is customer-typed text pinned to
+  a horse — the same family. The shipping app's Summary card holds an unwired
+  stub of it and its Review History default filter requests type 7; the
+  rewrite carries neither. Not deferred: removed.
 - Parity reviews and agentic implementation prompts must treat this feature as
   **intentionally dropped**, never as missing functionality to restore.
 
