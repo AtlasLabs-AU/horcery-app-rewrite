@@ -153,13 +153,41 @@ still a protocol measurement for both finalists, not a visual claim.
 Victory now has retained Android evidence for tooltip dismissal, replacement
 states, quiet and overnight fixtures, both pan implementations, parent-scroll
 gesture ownership, lifecycle remount and both daylight-saving fixtures. The
-required near-tap “Zoom to click” hint is still not implemented in either
-finalist, and fall-back repeated-hour presentation remains a product decision.
-Behavioral parity therefore remains open. No renderer recommendation is issued.
+near-tap “Zoom to click” hint remains shared shipping-parity work but is deferred
+from renderer selection because it does not distinguish the finalists. Fall-back
+repeated-hour presentation remains a product decision. Behavioral parity remains
+open on the other pending rows. No renderer recommendation is issued.
 
-The final recommendation also remains blocked by the observed-heavy QA fixture
-and release-like runs on a physical mid-range Android, modern Android, iPhone
-and tablet. Simulator/emulator checks cannot satisfy §6a's decision gates.
+The final recommendation also remains blocked by the observed-heavy QA fixture,
+the frozen interaction matrix on the supplied physical mid-range Android, and
+release-like runs on a modern Android, iPhone and tablet. Simulator/emulator
+checks cannot satisfy §6a's decision gates.
+
+### Physical mid-range Android catalogue checkpoint — 2026-08-17
+
+A Redmi Note 12 now supplies the first physical decision-gate device, but only
+the bounded catalogue correction pass is complete. It does not replace the
+seven-repetition interaction matrix or the other required devices.
+
+- ECharts rendered all five catalogue states, but its mixed-chart tooltip did
+  not appear on physical Android, including after the bounded change to the
+  documented rich-text tooltip renderer. This is a physical interaction failure
+  and maintenance risk; it is not yet an overall rejection.
+- Victory rendered the normal, mixed, 68.2% compact and compact no-data states.
+  Its April tap showed all exact joined values on the same phone.
+- Victory's first 20,000-point attempt froze at approximately 2.0 GB PSS. The
+  cause was Horcery's multiplicative adapter table, not established library
+  failure. The corrected linear scale table plus exact Skia segment paths stayed
+  responsive at approximately 220 MB PSS while retaining all 20,000 inputs.
+- Returning from 20,000 to 144 points remained responsive, but PSS settled near
+  221 MB rather than the 193 MB fresh-launch baseline. Treat this as retained
+  high-water memory until repeated cycles prove a stable plateau or growth.
+- The correction increases Victory's implementation-cost burden: Horcery owns
+  custom exact-segment path drawing in addition to its custom tooltip and
+  gesture behavior. It also demonstrates that the renderer-independent domain
+  seam allowed an adapter replacement without changing chart meaning.
+
+No performance score or renderer selection is issued from this checkpoint.
 
 ---
 

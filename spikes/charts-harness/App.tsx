@@ -17,6 +17,14 @@ import {
   occupancyA11yPage,
   type OccupancyA11yModel,
 } from '@/charts/occupancy-a11y';
+import {
+  COMPACT_NO_DATA,
+  COMPACT_SUMMARY,
+  CONTINUOUS_NORMAL,
+  MIXED_OBSERVATIONS,
+  buildContinuousFixture,
+  type CatalogueChart,
+} from '@/charts/chart-catalogue';
 
 import {
   DEFAULT_RENDERER_ID,
@@ -26,7 +34,7 @@ import {
   type RenderSignal,
   type VictoryRenderMode,
 } from './src/renderer';
-import { RendererHost } from './src/renderer-host';
+import { CatalogueRendererHost, RendererHost } from './src/renderer-host';
 import { GEOMETRY, loadScenarios, seriesLabel } from './src/scenarios';
 
 /**
@@ -47,6 +55,7 @@ export default function App() {
   const chartWidth = windowWidth - 32;
 
   const [rendererId, setRendererId] = useState<RendererId>(DEFAULT_RENDERER_ID);
+  const [screenMode, setScreenMode] = useState<'timeline' | 'catalogue'>('timeline');
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [mountKey, setMountKey] = useState(0);
   const [renderSignal, setRenderSignal] = useState<RenderSignal | null>(null);
@@ -56,7 +65,10 @@ export default function App() {
   const [victoryMode, setVictoryMode] = useState<VictoryRenderMode>('relayout');
   const [parentScroll, setParentScroll] = useState(false);
   const [chartForeground, setChartForeground] = useState(true);
-  const jsFps = useJsFps();
+  // External platform traces are the deciding evidence. Keep this off during
+  // release measurements so the harness does not schedule a frame forever or
+  // re-render its whole screen every second.
+  const jsFps = useJsFps(false);
 
   const scenario = scenarios[scenarioIndex]!;
   const onRenderSignal = useCallback((signal: RenderSignal) => {
@@ -67,10 +79,10 @@ export default function App() {
   // reconstructed exactly. Remove nothing here: it is the audit trail.
   useEffect(() => {
     console.log(
-      `[harness] renderer=${rendererId} scenario=${scenario.name} mount=${mountKey} ` +
+      `[harness] screen=${screenMode} renderer=${rendererId} scenario=${scenario.name} mount=${mountKey} ` +
       `lod=${lodEnabled} progressive=${progressiveMode} victory=${victoryMode}`,
     );
-  }, [rendererId, scenario.name, mountKey, lodEnabled, progressiveMode, victoryMode]);
+  }, [rendererId, scenario.name, mountKey, lodEnabled, progressiveMode, screenMode, victoryMode]);
   useEffect(() => {
     console.log('[harness] App mounted');
     return () => console.log('[harness] App UNMOUNTED');
@@ -137,8 +149,21 @@ export default function App() {
         <StatusBar style="dark" />
         <ParentContainer scrollEnabled={parentScroll}>
         <View style={styles.header}>
-          <Text style={styles.title}>People In Stall — renderer spike</Text>
+          <Text style={styles.title}>Horcery chart renderer spike</Text>
         </View>
+
+        <Segmented
+          options={[
+            { id: 'timeline', label: 'People In Stall' },
+            { id: 'catalogue', label: 'Catalogue scalability' },
+          ]}
+          value={screenMode}
+          onChange={(id) => {
+            setRenderSignal(null);
+            setScreenMode(id as 'timeline' | 'catalogue');
+          }}
+          testIDPrefix="scope"
+        />
 
         <Segmented
           options={RENDERERS.map((r) => ({ id: r.id, label: r.label }))}
@@ -150,6 +175,7 @@ export default function App() {
           testIDPrefix="renderer"
         />
 
+        {screenMode === 'timeline' ? <>
         <View style={styles.variants}>
           <Segmented
             options={[{ id: 'off', label: 'LOD off' }, { id: 'on', label: 'LOD on' }]}
@@ -235,7 +261,7 @@ export default function App() {
             value={renderSignal === null ? '…' : `${renderSignal.elapsedMs} ms · ${renderSignal.source}`}
             testID="stat-render-signal"
           />
-          <Stat label="JS fps" value={String(jsFps)} testID="stat-js-fps" />
+          <Stat label="JS fps" value={jsFps === null ? 'off' : String(jsFps)} testID="stat-js-fps" />
         </View>
 
         <View style={styles.actions}>
@@ -249,9 +275,119 @@ export default function App() {
         </View>
 
         <Text style={styles.purpose}>{scenario.purpose}</Text>
+        </> : (
+          <CataloguePanel
+            rendererId={rendererId}
+            width={chartWidth}
+            renderSignal={renderSignal}
+            onRenderSignal={onRenderSignal}
+            onCaseChange={() => setRenderSignal(null)}
+            jsFps={jsFps}
+          />
+        )}
         </ParentContainer>
       </SafeAreaView>
     </GestureHandlerRootView>
+  );
+}
+
+const CATALOGUE_CASES: { id: string; label: string; purpose: string }[] = [
+  {
+    id: 'continuous-normal',
+    label: 'continuous · 144',
+    purpose: 'Two irregular time series, real gaps, a threshold, organization-zone labels and horizontal zoom.',
+  },
+  {
+    id: 'continuous-high',
+    label: 'continuous · 20k',
+    purpose: 'The same meaning at 20,000 points. No sampling or gap filling is allowed to make the renderer look faster.',
+  },
+  {
+    id: 'mixed',
+    label: 'mixed + annotated',
+    purpose: 'Stacked bars, a line with a genuine missing value, sparse event markers and one exact joined tooltip.',
+  },
+  {
+    id: 'compact',
+    label: 'compact summary',
+    purpose: 'A bounded radial summary with an exact 68.2% value and restrained static presentation.',
+  },
+  {
+    id: 'compact-no-data',
+    label: 'compact no-data',
+    purpose: 'No reading is distinct from zero percent and clears the radial presentation.',
+  },
+];
+
+function CataloguePanel({
+  rendererId,
+  width,
+  renderSignal,
+  onRenderSignal,
+  onCaseChange,
+  jsFps,
+}: {
+  rendererId: RendererId;
+  width: number;
+  renderSignal: RenderSignal | null;
+  onRenderSignal: (signal: RenderSignal) => void;
+  onCaseChange: () => void;
+  jsFps: number | null;
+}) {
+  const [caseIndex, setCaseIndex] = useState(0);
+  const selected = CATALOGUE_CASES[caseIndex]!;
+  // The stress fixture is intentionally created only when selected. A normal
+  // chart screen must not pay the allocation/startup cost of a hidden test.
+  const selectedChart = useMemo<CatalogueChart>(() => {
+    if (selected.id === 'continuous-normal') return CONTINUOUS_NORMAL;
+    if (selected.id === 'continuous-high') return buildContinuousFixture(10_000);
+    if (selected.id === 'mixed') return MIXED_OBSERVATIONS;
+    if (selected.id === 'compact') return COMPACT_SUMMARY;
+    return COMPACT_NO_DATA;
+  }, [selected.id]);
+  const itemCount = selectedChart.kind === 'continuous'
+    ? selectedChart.series.reduce((count, series) => count + series.points.length, 0)
+    : selectedChart.kind === 'mixed'
+      ? selectedChart.categories.length
+      : selectedChart.value === null ? 0 : 1;
+
+  return (
+    <>
+      <View style={styles.chips}>
+        {CATALOGUE_CASES.map((entry, index) => (
+          <Pressable
+            key={entry.id}
+            testID={`catalogue-${entry.id}`}
+            onPress={() => {
+              onCaseChange();
+              setCaseIndex(index);
+            }}
+            style={[styles.chip, index === caseIndex && styles.chipOn]}>
+            <Text style={[styles.chipText, index === caseIndex && styles.chipTextOn]}>{entry.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={styles.chartCard} testID="catalogue-chart-card">
+        <CatalogueRendererHost
+          key={`${rendererId}-${selected.id}`}
+          rendererId={rendererId}
+          chart={selectedChart}
+          width={width}
+          height={GEOMETRY.chartHeight}
+          onRenderSignal={onRenderSignal}
+        />
+      </View>
+      <View style={styles.stats} testID="catalogue-stats">
+        <Stat label="items" value={String(itemCount)} />
+        <Stat
+          label="render signal"
+          value={renderSignal === null ? '…' : `${renderSignal.elapsedMs} ms · ${renderSignal.source}`}
+          testID="catalogue-render-signal"
+        />
+        <Stat label="JS fps" value={jsFps === null ? 'off' : String(jsFps)} />
+      </View>
+      <Text style={styles.purpose}>{selected.purpose}</Text>
+    </>
   );
 }
 
@@ -375,10 +511,11 @@ function Stat({ label, value, testID }: { label: string; value: string; testID?:
 }
 
 /** JS-thread frames per second — a rough guide only (see header). */
-function useJsFps() {
-  const [fps, setFps] = useState(0);
+function useJsFps(enabled: boolean) {
+  const [fps, setFps] = useState<number | null>(null);
   const frames = useRef(0);
   useEffect(() => {
+    if (!enabled) return;
     let raf = 0;
     const tick = () => {
       frames.current += 1;
@@ -393,7 +530,7 @@ function useJsFps() {
       cancelAnimationFrame(raf);
       clearInterval(id);
     };
-  }, []);
+  }, [enabled]);
   return fps;
 }
 

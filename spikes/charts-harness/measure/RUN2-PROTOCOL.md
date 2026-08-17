@@ -14,6 +14,10 @@ Frozen before Run 2 device numbers. Requirements authority:
 No variant may reduce labels, legend, tooltip meaning, zoom limits, domain
 meaning, or any fixture to make its library look faster.
 
+The legacy near-tap “Zoom to click” hint is deferred to the shared production
+chart surface. It remains a shipping-parity requirement but is not duplicated
+inside both throwaway adapters and does not block renderer selection.
+
 ## Accuracy gate
 
 Accuracy is evaluated before performance and is never averaged into a score.
@@ -35,6 +39,8 @@ People In Stall is necessary but not sufficient. Before renderer selection:
 
 A finalist fails scalability if other chart families require a bespoke chart
 framework, repeated interaction/state machinery, or changed domain meaning.
+The shipping inventory has no dual-unit/two-value-axis chart, so that capability
+is documented rather than implemented unless a new product contract requires it.
 
 ## Inputs
 

@@ -16,7 +16,7 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | 10%–100% horizontal zoom limits | Verified on Android: repeated fixed-focal pinches clamp at the floor; corrected iOS maximum-zoom screenshot retained | Verified on iOS and Android for relayout and matrix: ten aggressive fixed-focal pinches remain under that focal and clamp at the floor | Corrected screenshots and recordings in manifest; physical devices remain required |
 | Pan clamps inside one day | Verified on Android at both midnight boundaries | Verified on Android for both relayout and matrix | Boundary screenshots and recordings in manifest |
 | Exact tooltip text and two-second dismissal | Verified on Android Release | Verified on Android Release | Screenshots + dismissal recordings; exact formatter remains pinned by domain tests |
-| Near-tap hint: “Zoom to click” within one hour | **Failed: not implemented** | **Failed: not implemented** | Live empty-space tap produced no hint; implement renderer-independent behavior before parity can pass |
+| Near-tap hint: “Zoom to click” within one hour | Deferred from renderer selection | Deferred from renderer selection | Shared product behavior remains a shipping-parity task; it does not distinguish the renderer finalists |
 | Quiet week remains seven empty rows with legend | Verified on Android Release | Verified on Android Release | Screenshots in manifest |
 | No-data overlay; no stale rows, legend or tooltip | Verified on Android Release | Verified on Android Release | Transition recordings + screenshots |
 | Loading presentation; no stale chart | Verified on Android Release | Verified on Android Release | Transition recordings + screenshots |
@@ -32,6 +32,19 @@ paths are recorded in `RUN2-MANIFEST.md`.
 | Semantic nodes remain bounded and pageable | Unit tests + 20-node normal tree | Unit tests | Automated guard retained; spoken testing deferred |
 | Phone | Corrected iOS and Android Release screenshots plus Android zoom/pan recording | Corrected iOS and Android Release screenshots plus repeated-pinch recordings | Physical-device evidence still required |
 | Tablet layout | Prior Release screenshot is stale; final zoom-aware axis needs rebuild | Prior Release screenshot remains valid for layout; interaction still pending | Physical tablet remains a decision gate |
+
+## Physical catalogue checkpoint — Redmi Note 12
+
+The renderer-wide scalability slice is separate from the People In Stall rows
+above. On the physical Redmi Note 12, Victory passed the exact April joined
+tooltip and the compact 68.2% / no-data distinction. Its corrected 20,000-point
+continuous view remained responsive while retaining independent timestamps and
+true gaps in tested adapter inputs. ECharts rendered the five static catalogue
+states, but its mixed tooltip did not appear after a bounded rich-text attempt.
+
+This is smoke and correction evidence, not performance parity. Memory return,
+repeated-run smoothness, the other physical devices and the observed-heavy QA
+fixture remain open.
 
 ## Open product-design call
 
@@ -90,5 +103,7 @@ it is not performance or physical-device evidence.
 ## Blocked decision evidence
 
 - Observed-heavy anonymised QA response: unavailable.
-- Physical mid-range Android, modern Android, iPhone and tablet: unavailable.
+- Physical mid-range Android: Redmi Note 12 supplied; bounded catalogue smoke
+  complete, protocol interaction matrix still pending.
+- Modern Android, real iPhone and physical tablet: unavailable.
 - No renderer recommendation may be issued until the required evidence lands.

@@ -1,10 +1,10 @@
 # Run 2 evidence manifest
 
 Raw evidence is deliberately outside git under
-`/Users/inakshi/AI Projects/Horcery/spike-evidence/run2/`. Every item below was
-captured from the content now committed at `acbd0a7`; the native archives were
-built immediately before that commit from an identical worktree. These are
-build and smoke artefacts, **not** the seven-repetition decision matrix.
+`/Users/inakshi/AI Projects/Horcery/spike-evidence/run2/`. The initial build
+items below were captured from the content committed at `acbd0a7`; later
+sections name their own corrected builds and provenance. These are build and
+smoke artefacts, **not** the seven-repetition decision matrix.
 
 ## Isolated release builds
 
@@ -69,9 +69,12 @@ therefore the Victory accessibility rows remain pending in `PARITY.md`.
 - The randomized seven-repetition matrix for each significant variant and
   normal/dense/ceiling load has not been captured.
 - The observed-heavy anonymised QA response has not been supplied.
-- The physical mid-range Android, modern Android, iPhone and tablet have not
-  been supplied. The iPad mini simulator evidence is layout support only.
-- VoiceOver and spoken TalkBack behavior have not been recorded.
+- A physical mid-range Redmi Note 12 is now available and has a bounded
+  catalogue correction pass below, but not the randomized interaction matrix.
+  A modern Android, real iPhone and physical tablet remain unavailable. The
+  iPad mini simulator evidence is layout support only.
+- VoiceOver and spoken TalkBack behavior have not been recorded and are
+  explicitly deferred from this renderer decision by product scope.
 
 No score or renderer recommendation may be derived from this manifest alone.
 
@@ -182,3 +185,47 @@ readback only; they are not cells in the randomized performance matrix.
 | `corrected/victory/android/lifecycle-background-foreground.mp4` | 343,771 | `f4da83c48ea86de33e360a4f05c11e066f1fcd7752caa57e6c6f604999b86b68` | Visual unmount/remount transition succeeds. No memory-return claim. |
 | `corrected/victory/android/daylight-saving-spring-forward.png` | 543,986 | `d24859c7c3fce94a57f2b4913e443edb9aa45ae417a8ff3b1533cd095248768b` | Spring-forward fixture retains aligned clock semantics. |
 | `corrected/victory/android/daylight-saving-fall-back.png` | 571,071 | `ea1b14d3a484b21b787e6de22ce6e663ba61168d7b075ac5971f8882fca3f63b` | Fall-back data is retained; repeated-hour bars overlap and the product decision remains open. |
+
+## Physical Redmi Note 12 catalogue correction pass — 2026-08-17
+
+Device: Redmi Note 12 (`23021RAAEG`), Android 15 / API 35, arm64,
+1080 × 2400, approximately 8 GB RAM. These are bounded physical smoke checks,
+not the randomized seven-repetition performance matrix.
+
+The first Victory 20,000-point attempt froze the harness visually on the prior
+mixed chart. Before force-stop, Android reported approximately 2,017 MB PSS and
+2,159 MB RSS. The retained screen, logcat and gfx dumps are under
+`physical-redmi-note-12/catalogue/victory-skia/freeze/`. Inspection traced the
+growth to the Horcery adapter: it gave `CartesianChart` one `yKey` for each of
+934 independently sampled segments across roughly 20,000 timestamps, creating
+an effectively multiplicative table. This is an adapter failure discovered by
+the spike, not evidence that the Victory library alone cannot render the case.
+
+The bounded correction keeps an O(n) scale table (`x`, `domainValue`) and draws
+the exact independently timestamped, gap-preserving segments as Skia paths
+through Victory's supplied scales and clipping. Pure tests pin independent
+timestamps, real gaps and linear table shape. The corrected domain preparation
+handled 20,000 input points as 19,070 scale rows and 934 segments in 9.57 ms
+with approximately 5 MB heap growth on the development machine.
+
+| Artefact | Bytes | SHA-256 | What it proves / limitation |
+|---|---:|---|---|
+| `physical-redmi-note-12/catalogue/victory-skia/victory-catalogue-arm64-release-linear-memory.apk` | 42,673,616 | `bfe3f4312bac42b75da5e959387bcbf57dd74a4ce96bccef7f53aec15783d10d` | Isolated arm64 Release containing the linear-memory adapter correction. Identity was checked as the Victory package. |
+| `physical-redmi-note-12/catalogue/victory-skia/linear-memory-20k/screen.png` | 135,177 | `f1f0777433508fd3bd18edf2daa5ca180f47f66f158cc49fd2a711083bca68f9` | Corrected chart remains responsive and reports all 20,000 items. At overview scale sub-pixel gaps cannot be judged visually; gap semantics are covered by pure tests. |
+| `physical-redmi-note-12/catalogue/victory-skia/linear-memory-recovery/screen.png` | 175,154 | `4aa44d779e3c09b6049715651997eae3ecd41fe5213c27b252351384c0d770eb` | App returned interactively to the 144-point case and reported a 24 ms Victory layout signal. The signal is diagnostic only. |
+| `physical-redmi-note-12/catalogue/victory-skia/compact-summary.png` | 158,596 | `7a91e22fabd2ce20a791c4a43f38cf84628b904fa04790d97c5697e1a45c08bb` | Exact 68.2% value, matching radial proportion and unclipped label on the physical phone. |
+| `physical-redmi-note-12/catalogue/victory-skia/compact-no-data.png` | 126,191 | `ae56112c1db783876c8d0faad354164d966e6882fcb88f82bb753ece6d3de4ef` | No-data is visibly distinct from 0%; no radial value remains. |
+| `physical-redmi-note-12/catalogue/victory-skia/mixed-tooltip.png` | 169,959 | `a11b194729beb81efadb8c7f2e3f83f8d9d4271a6a9b9ef74affadab27222331` | April tap shows the exact joined Consumed, Remaining, Target and Refill values. |
+
+Corrected 20k memory settled at approximately 220 MB PSS / 354 MB RSS over
+ten samples in 20 seconds, roughly 1.8 GB less PSS than the failed adapter.
+After returning to 144 points it settled near 221 MB PSS / 356 MB RSS. That is
+about 29 MB above the fresh-launch baseline (193 MB PSS), so this pass does not
+claim substantial memory return or absence of a leak. Native/graphics allocators
+may retain reusable high-water storage; repeated 20k → 144 cycles in the frozen
+protocol must determine whether the retained plateau grows.
+
+The Victory physical tooltip passed. The equivalent ECharts physical catalogue
+tap did not display a tooltip after a bounded switch to the documented rich-text
+renderer, so ECharts records an interaction failure and maintenance risk for
+this harness. Neither fact is yet an overall renderer recommendation.
