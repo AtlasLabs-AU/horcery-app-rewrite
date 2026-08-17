@@ -156,6 +156,24 @@ export default function App() {
     <ChartStateOverlay status="background" />
   );
 
+  const remountControl = (
+    <View style={styles.actions}>
+      <Pressable
+        testID="remount-sequence"
+        onPress={() => setRemountSequence(startRemountSequence())}
+        disabled={remountSequence !== null}
+        style={[styles.button, remountSequence !== null && styles.buttonBusy]}>
+        <Text testID="remount-sequence-status" style={styles.buttonText}>
+          {remountSequence === null
+            ? 'Remount 0 → 10 → 25 → 50'
+            : remountSequence.phase === 'checkpoint'
+              ? `Checkpoint ${remountSequence.count}/50`
+              : `Remounting ${remountSequence.count}/50`}
+        </Text>
+      </Pressable>
+    </View>
+  );
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaView style={styles.root}>
@@ -187,6 +205,8 @@ export default function App() {
           }}
           testIDPrefix="renderer"
         />
+
+        {MEMORY_SEQUENCE_BUILD ? remountControl : null}
 
         {screenMode === 'timeline' ? <>
         <View style={styles.variants}>
@@ -277,21 +297,7 @@ export default function App() {
           <Stat label="JS fps" value={jsFps === null ? 'off' : String(jsFps)} testID="stat-js-fps" />
         </View>
 
-        <View style={styles.actions}>
-          <Pressable
-            testID="remount-sequence"
-            onPress={() => setRemountSequence(startRemountSequence())}
-            disabled={remountSequence !== null}
-            style={[styles.button, remountSequence !== null && styles.buttonBusy]}>
-            <Text testID="remount-sequence-status" style={styles.buttonText}>
-              {remountSequence === null
-                ? 'Remount 0 → 10 → 25 → 50'
-                : remountSequence.phase === 'checkpoint'
-                  ? `Checkpoint ${remountSequence.count}/50`
-                  : `Remounting ${remountSequence.count}/50`}
-            </Text>
-          </Pressable>
-        </View>
+        {MEMORY_SEQUENCE_BUILD ? null : remountControl}
 
         <Text style={styles.purpose}>{scenario.purpose}</Text>
         </> : (
