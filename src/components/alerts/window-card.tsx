@@ -63,6 +63,9 @@ export function WindowCard({
       </FieldShell>
       {window.mode === 'custom' ? (
         <View style={styles.times}>
+          {/* Each side takes half the row: on device the compact pickers
+              overlapped when the field was only as wide as its label. */}
+          <View style={styles.time}>
           <FieldShell label="From">
             <TimePicker
               value={start}
@@ -72,6 +75,8 @@ export function WindowCard({
               testID="field-window-start"
             />
           </FieldShell>
+          </View>
+          <View style={styles.time}>
           <FieldShell label="To">
             <TimePicker
               value={end}
@@ -81,6 +86,7 @@ export function WindowCard({
               testID="field-window-end"
             />
           </FieldShell>
+          </View>
         </View>
       ) : null}
       <Text style={[type.caption, { color: window.zoneFallback ? colors.statusAlert : colors.tertiary }]} testID="alert-window-zone">
@@ -100,6 +106,7 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   times: { flexDirection: 'row', gap: space.lg },
+  time: { flex: 1 },
   drift: {
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.sm,
