@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -67,6 +67,26 @@ describe('no dead controls on the screens', () => {
       const body = read(file);
       expect(body).toMatch(/accessibilityRole=\{wired \? 'button' : undefined\}/);
       expect(body).toMatch(/disabled=\{!wired\}/);
+    }
+  });
+
+  it('keeps unfinished Horses writes visibly disabled and removes fake routes', () => {
+    const groupChips = read(join('components', 'horses', 'group-chips.tsx'));
+    const horseCard = read(join('components', 'horses', 'horse-card.tsx'));
+
+    expect(groupChips).not.toContain('router.push');
+    expect(horseCard).not.toContain('router.push');
+    expect(groupChips.match(/disabled: true/g)?.length).toBe(3);
+    expect(horseCard.match(/disabled: true/g)?.length).toBe(3);
+
+    for (const route of [
+      'delete-horse.tsx',
+      'group-form.tsx',
+      'group-management.tsx',
+      'horse-form.tsx',
+      'horse-groups.tsx',
+    ]) {
+      expect(existsSync(join(SRC, 'app', '(tabs)', 'horses', route))).toBe(false);
     }
   });
 });

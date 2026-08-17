@@ -1,5 +1,4 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
 
 import { MediaTile } from '@/components/media/media-tile';
 import { Icon } from '@/components/ui/icon';
@@ -85,24 +84,24 @@ export function HorseCard({ horse, onPress }: { horse: HorseRow; onPress?: () =>
           {
             id: 'edit',
             label: 'Edit',
-            description: 'Review and update this horse’s details.',
+            description: 'Coming soon — update this horse’s details.',
             icon: 'edit',
-            onPress: () => router.push({ pathname: '/horses/horse-form', params: { id: horse.id, mode: 'edit' } }),
+            disabled: true,
           },
           {
             id: 'groups',
             label: 'Manage Groups',
-            description: 'Choose which groups this horse belongs to.',
+            description: 'Coming soon — organise horses in your organisation.',
             icon: 'group',
-            onPress: () => router.push({ pathname: '/horses/horse-groups', params: { id: horse.id } }),
+            disabled: true,
           },
           {
             id: 'remove',
             label: 'Remove',
-            description: 'Review this action before removing the horse.',
+            description: 'Coming soon — remove this horse from your organisation.',
             icon: 'remove',
             destructive: true,
-            onPress: () => router.push({ pathname: '/horses/delete-horse', params: { id: horse.id, name: horse.name } }),
+            disabled: true,
           },
         ]}
       />
