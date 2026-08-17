@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
 import { useMemo } from 'react';
 
-import { getStallMonitorThumbnailURLs } from '@acme/config/utils/stall-monitor-video-helper';
+import { LIVE_STREAM_OFFSET } from '@acme/config/constants/date-constants';
+import {
+  getStallIdFromURL,
+  getStallMonitorLiveStreamOffsetURL,
+  getStallMonitorThumbnailURLs,
+} from '@acme/config/utils/stall-monitor-video-helper';
 import { queries } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 
@@ -96,10 +101,33 @@ export function useSnapshots() {
         ? getStallMonitorThumbnailURLs(stall.stall_url, epoch)
         : [undefined];
 
+      /**
+       * The live HLS manifest, built only for a stall that actually has a
+       * monitor. `getStallIdFromURL` returns -1 when it cannot parse one, and
+       * a URL built on -1 is a request that can only 404 — so it is left
+       * undefined and the tile stays a still with nothing to switch to.
+       *
+       * Audio follows the stall's own setting: `audio_video` streams the barn,
+       * `video` does not. The current app makes the same choice from the same
+       * field.
+       */
+      const monitorId = stall.stall_url ? getStallIdFromURL(stall.stall_url) : -1;
+      const liveUri =
+        monitorId > 0
+          ? getStallMonitorLiveStreamOffsetURL({
+              stallId: monitorId,
+              offset: LIVE_STREAM_OFFSET,
+              type: stall.UserMetaData?.audio_enable ? 'audio_video' : 'video',
+              quality: 'low',
+            })
+          : undefined;
+
       return {
         id: stall.id,
         name: animal?.animal_name ?? stall.name ?? 'No Stall Assigned',
         posterUri,
+        liveUri,
+        hasAudio: !!stall.UserMetaData?.audio_enable,
         blurhash: stall.stall_blur_hash ?? undefined,
         avatarUri:
           animal?.animal_image && 'small' in animal.animal_image

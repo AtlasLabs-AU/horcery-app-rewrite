@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
@@ -7,33 +8,16 @@ import { Menu } from '@/components/ui/menu';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
-/**
- * Snapshot menu actions. Declared here, without handlers, because the
- * destinations do not exist yet — see the note on `Menu` below.
- */
-const SNAPSHOT_MENU_ACTIONS = [
-  {
-    id: 'playback-speed',
-    label: 'Playback speed',
-    description: 'Coming soon — choose how fast the timelapse runs.',
-    icon: 'play' as const,
-    disabled: true,
-  },
-  {
-    id: 'go-live',
-    label: 'Go live',
-    description: 'Coming soon — switch from timelapse to the live camera.',
-    icon: 'spaces' as const,
-    disabled: true,
-  },
-];
-
 export interface Snapshot {
   id: string;
   /** Stall or horse name, captioned on the frame. */
   name: string;
   /** Still frame for the tile. */
   posterUri?: string;
+  /** Live HLS manifest, when this stall has a monitor to stream from. */
+  liveUri?: string;
+  /** Whether the stall streams barn audio at all. */
+  hasAudio?: boolean;
   /** BlurHash shown while the poster loads. */
   blurhash?: string;
   /** Horse avatar — kept for the fullscreen view (H5), not drawn on the tile. */
@@ -57,12 +41,48 @@ export function SnapshotsCard({
   snapshots,
   playbackSpeedLabel = '10x',
   subtitle = 'Last 2 hours at a glance',
+  paused = false,
 }: {
   snapshots: Snapshot[];
   playbackSpeedLabel?: string;
   subtitle?: string;
+  /**
+   * Stop streaming — the screen sets this when the tab loses focus.
+   *
+   * Owned by the SCREEN rather than read from navigation here, so the card
+   * stays a presentational component that renders without a navigator (and
+   * stays testable in isolation, like every other For You card).
+   */
+  paused?: boolean;
 }) {
   const { colors } = useTokens();
+  const [wantsLive, setWantsLive] = useState(false);
+  const [muted, setMuted] = useState(true);
+  /** Stalls whose stream failed this session — they fall back to the still. */
+  const [failed, setFailed] = useState<string[]>([]);
+
+  const streamable = snapshots.some((snapshot) => !!snapshot.liveUri);
+  /**
+   * Derived, not stored. An organisation with no monitor can never be live,
+   * and a paused card must not stream — so both are folded in here rather
+   * than "corrected" by an effect afterwards.
+   *
+   * `paused` matters more than it looks: the current app's players keep
+   * decoding after you navigate away, because its release code is commented
+   * out and its visibility flag is unused.
+   */
+  const live = wantsLive && streamable && !paused;
+
+  // A stream that failed once should not retry forever on every re-render;
+  // reset only when the user deliberately goes live again.
+  const onGoLive = useCallback(() => {
+    setFailed([]);
+    setWantsLive((current) => !current);
+  }, []);
+
+  const onFailed = useCallback((id: string) => {
+    setFailed((current) => (current.includes(id) ? current : [...current, id]));
+  }, []);
 
   return (
     <SectionCard testID="for-you-snapshots">
@@ -71,7 +91,7 @@ export function SnapshotsCard({
         adornment={
           <View style={[styles.speedPill, { backgroundColor: colors.fillTonal }]}>
             <Text style={[type.caption, styles.speedText, { color: colors.accent }]}>
-              {`▶ ${playbackSpeedLabel}`}
+              {live ? 'LIVE' : `▶ ${playbackSpeedLabel}`}
             </Text>
           </View>
         }
@@ -80,25 +100,81 @@ export function SnapshotsCard({
             icon="overflow"
             accessibilityLabel="Snapshot options"
             testID="for-you-snapshot-menu"
-            actions={SNAPSHOT_MENU_ACTIONS}
+            actions={[
+              {
+                id: 'go-live',
+                label: live ? 'Stop live' : 'Go live',
+                description: streamable
+                  ? live
+                    ? 'Back to the still frames.'
+                    : 'Stream the camera you are looking at.'
+                  : 'No stall monitor in this organisation to stream from.',
+                icon: 'spaces',
+                disabled: !streamable,
+                onPress: streamable ? onGoLive : undefined,
+              },
+              {
+                id: 'mute',
+                label: muted ? 'Unmute' : 'Mute',
+                description: live
+                  ? 'Barn audio, when the stall streams it.'
+                  : 'Available while the camera is live.',
+                icon: muted ? 'soundOff' : 'sound',
+                disabled: !live,
+                onPress: live ? () => setMuted((current) => !current) : undefined,
+              },
+            ]}
           />
         }
       />
-      <Text style={[type.subhead, styles.subtitle, { color: colors.tertiary }]}>{subtitle}</Text>
+      <Text style={[type.subhead, styles.subtitle, { color: colors.tertiary }]}>
+        {live ? 'Live from the stall you are viewing' : subtitle}
+      </Text>
 
       <MediaCarousel
         items={snapshots}
         keyExtractor={(snapshot) => snapshot.id}
         testID="for-you-snapshot-row"
-        renderItem={(snapshot) => (
-          <MediaTile
-            posterUri={snapshot.posterUri}
-            blurhash={snapshot.blurhash}
-            title={snapshot.name}
-            accessibilityLabel={`${snapshot.name} snapshot`}
-            testID={`for-you-snapshot-${snapshot.id}`}
-          />
-        )}
+        renderItem={(snapshot, _index, isSnapped) => {
+          const broken = failed.includes(snapshot.id);
+          /**
+           * ONE player, ever. `videoUri` is passed only to the snapped tile
+           * while live — supplying it to every tile would construct a player
+           * per tile even though only one plays, which is the exact cost this
+           * carousel replaced.
+           */
+          const playing = live && isSnapped && !!snapshot.liveUri && !broken;
+          /**
+           * Live is on, but THIS stall has no stream to give. Without a word
+           * the header says LIVE while the tile sits there as a still and the
+           * reader is left to guess whether it is loading, broken, or simply
+           * a quiet stall.
+           */
+          const cannotStream = live && !snapshot.liveUri;
+
+          return (
+            <MediaTile
+              posterUri={snapshot.posterUri}
+              blurhash={snapshot.blurhash}
+              videoUri={playing ? snapshot.liveUri : undefined}
+              live={playing}
+              muted={muted || !snapshot.hasAudio}
+              onPlaybackError={() => onFailed(snapshot.id)}
+              title={snapshot.name}
+              tag={
+                broken
+                  ? { label: 'Live unavailable' }
+                  : cannotStream
+                    ? { label: 'No live stream' }
+                    : playing
+                      ? { label: 'LIVE', tone: 'alert' }
+                      : undefined
+              }
+              accessibilityLabel={`${snapshot.name} ${playing ? 'live camera' : 'snapshot'}`}
+              testID={`for-you-snapshot-${snapshot.id}`}
+            />
+          );
+        }}
       />
     </SectionCard>
   );

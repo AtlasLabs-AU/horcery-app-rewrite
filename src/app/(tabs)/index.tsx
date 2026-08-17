@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useCallback } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -51,6 +51,19 @@ export default function ForYouScreen() {
     timezone,
   } = useForYouData();
   const { snapshots } = useSnapshots();
+  /**
+   * Whether this tab is on screen. Owned here rather than inside
+   * `SnapshotsCard` so that card stays renderable without a navigator; it
+   * exists so a live stream stops decoding when you navigate away, which the
+   * current app never does.
+   */
+  const [isFocused, setIsFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => setIsFocused(false);
+    }, []),
+  );
   const alertStatus = useAlertStatus(organizationID, timezone);
   const { colors } = useTokens();
   const preview = PREVIEWS.sampleForYouData;
@@ -92,7 +105,7 @@ export default function ForYouScreen() {
             onSeeHistory={openHistory}
           />
 
-          <SnapshotsCard snapshots={visibleSnapshots} />
+          <SnapshotsCard snapshots={visibleSnapshots} paused={!isFocused} />
 
           <ReviewCard
             onSeeHistory={openHistory}

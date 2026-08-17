@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -29,8 +29,20 @@ export interface MediaTileProps {
    * Play, right now. Exactly one tile in a row or page should have this true
    * (PRINCIPLES #2; the current app mounts a player per tile and never
    * releases them, which is the single largest cost on For You).
+   *
+   * Note this gates PLAYBACK, not the player: passing `videoUri` still
+   * constructs one. Callers rendering a row should pass `videoUri` only to the
+   * tile that is actually going to play, so there is one player and not N
+   * paused ones.
    */
   live?: boolean;
+  /** Live barn audio is off unless asked for. */
+  muted?: boolean;
+  /**
+   * The stream failed. The tile keeps showing its still, so the caller can
+   * say so rather than leaving a black rectangle where video should be.
+   */
+  onPlaybackError?: () => void;
   /** Caption line one — the horse, or the stall. */
   title?: string;
   /** Caption line two — "Stall 4 · 12 min ago". */
@@ -75,6 +87,8 @@ export function MediaTile({
   blurhash,
   videoUri,
   live = false,
+  muted = true,
+  onPlaybackError,
   title,
   subtitle,
   subtitleIcon,
@@ -105,7 +119,19 @@ export function MediaTile({
         />
       ) : null}
 
-      {videoUri ? <TileVideo uri={videoUri} live={live} /> : null}
+      {videoUri ? (
+        // Keyed on `muted` so toggling audio rebuilds the player. The React
+        // Compiler forbids assigning to `player.muted` after construction, and
+        // for a live stream a rebuild is nearly free — it reconnects at the
+        // live edge, which is where it already was.
+        <TileVideo
+          key={muted ? 'muted' : 'audible'}
+          uri={videoUri}
+          live={live}
+          muted={muted}
+          onError={onPlaybackError}
+        />
+      ) : null}
 
       {/* Scrim first: everything below is painted ON it, so a duration pill
           in the same corner as the caption is never dimmed by the gradient. */}
@@ -207,10 +233,23 @@ export function MediaTile({
  * Split out so the player hook only ever runs for a tile that has a stream —
  * `useVideoPlayer` cannot be called conditionally inside `MediaTile` itself.
  */
-function TileVideo({ uri, live }: { uri: string; live: boolean }) {
+function TileVideo({
+  uri,
+  live,
+  muted,
+  onError,
+}: {
+  uri: string;
+  live: boolean;
+  muted: boolean;
+  onError?: () => void;
+}) {
+  const [failed, setFailed] = useState(false);
   const player = useVideoPlayer(uri, (instance) => {
-    instance.loop = true;
-    instance.muted = true;
+    // A live stream has no end to loop back to; looping only makes sense for
+    // a recorded clip standing in for itself.
+    instance.loop = !live;
+    instance.muted = muted;
   });
 
   /**
@@ -220,9 +259,26 @@ function TileVideo({ uri, live }: { uri: string; live: boolean }) {
    * decoded at once (found in the carousel prototype).
    */
   useEffect(() => {
-    if (live) player.play();
+    if (live && !failed) player.play();
     else player.pause();
-  }, [live, player]);
+  }, [live, failed, player]);
+
+  /**
+   * A barn camera can be offline, and an HLS manifest that 404s otherwise
+   * leaves a black rectangle where the still used to be. Unmounting the video
+   * lets the poster show through, and the caller gets told so it can say why.
+   */
+  useEffect(() => {
+    const subscription = player.addListener('statusChange', ({ status }) => {
+      if (status === 'error') {
+        setFailed(true);
+        onError?.();
+      }
+    });
+    return () => subscription.remove();
+  }, [player, onError]);
+
+  if (failed) return null;
 
   return (
     <VideoView
