@@ -21,6 +21,18 @@ export default function AlertsLayout() {
   return (
     <AlertsPermissionsProvider>
       <Stack>
+        <Stack.Screen name="new" options={{ title: 'New alert' }} />
+        <Stack.Screen name="configure" options={{ title: 'Alert' }} />
+        {/* The targets picker is a FORM SHEET so it keeps a native header (search + Done). */}
+        <Stack.Screen
+          name="targets"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.9],
+            sheetGrabberVisible: true,
+            headerShown: true,
+          }}
+        />
         <Stack.Screen
           name="index"
           options={{

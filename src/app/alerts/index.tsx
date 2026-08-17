@@ -1,6 +1,6 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { AlertRuleRow } from '@/components/alerts/alert-rule-row';
 import { useAlertsPermissions } from '@/components/alerts/alerts-permissions';
@@ -128,11 +128,9 @@ export default function ManageAlertsScreen() {
   const footer = (
     <View style={styles.footer}>
       {rules.isFetchingNextPage ? <ActivityIndicator color={colors.accent} /> : null}
-      {views.length > 0 ? (
+      {views.length > 0 && !permissions.edit ? (
         <Text style={[type.footnote, styles.footerText, { color: colors.tertiary }]}>
-          {permissions.edit
-            ? 'Adding and editing alerts arrives with the next slice.'
-            : 'Editors and admins will be able to add and edit alerts here.'}
+          Editors and admins can add and edit alerts here.
         </Text>
       ) : null}
     </View>
@@ -147,7 +145,25 @@ export default function ManageAlertsScreen() {
         title floated over the content on scroll — seen on device, A2.
         Not headerTransparent either: the native header owns its background.
       */}
-      <Stack.Screen options={{ title: 'Alerts', headerLargeTitle: true }} />
+      <Stack.Screen
+        options={{
+          title: 'Alerts',
+          headerLargeTitle: true,
+          headerRight: permissions.create
+            ? () => (
+                <Pressable
+                  onPress={() => router.push('/alerts/new')}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel="New alert"
+                  testID="alerts-add"
+                  style={styles.headerButton}>
+                  <Icon name="add" size={22} color={colors.foreground} />
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <FlatList
         style={[styles.page, { backgroundColor: colors.background }]}
         contentInsetAdjustmentBehavior="automatic"
@@ -160,7 +176,10 @@ export default function ManageAlertsScreen() {
         ListHeaderComponent={header}
         renderItem={({ item }) => (
           <View style={styles.cell}>
-            <AlertRuleRow view={item} />
+            <AlertRuleRow
+              view={item}
+              onPress={() => router.push({ pathname: '/alerts/configure', params: { ruleId: item.id } })}
+            />
           </View>
         )}
         ListEmptyComponent={
@@ -176,11 +195,21 @@ export default function ManageAlertsScreen() {
               title="No alerts yet"
               detail={
                 permissions.create
-                  ? 'Alerts tell you when something needs a look. Adding one arrives with the next slice.'
+                  ? 'Alerts tell you when something needs a look.'
                   : `Alerts tell you when something needs a look. ${permissions.reason}`
               }
-              testID="alerts-empty"
-            />
+              testID="alerts-empty">
+              {permissions.create ? (
+                <Pressable
+                  onPress={() => router.push('/alerts/new')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add an alert"
+                  testID="alerts-empty-add"
+                  style={({ pressed }) => [styles.primary, { backgroundColor: colors.inverse }, pressed && { opacity: 0.85 }]}>
+                  <Text style={[type.headline, { color: colors.onInverse }]}>Add an alert</Text>
+                </Pressable>
+              ) : null}
+            </StateShell>
           )
         }
         ListFooterComponent={footer}
@@ -215,4 +244,13 @@ const styles = StyleSheet.create({
   cell: { paddingHorizontal: space.edge, paddingBottom: space.md },
   footer: { paddingVertical: space.lg, alignItems: 'center', gap: space.sm },
   footerText: { textAlign: 'center', paddingHorizontal: space.xl },
+  headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  primary: {
+    minHeight: 44,
+    marginTop: space.sm,
+    paddingHorizontal: space.card,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

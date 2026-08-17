@@ -106,17 +106,30 @@ describe('no dead controls on the screens', () => {
     expect(stallCard).not.toContain('Pressable');
   });
 
-  it('keeps Manage Alerts (A2, read-only) free of dead controls', () => {
-    const screen = read(join('app', 'alerts', 'index.tsx'));
+  it('keeps the alerts screens honest (A3: create/edit built, saving gated)', () => {
+    const list = read(join('app', 'alerts', 'index.tsx'));
     const row = read(join('components', 'alerts', 'alert-rule-row.tsx'));
+    const configure = read(join('app', 'alerts', 'configure.tsx'));
+    const scopeRow = read(join('components', 'alerts', 'scope-row.tsx'));
 
-    // No add/edit/delete affordance exists yet — the footer SAYS so instead
-    // of a dimmed button with no reason. Nothing routes anywhere.
-    expect(screen).not.toContain('router.push');
-    expect(screen).toContain('arrives with the next slice');
+    // The "+" and the empty-state button exist ONLY for roles that may create.
+    expect(list).toMatch(/headerRight: permissions\.create/);
+    expect(list).toMatch(/permissions\.create \? \(/);
     // A row is a button only when a press is wired.
     expect(row).toMatch(/accessibilityRole=\{onPress \? 'button' : undefined\}/);
     expect(row).toMatch(/disabled=\{!onPress\}/);
+    // Save: role and press only when it can act; otherwise the reason is on screen.
+    expect(configure).toMatch(/accessibilityRole=\{canPressSave \? 'button' : undefined\}/);
+    expect(configure).toMatch(/disabled=\{!canPressSave\}/);
+    expect(configure).toContain('configure-save-reason');
+    // Delete is not a button in A3 — it is text with its reason beside it.
+    expect(configure).toContain('deleteReason');
+    expect(configure).not.toMatch(/accessibilityLabel="Remove alert"[\s\S]*accessibilityRole="button"/);
+    // The service is never called from Configure in A3.
+    expect(configure).not.toContain('alertRuleService');
+    expect(configure).not.toContain('useMutation');
+    // Scope rows drop their button role when read-only.
+    expect(scopeRow).toMatch(/accessibilityRole=\{disabled \? undefined : 'button'\}/);
   });
 
   it('keeps the date bar arrows honest at the ends of the range', () => {
