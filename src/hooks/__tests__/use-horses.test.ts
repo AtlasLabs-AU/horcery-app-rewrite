@@ -46,4 +46,74 @@ describe('joinRow', () => {
     expect(empty).toMatchObject({ name: 'Comet', imageKind: 'none' });
     expect(empty.imageUri).toBeUndefined();
   });
+
+  it('only applies frame refresh when a camera frame exists', () => {
+    const photo = joinHorseRow(
+      {
+        id: 'horse-camera',
+        animal_name: 'Storm',
+        animal_image: { small: 's', medium: 'profile.jpg', large: 'l', extra_large: 'xl' },
+        animal_blur_hash: 'profile-blur',
+      },
+      {
+        id: 'stall-1',
+        name: 'Stall 1',
+        stall_url: 'https://camera.example/',
+        stall_blur_hash: 'camera-blur',
+        current_stall_monitor_deviceinstance: 'device-1',
+      } as IStall,
+      12345,
+      1,
+    );
+    const photoRefreshed = joinHorseRow(
+      {
+        id: 'horse-camera',
+        animal_name: 'Storm',
+        animal_image: { small: 's', medium: 'profile.jpg', large: 'l', extra_large: 'xl' },
+        animal_blur_hash: 'profile-blur',
+      },
+      {
+        id: 'stall-1',
+        name: 'Stall 1',
+        stall_url: 'https://camera.example/',
+        stall_blur_hash: 'camera-blur',
+        current_stall_monitor_deviceinstance: 'device-1',
+      } as IStall,
+      12345,
+      2,
+    );
+    const photoRefreshSameToken = joinHorseRow(
+      {
+        id: 'horse-camera',
+        animal_name: 'Storm',
+        animal_image: { small: 's', medium: 'profile.jpg', large: 'l', extra_large: 'xl' },
+        animal_blur_hash: 'profile-blur',
+      },
+      {
+        id: 'stall-1',
+        name: 'Stall 1',
+        stall_url: 'https://camera.example/',
+        stall_blur_hash: 'camera-blur',
+        current_stall_monitor_deviceinstance: 'device-1',
+      } as IStall,
+      12345,
+      2,
+    );
+    const profilePhoto = joinHorseRow(
+      {
+        id: 'horse-profile',
+        registered_name: 'Willow',
+        animal_image: { small: 's', medium: 'profile.jpg', large: 'l', extra_large: 'xl' },
+      },
+      undefined,
+      12345,
+      2,
+    );
+
+    expect(photo.imageUri).toContain('v=1');
+    expect(photoRefreshed.imageUri).toContain('v=2');
+    expect(photoRefreshed.imageUri).toBe(photoRefreshSameToken.imageUri);
+    expect(photo.imageUri).not.toBe(photoRefreshed.imageUri);
+    expect(profilePhoto.imageUri).toBe('profile.jpg');
+  });
 });

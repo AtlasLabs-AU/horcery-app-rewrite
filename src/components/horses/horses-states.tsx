@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import type { IconName } from '@/components/ui/icon';
 import { CARD_HEIGHT } from '@/components/horses/horse-card';
 import { radius, space, type } from '@/constants/tokens';
 import { useTokens } from '@/hooks/use-tokens';
@@ -29,12 +30,46 @@ export function HorsesError({ onRetry }: { onRetry: () => void }) {
       <Pressable
         onPress={onRetry}
         accessibilityRole="button"
+        accessibilityLabel="Try again"
         style={({ pressed }) => [
           styles.retry,
           { backgroundColor: colors.inverse },
           pressed && { opacity: 0.85 },
         ]}>
         <Text style={[type.headline, { color: colors.onInverse }]}>Try again</Text>
+      </Pressable>
+    </StateShell>
+  );
+}
+
+export function HorsesNoInternet({
+  onRetry,
+  enabled,
+}: {
+  onRetry: () => void;
+  enabled: boolean;
+}) {
+  const { colors } = useTokens();
+  return (
+    <StateShell
+      icon="wifiOff"
+      title="No internet connection"
+      detail="Reconnect your network and the page will refresh automatically."
+    >
+      <Pressable
+        onPress={onRetry}
+        disabled={!enabled}
+        accessibilityRole={enabled ? 'button' : undefined}
+        accessibilityLabel={enabled ? 'Retry when online' : 'Retry unavailable while offline'}
+        style={({ pressed }) => [
+          styles.retry,
+          { backgroundColor: enabled ? colors.inverse : colors.bed },
+          pressed && enabled && { opacity: 0.85 },
+          !enabled && { opacity: 0.6 },
+        ]}>
+        <Text style={[type.headline, { color: enabled ? colors.onInverse : colors.tertiary }]}>
+          {enabled ? 'Retry' : 'Waiting for connection'}
+        </Text>
       </Pressable>
     </StateShell>
   );
@@ -80,7 +115,7 @@ function StateShell({
   detail,
   children,
 }: {
-  icon: 'info' | 'search' | 'group' | 'horse';
+  icon: IconName;
   title: string;
   detail: string;
   children?: React.ReactNode;

@@ -41,6 +41,13 @@ export interface HorsesOptions {
 export function useHorses({ groupId, search, pageSize = 20 }: HorsesOptions = {}) {
   const organizationID = useAuthStore((s) => s.organizationID);
   const enabled = !!organizationID;
+  /**
+   * Pull-to-refresh with its own flag: `isRefetching` on one query cannot
+   * stand for three, and a spinner that stops before the stall names arrive
+   * reads as "done" when it is not.
+   */
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshFrameToken, setRefreshFrameToken] = useState(0);
 
   const additionalParams = useMemo(
     () => (groupId ? [{ key: 'animal_group_id', value: groupId }] : []),
@@ -111,19 +118,19 @@ export function useHorses({ groupId, search, pageSize = 20 }: HorsesOptions = {}
       ) * FRAME_SLICE_SECONDS;
 
     return animals.map((animal) =>
-      joinHorseRow(animal, stallByAnimalId.get(animal.id ?? ''), epoch),
+      joinHorseRow(
+        animal,
+        stallByAnimalId.get(animal.id ?? ''),
+        epoch,
+        refreshFrameToken,
+      ),
     );
-  }, [animalsQuery.data, stallsQuery.data, linksQuery.data]);
+  }, [animalsQuery.data, stallsQuery.data, linksQuery.data, refreshFrameToken]);
 
-  /**
-   * Pull-to-refresh with its own flag: `isRefetching` on one query cannot
-   * stand for three, and a spinner that stops before the stall names arrive
-   * reads as "done" when it is not.
-   */
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
+      setRefreshFrameToken((token) => token + 1);
       await Promise.all([animalsQuery.refetch(), stallsQuery.refetch(), linksQuery.refetch()]);
     } finally {
       setIsRefreshing(false);

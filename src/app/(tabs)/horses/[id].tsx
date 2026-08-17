@@ -1,17 +1,28 @@
-import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { HorsesError, HorsesLoading } from '@/components/horses/horses-states';
-import { Icon } from '@/components/ui/icon';
+import { MediaTile } from '@/components/media/media-tile';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { radius, space, type } from '@/constants/tokens';
 import { queries } from '@/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 import { useTokens } from '@/hooks/use-tokens';
 import { horseSelectionKey, joinHorseRow, type HorseRow } from '@/hooks/horses-data';
+import type { SegmentedOption } from '@/components/ui/segmented-control-types';
+
+const TAB_SEGMENT_WIDTH_OFFSET = space.edge * 2;
+
+type DetailTab = 'summary' | 'events' | 'alerts';
+
+const TABS: SegmentedOption<DetailTab>[] = [
+  { label: 'Summary', value: 'summary' },
+  { label: 'Events', value: 'events' },
+  { label: 'Alerts', value: 'alerts' },
+];
 
 function value(param: string | string[] | undefined, fallback = '') {
   return Array.isArray(param) ? (param[0] ?? fallback) : (param ?? fallback);
@@ -22,6 +33,8 @@ export default function HorseDetailSeed() {
   const queryClient = useQueryClient();
   const organizationID = useAuthStore((state) => state.organizationID);
   const { colors } = useTokens();
+  const { width } = useWindowDimensions();
+  const [activeTab, setActiveTab] = useState<DetailTab>('summary');
   const id = value(params.id);
   const isSampleHorse = id.startsWith('sample-');
 
@@ -49,6 +62,10 @@ export default function HorseDetailSeed() {
 
     return joinHorseRow(horseQuery.data, horseQuery.data.stall, epoch);
   }, [queryClient, id, horseQuery.data]);
+
+  const onTabChange = useCallback((value: DetailTab) => {
+    setActiveTab(value);
+  }, []);
 
   if (!horse && horseQuery.isLoading) {
     return (
@@ -90,52 +107,70 @@ export default function HorseDetailSeed() {
       contentContainerStyle={styles.content}
       contentInsetAdjustmentBehavior="automatic">
       <Stack.Screen options={{ title: name, headerLargeTitle: false }} />
-      <View style={[styles.image, { backgroundColor: colors.fillTonal }]}>
-        {hasImage ? (
-          <Image
-            source={horse?.imageUri || undefined}
-            placeholder={horse?.blurhash ? { blurhash: horse.blurhash } : undefined}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            accessible
-            accessibilityLabel={`${name} thumbnail`}
-          />
-        ) : (
-          <Icon name="horse" size={42} color={colors.accent} />
-        )}
+
+      <MediaTile
+        posterUri={hasImage ? horse.imageUri : undefined}
+        blurhash={horse.blurhash}
+        accessibilityLabel={`${name} photo`}
+        style={[styles.media, { backgroundColor: colors.fillTonal }]}
+      />
+
+      <View style={styles.titleRow}>
+        <Text style={[type.largeTitle, { color: colors.foreground }]}>{name}</Text>
+        <Text style={[type.headline, { color: colors.secondary }]}>{stallName}</Text>
       </View>
-      {id.startsWith('sample-') ? (
-        <Text style={[type.footnote, styles.sample, { color: colors.accent }]}>Sample horse</Text>
-      ) : null}
-      <Text style={[type.largeTitle, { color: colors.foreground }]}>{name}</Text>
-      <Text style={[type.headline, { color: colors.secondary }]}>{stallName}</Text>
-      <View style={[styles.note, { backgroundColor: colors.card }]}>
-        <Text style={[type.headline, { color: colors.foreground }]}>Horse details are next</Text>
-        <Text style={[type.subhead, { color: colors.secondary }]}>
-          This read-only seed preserves card navigation without pretending edit, group, or removal flows are ready.
-        </Text>
+
+      <SegmentedControl<DetailTab>
+        options={TABS}
+        value={activeTab}
+        onChange={onTabChange}
+        width={Math.max(width - TAB_SEGMENT_WIDTH_OFFSET, 260)}
+        accessibilityLabel="Horse tabs"
+      />
+
+      <View style={[styles.tabPanel, { backgroundColor: colors.card }]}>
+        {activeTab === 'summary' ? (
+          <>
+            <Text style={[type.title3, { color: colors.foreground }]}>Horse summary</Text>
+            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>
+              This tab currently shows card-level information only. In the rewrite, this is where
+              live in-stall / out-of-stall status, latest activity and quick metrics will live.
+            </Text>
+            {isSampleHorse ? (
+              <Text style={[type.footnote, { color: colors.accent, marginTop: space.sm }]}>Sample horse</Text>
+            ) : null}
+          </>
+        ) : activeTab === 'events' ? (
+          <>
+            <Text style={[type.title3, { color: colors.foreground }]}>Events</Text>
+            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>
+              This tab is intentionally scaffolded while we wire live event pages and filters.
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={[type.title3, { color: colors.foreground }]}>Alerts</Text>
+            <Text style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}>
+              This tab is intentionally scaffolded. Alerts readout, threshold details, and action paths
+              are still to be connected.
+            </Text>
+          </>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: space.edge, paddingBottom: space.xxl },
-  image: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-    marginBottom: space.lg,
+  content: { padding: space.edge, paddingBottom: space.xxl, gap: space.md },
+  media: {
     borderRadius: radius.lg,
     borderCurve: 'continuous',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  sample: { marginBottom: space.xs, fontWeight: '600' },
-  note: {
-    marginTop: space.lg,
-    gap: space.sm,
-    padding: space.card,
+  titleRow: { gap: space.xs },
+  tabPanel: {
+    marginTop: space.sm,
+    padding: space.md,
     borderRadius: radius.md,
     borderCurve: 'continuous',
   },

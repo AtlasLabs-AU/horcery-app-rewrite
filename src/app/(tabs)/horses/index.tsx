@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { useQueryClient } from '@tanstack/react-query';
-import { router, Stack } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -13,14 +13,21 @@ import {
 import { GroupChips, ALL_HORSES } from '@/components/horses/group-chips';
 import { HorseCard } from '@/components/horses/horse-card';
 import { HorsesPreviewBanner } from '@/components/horses/horses-preview-banner';
-import { HorsesEmpty, HorsesError, HorsesLoading } from '@/components/horses/horses-states';
+import {
+  HorsesEmpty,
+  HorsesError,
+  HorsesLoading,
+  HorsesNoInternet,
+} from '@/components/horses/horses-states';
 import { PREVIEWS } from '@/config/previews';
 import { filterSampleHorses, SAMPLE_HORSE_GROUPS } from '@/config/sample/horses-sample';
 import { space } from '@/constants/tokens';
 import { useHorseGroups } from '@/hooks/use-horse-groups';
 import { useHorses, type HorseRow } from '@/hooks/use-horses';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { horseSelectionKey } from '@/hooks/horses-data';
 import { useTokens } from '@/hooks/use-tokens';
+import { prefetchAnimalDetailPage } from '@/services/api/prefetch-utils';
 import { useAuthStore } from '@acme/stores/authorization-states';
 
 const SEARCH_DELAY_MS = 300;
@@ -35,15 +42,21 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
   const [selectedGroup, setSelectedGroup] = useState(ALL_HORSES);
-  const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sampleOrganization, setSampleOrganization] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isNavigatingRef = useRef(false);
+  const isOnline = useOnlineStatus();
+  const wasOfflineRef = useRef(!isOnline);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchText.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [searchText]);
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
 
   const groupId = selectedGroup === ALL_HORSES ? undefined : selectedGroup;
   const horses = useHorses({ groupId, search: debouncedSearch || undefined });
@@ -89,9 +102,79 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
   const selectedGroupName = groups.find((group) => group.id === selectedGroup)?.name;
   const loading = !usingSample && (horses.isLoading || groupsQuery.isLoading);
   const error = !usingSample && (horses.isError || groupsQuery.isError);
-  const showSkeleton = loading && rows.length === 0;
+  const isOffline = !usingSample && !isOnline;
+  const showSkeleton = loading && rows.length === 0 && !isOffline;
+  const onGroupSelect = useCallback((groupId: string) => setSelectedGroup(groupId), []);
+  const selectedNoInternet = isOffline && (error || rows.length === 0);
+  const listHeader = error || selectedNoInternet ? null : (
+    <View style={[styles.header, { backgroundColor: colors.background }]}>
+      {usingSample ? <HorsesPreviewBanner /> : null}
+      <GroupChips groups={groups} selectedId={selectedGroup} onSelect={onGroupSelect} />
+    </View>
+  );
+
+  const retry = useCallback(() => {
+    if (isOffline) return;
+    void Promise.all([horses.refetch(), groupsQuery.refetch()]);
+  }, [isOffline, horses, groupsQuery]);
+
+  useEffect(() => {
+    if (usingSample) {
+      wasOfflineRef.current = false;
+      return;
+    }
+
+    if (!isOnline) {
+      wasOfflineRef.current = true;
+      return;
+    }
+
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      void retry();
+    }
+  }, [isOnline, usingSample, retry]);
+
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+      return () => {
+        isNavigatingRef.current = false;
+      };
+    }, []),
+  );
+
+  const onSearchTextChange = useCallback(
+    (event: { nativeEvent: { text: string } }) => {
+      const value = event.nativeEvent.text;
+      const nextValue = value.trim();
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+
+      if (!value) {
+        setDebouncedSearch('');
+        return;
+      }
+
+      searchDebounceRef.current = setTimeout(() => {
+        setDebouncedSearch(nextValue);
+        searchDebounceRef.current = null;
+      }, SEARCH_DELAY_MS);
+    },
+    [],
+  );
+
+  const onSearchCancel = useCallback(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+    setDebouncedSearch('');
+  }, []);
 
   const refresh = async () => {
+    if (!isOnline) return;
     setIsRefreshing(true);
     try {
       await Promise.all([horses.refresh(), groupsQuery.refetch()]);
@@ -100,17 +183,31 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
     }
   };
 
-  const openHorse = (horse: HorseRow) => {
-    queryClient.setQueryData(horseSelectionKey(horse.id), horse);
-    router.push({
-      pathname: '/horses/[id]',
-      params: { id: horse.id },
-    });
-  };
+  const openHorse = useCallback((horse: HorseRow) => {
+    if (isNavigatingRef.current) {
+      return;
+    }
 
-  const retry = () => {
-    void Promise.all([horses.refetch(), groupsQuery.refetch()]);
-  };
+    isNavigatingRef.current = true;
+    queryClient.setQueryData(horseSelectionKey(horse.id), horse);
+
+    if (organizationID && !horse.id.startsWith('sample-')) {
+      void prefetchAnimalDetailPage(horse.id, { organizationID }).catch(() => {
+        // Keep route push responsive if prefetch fails.
+      });
+    }
+
+    void (async () => {
+      try {
+        await router.push({
+          pathname: '/horses/[id]',
+          params: { id: horse.id },
+        });
+      } catch {
+        isNavigatingRef.current = false;
+      }
+    })();
+  }, [organizationID, queryClient]);
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
@@ -125,8 +222,8 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
             // A horse name is not a sentence: without this iOS sends "Zzzz"
             // for what was typed as "zzzz".
             autoCapitalize: 'none',
-            onChangeText: (event) => setSearchText(event.nativeEvent.text),
-            onCancelButtonPress: () => setSearchText(''),
+            onChangeText: onSearchTextChange,
+            onCancelButtonPress: onSearchCancel,
           },
         }}
       />
@@ -141,21 +238,8 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
         }
-        ListHeaderComponent={
-          error
-            ? null
-            : (
-                <View style={[styles.header, { backgroundColor: colors.background }]}>
-                  {usingSample ? <HorsesPreviewBanner /> : null}
-                  <GroupChips
-                    groups={groups}
-                    selectedId={selectedGroup}
-                    onSelect={setSelectedGroup}
-                  />
-                </View>
-              )
-        }
-        stickyHeaderIndices={error ? undefined : [0]}
+        ListHeaderComponent={listHeader}
+        stickyHeaderIndices={error || selectedNoInternet ? undefined : [0]}
         renderItem={({ item }) => (
           <View style={styles.cell}>
             <HorseCard horse={item} onPress={() => openHorse(item)} />
@@ -164,6 +248,8 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
         ListEmptyComponent={
           showSkeleton ? (
             <HorsesLoading />
+          ) : selectedNoInternet ? (
+            <HorsesNoInternet onRetry={retry} enabled={isOnline} />
           ) : error ? (
             <HorsesError onRetry={retry} />
           ) : (

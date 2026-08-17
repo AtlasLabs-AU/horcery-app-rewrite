@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
 import { AuthFlow } from '@/components/auth/auth-flow';
+import { AppError } from '@/components/app/app-error';
 import { LockScreen } from '@/components/auth/lock-screen';
 import { SheetBackdropHost } from '@/components/ui/sheet-backdrop';
 import { PREVIEWS } from '@/config/previews';
@@ -25,6 +26,10 @@ export default function RootLayout() {
       </ThemeProvider>
     </QueryClientProvider>
   );
+}
+
+export function ErrorBoundary(props: Parameters<typeof AppError>[0]) {
+  return <AppError {...props} />;
 }
 
 /**
