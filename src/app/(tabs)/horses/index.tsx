@@ -89,6 +89,7 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
   const selectedGroupName = groups.find((group) => group.id === selectedGroup)?.name;
   const loading = !usingSample && (horses.isLoading || groupsQuery.isLoading);
   const error = !usingSample && (horses.isError || groupsQuery.isError);
+  const showSkeleton = loading && rows.length === 0;
 
   const refresh = async () => {
     setIsRefreshing(true);
@@ -132,7 +133,7 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
 
       <FlashList
         key={`horses-${columns}`}
-        data={loading || error ? [] : rows}
+        data={rows}
         numColumns={columns}
         keyExtractor={(item) => item.id}
         contentInsetAdjustmentBehavior="automatic"
@@ -141,25 +142,27 @@ function HorsesContent({ organizationID }: { organizationID: string | null }) {
           <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />
         }
         ListHeaderComponent={
-          loading || error ? null : (
-            <View style={[styles.header, { backgroundColor: colors.background }]}>
-              {usingSample ? <HorsesPreviewBanner /> : null}
-              <GroupChips
-                groups={groups}
-                selectedId={selectedGroup}
-                onSelect={setSelectedGroup}
-              />
-            </View>
-          )
+          error
+            ? null
+            : (
+                <View style={[styles.header, { backgroundColor: colors.background }]}>
+                  {usingSample ? <HorsesPreviewBanner /> : null}
+                  <GroupChips
+                    groups={groups}
+                    selectedId={selectedGroup}
+                    onSelect={setSelectedGroup}
+                  />
+                </View>
+              )
         }
-        stickyHeaderIndices={loading || error ? undefined : [0]}
+        stickyHeaderIndices={error ? undefined : [0]}
         renderItem={({ item }) => (
           <View style={styles.cell}>
             <HorseCard horse={item} onPress={() => openHorse(item)} />
           </View>
         )}
         ListEmptyComponent={
-          loading ? (
+          showSkeleton ? (
             <HorsesLoading />
           ) : error ? (
             <HorsesError onRetry={retry} />

@@ -115,6 +115,13 @@ export default function CarouselPrototypes() {
           testID="review-history-link">
           Review History →
         </Text>
+        <Text
+          style={styles.stallsLink}
+          onPress={() => router.push('/proto-bottom-sheet')}
+          accessibilityRole="button"
+          testID="proto-bottom-sheet-link">
+          Bottom Sheet options →
+        </Text>
         <Text style={styles.title}>Snapshot carousel</Text>
         <Text style={styles.subtitle}>Prototype — text style: {variant}</Text>
 

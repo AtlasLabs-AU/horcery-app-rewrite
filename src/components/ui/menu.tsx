@@ -1,9 +1,12 @@
-import { BottomSheet, RNHostView } from '@expo/ui';
-import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+// Default export AND a named export of the same name; the alias keeps the
+// import-rule happy without pretending they are the same thing.
+import { default as NativeSheet, BottomSheetView } from '@expo/ui/community/bottom-sheet';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import type { MenuAction, MenuProps } from '@/components/ui/menu-types';
+import { useSheetScale } from '@/components/ui/sheet-scale';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -27,12 +30,22 @@ export type { MenuAction, MenuProps } from '@/components/ui/menu-types';
  *    ("Update details of the selected horse"), so a disabled action can say
  *    *why* instead of smuggling it into the label.
  *
- * It is still native where it counts: `BottomSheet` from `@expo/ui` is a real
- * `UISheetPresentationController` on iOS and a Material 3 `ModalBottomSheet`
- * on Android. `RNHostView` is what lets the rows inside be ordinary React
- * Native views, so they take the design tokens like everything else. This
- * file therefore has no platform fork at all — the previous `menu.ios.tsx`
- * and `menu.android.tsx` are gone.
+ * **Which sheet (decided 2026-08-17 after three prototypes).** This uses
+ * `@expo/ui/community/bottom-sheet` — a real iOS sheet with detents and a
+ * Material 3 `ModalBottomSheet` on Android — because it is the only option
+ * that brings the *gesture*: drag to dismiss, and drag between resting
+ * heights. A hand-animated version (the "MotionFlix" prototype) reproduced
+ * the look but had no gesture at all, and hand-writing drag physics is
+ * exactly where "smooth over showy" goes wrong.
+ *
+ * The one thing the native sheet does not do is move the app behind it, and
+ * that recession is the part of the MotionFlix transition Inakshi picked. It
+ * lives in `SheetScaleHost`, wrapped around the root navigator — see the note
+ * there for why that is the only hand-animated piece.
+ *
+ * Content is ordinary React Native, so the rows take the design tokens like
+ * everything else. This file has no platform fork at all — the previous
+ * `menu.ios.tsx` and `menu.android.tsx` are gone.
  */
 export function Menu({
   actions,
@@ -46,16 +59,17 @@ export function Menu({
   testID,
 }: MenuProps) {
   const { colors } = useTokens();
-  const { width: windowWidth } = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const empty = actions.length === 0;
+  const sheetScale = useSheetScale();
 
-  /**
-   * `RNHostView` sizes to its content inside the native sheet, so short rows
-   * ("Exiting") produced a half-width panel floating on the left. The sheet
-   * insets its content by 16 on each side, so this is the full usable width.
-   */
-  const sheetWidth = windowWidth - space.edge * 2;
+  // The app recedes while the sheet is up, and comes back when it goes —
+  // including when the sheet is DRAGGED away rather than dismissed by us.
+  useEffect(() => {
+    if (!open) return undefined;
+    sheetScale.present();
+    return () => sheetScale.release();
+  }, [open, sheetScale]);
 
   const runAction = useCallback(
     (action: MenuAction) => {
@@ -94,9 +108,19 @@ export function Menu({
         ) : null}
       </Pressable>
 
-      <BottomSheet isPresented={open} onDismiss={() => setOpen(false)}>
-        <RNHostView matchContents>
-          <View style={[styles.sheet, { width: sheetWidth, backgroundColor: colors.card }]}>
+      <NativeSheet
+        index={open ? 0 : -1}
+        onClose={() => setOpen(false)}
+        onDismiss={() => setOpen(false)}
+        enablePanDownToClose
+        // Content height, not fixed detents: these lists are three to seven
+        // short rows, and a 72%-tall sheet holding three rows is mostly empty
+        // sheet. A long sheet can pass snap points when one exists.
+        enableDynamicSizing
+        backgroundStyle={{ backgroundColor: colors.background }}
+        handleIndicatorStyle={{ backgroundColor: colors.tertiary }}>
+        <BottomSheetView>
+          <View style={[styles.sheet, { backgroundColor: colors.background }]}>
             <View style={styles.sheetHeader}>
               <Text style={[type.title3, styles.sheetTitle, { color: colors.foreground }]}>
                 {title ?? accessibilityLabel}
@@ -106,25 +130,38 @@ export function Menu({
                 hitSlop={12}
                 accessibilityRole="button"
                 accessibilityLabel={multiSelect ? 'Done' : 'Close'}
-                testID={testID ? `${testID}-done` : undefined}>
-                <Text style={[type.headline, { color: colors.accent }]}>
-                  {multiSelect ? 'Done' : 'Close'}
-                </Text>
+                testID={testID ? `${testID}-done` : undefined}
+                style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
+                {multiSelect ? (
+                  <Text style={[type.footnote, { color: colors.accent, fontWeight: '600' }]}>
+                    Done
+                  </Text>
+                ) : (
+                  <Icon name="close" size={16} color={colors.tertiary} />
+                )}
               </Pressable>
             </View>
+            <View style={[styles.separatorBar, { backgroundColor: colors.divider }]} />
 
-            {actions.map((action, index) => (
-              <Row
-                key={action.id}
-                action={action}
-                last={index === actions.length - 1}
-                onPress={() => runAction(action)}
-                testID={testID ? `${testID}-${action.id}` : undefined}
-              />
-            ))}
+            <ScrollView
+              // A long filter list must stay reachable on a small phone; a
+              // short one measures to its content and never scrolls.
+              style={styles.rows}
+              contentContainerStyle={styles.rowsContent}
+              showsVerticalScrollIndicator={false}>
+              {actions.map((action, index) => (
+                <Row
+                  key={action.id}
+                  action={action}
+                  last={index === actions.length - 1}
+                  onPress={() => runAction(action)}
+                  testID={testID ? `${testID}-${action.id}` : undefined}
+                />
+              ))}
+            </ScrollView>
           </View>
-        </RNHostView>
-      </BottomSheet>
+        </BottomSheetView>
+      </NativeSheet>
     </>
   );
 }
@@ -192,34 +229,56 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   sheet: {
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    paddingBottom: space.sm,
+    paddingTop: space.xs,
+    // Clears the home indicator: a native sheet ends at the screen edge.
+    paddingBottom: space.xl,
+  },
+  /** A long filter stays reachable on a small phone; a short one never scrolls. */
+  rows: { maxHeight: 420 },
+  rowsContent: { paddingBottom: space.sm },
+  dragHandle: {
+    alignSelf: 'center',
+    width: 36,
+    height: 5,
+    borderRadius: radius.full,
+    marginBottom: space.sm,
+    opacity: 0.5,
   },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: space.md,
-    paddingHorizontal: space.card,
-    paddingTop: space.md,
+    paddingHorizontal: space.sm + space.xs,
+    paddingTop: space.sm,
     paddingBottom: space.sm,
+  },
+  closeButton: {
+    minHeight: 26,
+    minWidth: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.full,
+  },
+  separatorBar: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: space.sm,
+    marginBottom: space.xs,
   },
   sheetTitle: { flexShrink: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.md,
-    minHeight: 56,
-    paddingHorizontal: space.card,
+    gap: space.sm,
+    minHeight: 60,
+    paddingHorizontal: space.sm + space.xs,
     paddingVertical: space.md,
   },
-  rowIcon: { marginTop: 2 },
+  rowIcon: { marginTop: 2, opacity: 0.95 },
   rowWords: { flex: 1, gap: space.xxs },
   separator: {
     position: 'absolute',
-    left: space.card,
+    left: space.sm + space.xs,
     right: 0,
     bottom: 0,
     height: StyleSheet.hairlineWidth,
