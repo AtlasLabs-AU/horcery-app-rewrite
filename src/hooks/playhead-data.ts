@@ -1,5 +1,7 @@
 import type { DateTime } from 'luxon';
 
+import { BUFFER_OFFSET_SECONDS } from '@acme/config/constants/date-constants';
+
 /**
  * The play-head: which day you are looking at, and the instant within it.
  *
@@ -14,13 +16,19 @@ import type { DateTime } from 'luxon';
  */
 
 /**
- * Live video runs behind real time, so "now" for the player is a little in the
- * past. The current app uses the same offset for the same reason; without it
- * the scrubber can be dragged to an instant no footage exists for yet.
+ * The latest instant the user may select.
+ *
+ * Live video runs behind real time, so "now" for the play-head is slightly in
+ * the past; without the offset the scrubber can be dragged to an instant no
+ * footage exists for yet.
+ *
+ * `BUFFER_OFFSET_SECONDS` is the SHARED constant (`SEGMENT_SIZE ×
+ * LIVE_STREAM_OFFSET` = 6s), the same one the current app's play-head uses.
+ * This file briefly declared its own `BUFFER_OFFSET_SECONDS = 30` — an
+ * invented value that both disagreed with the real one and shadowed it by
+ * name, which would have put the scrubber and the video player 24 seconds
+ * apart about where "now" is the moment the player landed.
  */
-export const BUFFER_OFFSET_SECONDS = 30;
-
-/** The latest instant the user may select. */
 export function latestSelectable(now: DateTime): DateTime {
   return now.minus({ seconds: BUFFER_OFFSET_SECONDS });
 }
