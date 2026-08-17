@@ -23,6 +23,25 @@ function hourStep(spanHours: number, maxLabels: number): number {
   return [1, 2, 3, 4, 6, 8, 12].find((hours) => spanHours / hours <= maxLabels) ?? 12;
 }
 
+const HOUR_MS = 60 * 60 * 1000;
+
+/** Select deterministic time-axis values while retaining both exact endpoints. */
+export function timeAxisTickValues(
+  domain: readonly [number, number],
+  width: number,
+): number[] {
+  const [start, end] = domain;
+  if (!(end > start)) return [start];
+  const stepMs = hourStep((end - start) / HOUR_MS, maxAxisLabels(width)) * HOUR_MS;
+  const firstAligned = Math.ceil(start / stepMs) * stepMs;
+  const ticks = [start];
+  for (let value = firstAligned; value < end; value += stepMs) {
+    if (value > start) ticks.push(value);
+  }
+  if (ticks.at(-1) !== end) ticks.push(end);
+  return ticks;
+}
+
 /** Pick an ECharts value-axis interval that fits the current viewport. */
 export function axisTickInterval(
   visible: readonly [number, number],

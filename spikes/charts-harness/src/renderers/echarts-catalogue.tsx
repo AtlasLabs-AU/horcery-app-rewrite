@@ -15,6 +15,7 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import {
   compactFraction,
   mixedCategoryTooltip,
+  mixedValueDomain,
   type CatalogueChart,
   type ContinuousObservationChart,
   type MixedObservationChart,
@@ -86,6 +87,7 @@ function continuousOption(chart: ContinuousObservationChart) {
 }
 
 function mixedOption(chart: MixedObservationChart) {
+  const valueDomain = mixedValueDomain(chart);
   return {
     animation: false,
     color: COLORS,
@@ -93,6 +95,7 @@ function mixedOption(chart: MixedObservationChart) {
     legend: { top: 0, textStyle: { color: '#64748B' } },
     tooltip: {
       trigger: 'axis',
+      triggerOn: 'click',
       confine: true,
       renderMode: 'richText',
       formatter: (params: { dataIndex?: number } | { dataIndex?: number }[]) => {
@@ -109,6 +112,8 @@ function mixedOption(chart: MixedObservationChart) {
     },
     yAxis: {
       type: 'value',
+      min: valueDomain[0],
+      max: valueDomain[1],
       axisLabel: { color: '#64748B', formatter: (value: number) => `${value} ${chart.unit}` },
       splitLine: { lineStyle: { color: '#f1f5f9' } },
     },

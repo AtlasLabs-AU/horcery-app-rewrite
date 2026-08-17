@@ -7,6 +7,7 @@ import {
   compactFraction,
   continuousSegments,
   mixedCategoryTooltip,
+  mixedValueDomain,
 } from '@/charts/chart-catalogue';
 
 describe('whole-catalogue renderer-independent fixtures', () => {
@@ -61,6 +62,20 @@ describe('whole-catalogue renderer-independent fixtures', () => {
     expect(mixedCategoryTooltip(MIXED_OBSERVATIONS, MIXED_OBSERVATIONS.categories[5]!)).toContain(
       'Target: No reading',
     );
+  });
+
+  it('uses one zero-based mixed value domain that includes stacks, lines and markers', () => {
+    expect(mixedValueDomain(MIXED_OBSERVATIONS)).toEqual([0, 35]);
+    expect(mixedValueDomain({
+      ...MIXED_OBSERVATIONS,
+      categories: [{
+        key: 'empty',
+        label: 'Empty',
+        stacked: {},
+        line: null,
+        marker: null,
+      }],
+    })).toEqual([0, 5]);
   });
 
   it('preserves exact compact-summary domain behavior and no-data meaning', () => {

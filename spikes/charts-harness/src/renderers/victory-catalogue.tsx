@@ -15,12 +15,14 @@ import {
 import {
   compactFraction,
   mixedCategoryTooltip,
+  mixedValueDomain,
   type CompactSummaryChart,
   type ContinuousObservationChart,
   type MixedObservationChart,
 } from '@/charts/chart-catalogue';
 
 import type { CatalogueRendererProps } from '../catalogue-renderer';
+import { timeAxisTickValues } from '../axis-ticks';
 import { buildVictoryContinuousTable } from './victory-continuous';
 
 const COLORS = ['#0369A1', '#7DD3FC', '#F59E0B', '#7C3AED'];
@@ -30,6 +32,13 @@ function ContinuousChart({ chart, width, height }: { chart: ContinuousObservatio
   const { state: transform } = useChartTransformState();
   const table = useMemo(() => buildVictoryContinuousTable(chart), [chart]);
   const seriesColors = new Map(chart.series.map((series, index) => [series.id, COLORS[index % COLORS.length]!]));
+  const tickValues = useMemo(
+    () => timeAxisTickValues(
+      [table.data[0]?.x ?? 0, table.data.at(-1)?.x ?? 0],
+      width,
+    ),
+    [table.data, width],
+  );
 
   return (
     <View style={{ width, height }}>
@@ -51,7 +60,8 @@ function ContinuousChart({ chart, width, height }: { chart: ContinuousObservatio
         transformConfig={{ pinch: { dimensions: 'x' }, pan: { dimensions: 'x' } }}
         xAxis={{
           font,
-          tickCount: 5,
+          tickValues,
+          tickCount: tickValues.length,
           formatXLabel: (value) => DateTime.fromMillis(Number(value), { zone: chart.zone }).toFormat('h a'),
           labelColor: '#64748B',
           lineWidth: 0,
@@ -99,6 +109,7 @@ function ContinuousChart({ chart, width, height }: { chart: ContinuousObservatio
 
 function MixedChart({ chart, width, height }: { chart: MixedObservationChart; width: number; height: number }) {
   const [selected, setSelected] = useState<number | null>(null);
+  const valueDomain = mixedValueDomain(chart);
   const data = useMemo(
     () => chart.categories.map((category, index) => ({
       x: index,
@@ -112,6 +123,14 @@ function MixedChart({ chart, width, height }: { chart: MixedObservationChart; wi
 
   return (
     <View style={{ width, height }}>
+      <View style={styles.legend} pointerEvents="none">
+        {['Consumed', 'Remaining', 'Target', 'Events'].map((label, index) => (
+          <View key={label} style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: COLORS[index] }]} />
+            <Text style={styles.legendText}>{label}</Text>
+          </View>
+        ))}
+      </View>
       <Pressable
         accessibilityRole="imagebutton"
         accessibilityLabel="Mixed observations chart. Tap a month for exact values."
@@ -125,6 +144,8 @@ function MixedChart({ chart, width, height }: { chart: MixedObservationChart; wi
           data={data}
           xKey="x"
           yKeys={['consumed', 'remaining', 'target', 'marker']}
+          domain={{ y: valueDomain }}
+          domainPadding={{ left: 20, right: 20 }}
           padding={{ left: 8, right: 8, top: 10, bottom: 20 }}
           xAxis={{
             font,
@@ -134,8 +155,14 @@ function MixedChart({ chart, width, height }: { chart: MixedObservationChart; wi
             labelColor: '#64748B',
             lineWidth: 0,
           }}
-          yAxis={[{ font, tickCount: 5, labelColor: '#64748B', lineColor: '#f1f5f9' }]}
-          explicitSize={{ width, height }}>
+          yAxis={[{
+            font,
+            tickCount: 5,
+            formatYLabel: (value) => `${value} ${chart.unit}`,
+            labelColor: '#64748B',
+            lineColor: '#f1f5f9',
+          }]}
+          explicitSize={{ width, height: height - 24 }}>
           {({ points, chartBounds }) => (
             <>
               <StackedBar
@@ -205,7 +232,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendSwatch: { width: 10, height: 3, borderRadius: 2 },
   legendText: { color: '#64748B', fontSize: 11 },
-  tooltip: { position: 'absolute', left: 48, top: 22, backgroundColor: '#ffffff', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  tooltip: { position: 'absolute', left: 48, top: 46, backgroundColor: '#ffffff', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
   tooltipText: { color: '#0f172a', fontSize: 12 },
   noData: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9', borderRadius: 12 },
   noDataText: { color: '#64748B', fontSize: 14 },

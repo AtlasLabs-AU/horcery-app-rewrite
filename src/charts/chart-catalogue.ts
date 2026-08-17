@@ -161,6 +161,21 @@ export function mixedCategoryTooltip(chart: MixedObservationChart, category: Mix
   ].join('\n');
 }
 
+/**
+ * One truthful value domain for both renderers. Stacked bars start at zero and
+ * the upper bound includes every stack, line and marker, rounded to a readable
+ * five-unit step so library defaults cannot change the comparison.
+ */
+export function mixedValueDomain(chart: MixedObservationChart): [number, number] {
+  const values = chart.categories.flatMap((category) => [
+    chart.stackOrder.reduce((total, key) => total + (category.stacked[key] ?? 0), 0),
+    category.line ?? 0,
+    category.marker?.value ?? 0,
+  ]);
+  const maximum = Math.max(0, ...values);
+  return [0, Math.max(5, Math.ceil(maximum / 5) * 5)];
+}
+
 export function compactFraction(chart: CompactSummaryChart): number | null {
   if (chart.value === null) return null;
   if (!(chart.max > chart.min)) throw new RangeError('compact summary max must be greater than min');
