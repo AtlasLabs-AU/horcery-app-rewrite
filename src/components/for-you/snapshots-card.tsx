@@ -1,7 +1,7 @@
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
-import { snapshotPage, snapshotPageCount } from '@/components/for-you/snapshot-paging';
+import { MediaCarousel } from '@/components/media/media-carousel';
 import { MediaTile } from '@/components/media/media-tile';
 import { Menu } from '@/components/ui/menu';
 import { useTokens } from '@/hooks/use-tokens';
@@ -18,13 +18,13 @@ const SNAPSHOT_MENU_ACTIONS = [
 
 export interface Snapshot {
   id: string;
-  /** Stall or horse name shown in the tile footer. */
+  /** Stall or horse name, captioned on the frame. */
   name: string;
   /** Still frame for the tile. */
   posterUri?: string;
   /** BlurHash shown while the poster loads. */
   blurhash?: string;
-  /** Avatar image for the horse; initials are drawn when absent. */
+  /** Horse avatar — kept for the fullscreen view (H5), not drawn on the tile. */
   avatarUri?: string;
 }
 
@@ -35,29 +35,22 @@ export interface Snapshot {
  * looping `expo-video` player streaming an HLS timelapse, so N tiles decode N
  * video streams at once — the single largest cost on the page. Here a tile is a
  * still image; the visual result is the same, the work is not.
+ *
+ * **Sizing (Inakshi, 2026-08-17):** a swipeable row of full-size tiles rather
+ * than two small ones side by side. The two-up grid could only give each tile
+ * 178pt inside a doubly-inset card; the carousel measures the screen and gets
+ * 273pt, with the next tile peeking as the swipe affordance.
  */
-function columnsForWidth(width: number): number {
-  if (width >= 1000) return 4;
-  if (width >= 700) return 3;
-  return 2;
-}
-
 export function SnapshotsCard({
   snapshots,
   playbackSpeedLabel = '10x',
   subtitle = 'Last 2 hours at a glance',
-  activePage = 0,
 }: {
   snapshots: Snapshot[];
   playbackSpeedLabel?: string;
   subtitle?: string;
-  activePage?: number;
 }) {
   const { colors } = useTokens();
-  const { width } = useWindowDimensions();
-  const columns = columnsForWidth(width);
-  const pageCount = snapshotPageCount(snapshots.length, columns);
-  const visible = snapshotPage(snapshots, columns, activePage);
 
   return (
     <SectionCard testID="for-you-snapshots">
@@ -81,57 +74,21 @@ export function SnapshotsCard({
       />
       <Text style={[type.subhead, styles.subtitle, { color: colors.tertiary }]}>{subtitle}</Text>
 
-      <View style={styles.tileRow}>
-        {visible.map((snapshot) => (
-          <SnapshotTile key={snapshot.id} snapshot={snapshot} />
-        ))}
-      </View>
-
-      {/*
-        The dots reflect real pages now that the row is paged rather than
-        truncated (§6b finding 6). Changing page still needs a swipe gesture —
-        that, foreground refresh and fullscreen belong to the Snapshots
-        vertical slice, and `activePage` is controlled by the caller until then.
-      */}
-      {pageCount > 1 ? (
-        <View style={styles.dots}>
-          {Array.from({ length: pageCount }).map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                { backgroundColor: index === activePage ? colors.accent : colors.dimmed },
-              ]}
-            />
-          ))}
-        </View>
-      ) : null}
-    </SectionCard>
-  );
-}
-
-/**
- * A tile is now the shared `MediaTile` in its confirmed overlay treatment
- * (Inakshi, 2026-08-17): the name sits on the frame over a scrim rather than
- * on a grey strip beneath it.
- *
- * The horse avatar that used to sit in that strip is gone with it — a face
- * chip on top of a camera frame is one thing too many, and the frame already
- * shows the horse. Its `avatarUri` stays on the type for the fullscreen view
- * (H5), where there is room for it.
- */
-function SnapshotTile({ snapshot }: { snapshot: Snapshot }) {
-  return (
-    <View style={styles.tile}>
-      <MediaTile
-        posterUri={snapshot.posterUri}
-        blurhash={snapshot.blurhash}
-        title={snapshot.name}
-        accessibilityLabel={`${snapshot.name} snapshot`}
-        testID={`for-you-snapshot-${snapshot.id}`}
-        compact
+      <MediaCarousel
+        items={snapshots}
+        keyExtractor={(snapshot) => snapshot.id}
+        testID="for-you-snapshot-row"
+        renderItem={(snapshot) => (
+          <MediaTile
+            posterUri={snapshot.posterUri}
+            blurhash={snapshot.blurhash}
+            title={snapshot.name}
+            accessibilityLabel={`${snapshot.name} snapshot`}
+            testID={`for-you-snapshot-${snapshot.id}`}
+          />
+        )}
       />
-    </View>
+    </SectionCard>
   );
 }
 
@@ -146,22 +103,5 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: space.xxs,
-  },
-  tileRow: {
-    flexDirection: 'row',
-    gap: space.md,
-    marginTop: space.edge,
-  },
-  tile: { flex: 1 },
-  dots: {
-    flexDirection: 'row',
-    alignSelf: 'center',
-    gap: space.sm,
-    marginTop: space.edge,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: radius.full,
   },
 });

@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { LinkButton } from '@/components/for-you/link-button';
+import { MediaCarousel } from '@/components/media/media-carousel';
 import { MediaTile } from '@/components/media/media-tile';
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon';
@@ -59,11 +60,12 @@ export function ReviewCard({
       />
       {children ??
         (previewEvents?.length ? (
-          <View style={styles.previewRow} testID="for-you-review-preview">
-            {previewEvents.slice(0, 2).map((event) => (
-              <ReviewPreviewTile key={event.id} event={event} />
-            ))}
-          </View>
+          <MediaCarousel
+            items={previewEvents}
+            keyExtractor={(event) => event.id}
+            testID="for-you-review-preview"
+            renderItem={(event) => <ReviewPreviewTile event={event} />}
+          />
         ) : (
           <ReviewEmptyState />
         ))}
@@ -82,18 +84,15 @@ export function ReviewCard({
  */
 function ReviewPreviewTile({ event }: { event: ReviewPreviewEvent }) {
   return (
-    <View style={styles.previewTile}>
-      <MediaTile
-        posterUri={event.posterUri}
-        blurhash={event.blurhash}
-        title={event.horseName}
-        subtitle={`${event.title} · ${event.stallName}`}
-        subtitleIcon={event.icon}
-        badge={event.durationLabel}
-        accessibilityLabel={`${event.horseName}, ${event.title}, ${event.stallName}, ${event.timeLabel}`}
-        compact
-      />
-    </View>
+    <MediaTile
+      posterUri={event.posterUri}
+      blurhash={event.blurhash}
+      title={event.horseName}
+      subtitle={`${event.title} · ${event.stallName}`}
+      subtitleIcon={event.icon}
+      badge={event.durationLabel}
+      accessibilityLabel={`${event.horseName}, ${event.title}, ${event.stallName}, ${event.timeLabel}`}
+    />
   );
 }
 
@@ -111,12 +110,6 @@ function ReviewEmptyState() {
 }
 
 const styles = StyleSheet.create({
-  previewRow: {
-    flexDirection: 'row',
-    gap: space.md,
-    marginTop: space.edge,
-  },
-  previewTile: { flex: 1, minWidth: 0 },
   info: {
     flexDirection: 'row',
     alignItems: 'flex-start',

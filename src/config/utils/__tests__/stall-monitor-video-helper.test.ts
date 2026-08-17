@@ -9,7 +9,7 @@ import {
  * SCOPE, precisely: the thumbnail URL construction and 10-second frame maths.
  * Nothing here touches the §6b finding 6 data-loss bugs — page truncation,
  * omitted paginated stalls, incomplete refresh queries. Those are covered by
- * `snapshot-paging.test.ts` (truncation) and remain open for the rest (see the
+ * `media-carousel.test.tsx` (truncation) and remain open for the rest (see the
  * note there). An earlier version of this comment claimed otherwise, which is
  * worse than no comment: it invites the next person to believe a failure mode
  * is already guarded (review, 2026-08-15).
