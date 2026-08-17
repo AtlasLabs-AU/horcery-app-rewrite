@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { EVENT_TYPE_ID } from '@acme/config/constants/event-types';
 import { DayStrip } from '@/components/review-history/day-strip';
 import { EventCard, type HistoryEvent } from '@/components/review-history/event-card';
+import { formatEventTime, toHistoryEvents } from '@/components/review-history/event-rows';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
 import { useForYouData } from '@/hooks/use-for-you-data';
@@ -67,20 +67,6 @@ const BEHAVIOR_OPTIONS: { id: BehaviorKey; label: string; icon: IconName }[] = [
   { id: 'entering', label: 'Entering', icon: 'entering' },
 ];
 
-const ICON_FOR_TYPE: Record<number, IconName> = {
-  7: 'info',
-  80: 'entering',
-  81: 'exiting',
-  100: 'lyingDown',
-  102: 'rolling',
-  103: 'rolling',
-  104: 'rolling',
-  105: 'rolling',
-  200: 'peopleInStall',
-  204: 'peopleInStall',
-  205: 'peopleInteraction',
-  [EVENT_TYPE_ID.alert]: 'alerts',
-};
 
 export default function ReviewHistoryScreen() {
   const { colors } = useTokens();
@@ -118,30 +104,7 @@ export default function ReviewHistoryScreen() {
   } = useReviewHistory({ day, eventTypes });
 
   const rows = useMemo<HistoryEvent[]>(
-    () =>
-      events.map((event) => {
-        const typeId = event.event_type ?? 0;
-        const isAlert =
-          typeId === EVENT_TYPE_ID.alert || [103, 104, 105].includes(typeId);
-        const stall =
-          typeof event.stall_id === 'object' ? event.stall_id : event.stall;
-        const durationSeconds = Number(event.duration ?? 0);
-        return {
-          id: event.id ?? `${event.start_time}-${typeId}`,
-          title: event.title,
-          startTime: event.start_time ?? '',
-          timeLabel: formatEventTime(event.start_time, timezone),
-          // Only behaviour events with real duration have footage — the guard
-          // the current app added to History but never back-ported to For You.
-          hasClip: durationSeconds > 0,
-          durationLabel: durationSeconds > 0 ? formatDuration(durationSeconds) : undefined,
-          blurhash: event.event_blur_hash,
-          animalName: event.animal?.animal_name ?? event.animal?.registered_name,
-          stallName: stall?.name,
-          isAlert,
-          icon: ICON_FOR_TYPE[typeId] ?? 'info',
-        };
-      }),
+    () => toHistoryEvents(events, { timezone }),
     [events, timezone],
   );
 
@@ -343,20 +306,6 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
       </View>
     </View>
   );
-}
-
-/** Timestamps are shown in the barn's zone, never the phone's (§6c). */
-function formatEventTime(iso: string | undefined, timezone?: string | null) {
-  if (!iso) return '';
-  const time = DateTime.fromISO(iso);
-  return (timezone ? time.setZone(timezone) : time).toFormat('dd LLL yyyy h:mm a');
-}
-
-function formatDuration(seconds: number) {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
 const styles = StyleSheet.create({

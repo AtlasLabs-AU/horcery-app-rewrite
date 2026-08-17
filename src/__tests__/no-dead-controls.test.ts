@@ -89,4 +89,39 @@ describe('no dead controls on the screens', () => {
       expect(existsSync(join(SRC, 'app', '(tabs)', 'horses', route))).toBe(false);
     }
   });
+
+  it('keeps the Horse Details writes visibly disabled and routes nowhere', () => {
+    const detail = read(join('app', '(tabs)', 'horses', '[id].tsx'));
+    const stallCard = read(join('components', 'horses', 'horse-stall-card.tsx'));
+
+    // Edit, Manage Groups, Remove — the same three the list card offers, and
+    // all three dimmed until the write side exists.
+    expect(detail.match(/disabled: true/g)?.length).toBe(3);
+    expect(detail).not.toContain('router.push');
+
+    // Re-assign and the stall row are disabled by being non-interactive
+    // Views, so they must not claim a button role or hold a press handler.
+    expect(stallCard).not.toContain('accessibilityRole="button"');
+    expect(stallCard).not.toContain('onPress');
+    expect(stallCard).not.toContain('Pressable');
+  });
+
+  it('does not reintroduce the removed surfaces on Horse Details', () => {
+    const detail = read(join('app', '(tabs)', 'horses', '[id].tsx'));
+    // D4 no feedback card, D8 no Special Instructions, D1 no settings cog —
+    // each decided 2026-08-17 and each easy to re-add by accident during a
+    // later parity pass.
+    // Match rendered components and imports, not prose: the file's own header
+    // names these decisions, and a test that trips on its own documentation
+    // teaches people to delete the documentation.
+    const rendered = detail.match(/<[A-Z][A-Za-z]*/g) ?? [];
+    const imported = detail.match(/^import .*$/gm) ?? [];
+    const surface = [...rendered, ...imported].join('\n');
+
+    expect(surface).not.toMatch(/feedback/i);
+    expect(surface).not.toMatch(/special.?instruction/i);
+    expect(surface).not.toMatch(/animal-settings|settings-page/i);
+    // The cog is what D1 removed; the ⋮ replaced it.
+    expect(detail).not.toMatch(/name="settings"\s+size=\{\d+\}\s+color=\{colors\.(accent|foreground)\}/);
+  });
 });

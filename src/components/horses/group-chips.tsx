@@ -12,9 +12,11 @@ export const ALL_HORSES = 'all';
  * then a visible ⋮ for group editing.
  *
  * The current app hides group editing behind a LONG-PRESS on a chip, which
- * nothing on screen hints at. The ⋮ replaces that (Inakshi, 2026-08-16); its
- * actions are disabled until the write side exists, but present so the row
- * reads as designed.
+ * nothing on screen hints at, and puts a separate round "+" at the HEAD of the
+ * row for Add Horse / New Group. Both are replaced by this one ⋮ (Inakshi,
+ * 2026-08-16 and again 2026-08-17: "keep the single ⋮"). Its actions are
+ * disabled until the write side exists, but present so the row reads as
+ * designed.
  */
 export function GroupChips({
   groups,
@@ -32,30 +34,6 @@ export function GroupChips({
 
   return (
     <View style={styles.row}>
-      <Menu
-        icon="add"
-        accessibilityLabel="Add horse or group"
-        testID="horse-add-menu"
-        width={44}
-        height={44}
-        title="Add to horses"
-        actions={[
-          {
-            id: 'add-horse',
-            label: 'Add Horse',
-            description: 'Coming soon — add a horse to your organisation.',
-            icon: 'add',
-            disabled: true,
-          },
-          {
-            id: 'new-group',
-            label: 'New Group',
-            description: 'Coming soon — create a group to sort horses into.',
-            icon: 'group',
-            disabled: true,
-          },
-        ]}
-      />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -114,6 +92,20 @@ export function GroupChips({
         height={44}
         title="Horses and groups"
         actions={[
+          {
+            id: 'add',
+            label: 'Add Horse',
+            description: 'Coming soon — add a horse to your organisation.',
+            icon: 'add',
+            disabled: true,
+          },
+          {
+            id: 'new',
+            label: 'New Group',
+            description: 'Coming soon — create a group to sort horses into.',
+            icon: 'add',
+            disabled: true,
+          },
           {
             id: 'edit',
             label: 'Edit Groups',

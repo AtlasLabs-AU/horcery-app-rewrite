@@ -1,20 +1,67 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { DateTime } from 'luxon';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
-import { HorsesError, HorsesLoading } from '@/components/horses/horses-states';
+import { EVENT_TYPE_ID } from '@acme/config/constants/event-types';
+import { HorsePassport } from '@/components/horses/horse-passport';
+import { HorseStallCard } from '@/components/horses/horse-stall-card';
+import { HorsesError, HorsesLoading, HorsesNoInternet } from '@/components/horses/horses-states';
 import { MediaTile } from '@/components/media/media-tile';
+import { EventCard, type HistoryEvent } from '@/components/review-history/event-card';
+import { toHistoryEvents } from '@/components/review-history/event-rows';
+import { Icon } from '@/components/ui/icon';
+import { Menu } from '@/components/ui/menu';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { radius, space, type } from '@/constants/tokens';
-import { queries } from '@/services';
-import { useAuthStore } from '@acme/stores/authorization-states';
-import { useTokens } from '@/hooks/use-tokens';
-import { horseSelectionKey, joinHorseRow, type HorseRow } from '@/hooks/horses-data';
 import type { SegmentedOption } from '@/components/ui/segmented-control-types';
+import { PREVIEWS } from '@/config/previews';
+import {
+  sampleAlertsFor,
+  sampleEventsFor,
+  samplePassportFor,
+} from '@/config/sample/horse-detail-sample';
+import { radius, space, type } from '@/constants/tokens';
+import { useHorseDetail } from '@/hooks/use-horse-detail';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import { useOrganizationNow } from '@/hooks/use-organization-now';
+import { useOrganizationTimezone } from '@/hooks/use-organization-timezone';
+import { useReviewHistory } from '@/hooks/use-review-history';
+import { useTokens } from '@/hooks/use-tokens';
 
-const TAB_SEGMENT_WIDTH_OFFSET = space.edge * 2;
+/**
+ * Horse Details — slice 1, "the honest page"
+ * (`docs/scope/Horcery_Horse_Details_Scope.md`).
+ *
+ * What this page is, and deliberately is not:
+ *
+ * - **Is:** the horse's frame, its name and stall, everything the API already
+ *   knows about it, and its recent events and alerts. Every write action is
+ *   present and dimmed with a reason, so the composition can be judged and
+ *   nothing pretends to work.
+ * - **Is not (yet):** charts, the video player, the date bar and the live
+ *   In-Stall status. Those are slices 2–4 and each is gated on a decision that
+ *   has not been taken — the chart renderer (§6a) and where chart queries live
+ *   (§6a-i). Nothing here is blocked on either, which is why it went first.
+ *
+ * Decisions this page implements, all 2026-08-17:
+ * - **D1** the settings cog is gone; its four fields moved into the passport
+ *   and its Delete moved into the header ⋮.
+ * - **D4** no feedback card.
+ * - **D5** tabs are text, no icons.
+ * - **D8** no Special Instructions.
+ *
+ * Request budget on a cold open: the animal (1), the organization for its
+ * timezone (1, usually cached by For You), the group list (1, usually cached
+ * by the Horses list), and one event page for whichever tab you open. The
+ * current app's Summary tab costs ~30 (scope §1.7).
+ */
 
 type DetailTab = 'summary' | 'events' | 'alerts';
 
@@ -24,167 +71,351 @@ const TABS: SegmentedOption<DetailTab>[] = [
   { label: 'Alerts', value: 'alerts' },
 ];
 
-function value(param: string | string[] | undefined, fallback = '') {
-  return Array.isArray(param) ? (param[0] ?? fallback) : (param ?? fallback);
+/**
+ * The window the current app's per-horse feed uses (`animal-details/feeds`
+ * asks for the last 10 days). Slice 2 replaces the fixed "ending today" with
+ * the date bar; until then the page says which window it is showing rather
+ * than leaving you to guess.
+ */
+const EVENT_WINDOW_DAYS = 10;
+
+const ALERT_EVENT_TYPES = [EVENT_TYPE_ID.alert];
+
+const TAB_WIDTH_INSET = space.edge * 2;
+
+function firstParam(param: string | string[] | undefined): string {
+  return (Array.isArray(param) ? param[0] : param) ?? '';
 }
 
-export default function HorseDetailSeed() {
+export default function HorseDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
-  const queryClient = useQueryClient();
-  const organizationID = useAuthStore((state) => state.organizationID);
+  const id = firstParam(params.id);
   const { colors } = useTokens();
   const { width } = useWindowDimensions();
+  const isOnline = useOnlineStatus();
+  const timezone = useOrganizationTimezone();
+  const now = useOrganizationNow(timezone);
   const [activeTab, setActiveTab] = useState<DetailTab>('summary');
-  const id = value(params.id);
-  const isSampleHorse = id.startsWith('sample-');
 
-  const horseQuery = useQuery({
-    ...queries.animal.detail(id, {
-      deleted_at__isnull: true,
-      organization_id: organizationID ?? '',
-    }),
-    enabled: !!id && !isSampleHorse && !!organizationID,
-    select: (response) => response.data,
+  const isSample = PREVIEWS.sampleHorsesData && id.startsWith('sample-');
+  const horse = useHorseDetail(id);
+
+  const events = useReviewHistory({
+    day: now,
+    animalId: id,
+    windowDays: EVENT_WINDOW_DAYS,
+    enabled: !isSample && activeTab === 'events',
+  });
+  const alerts = useReviewHistory({
+    day: now,
+    animalId: id,
+    eventTypes: ALERT_EVENT_TYPES,
+    windowDays: EVENT_WINDOW_DAYS,
+    enabled: !isSample && activeTab === 'alerts',
   });
 
-  const horse = useMemo(() => {
-    // Read inside the memo, not during render: the compiler cannot prove a
-    // value pulled out of the query cache will not be mutated afterwards, so
-    // hoisting it out costs the whole component its memoization.
-    const cached = queryClient.getQueryData<HorseRow>(horseSelectionKey(id));
-    if (cached) return cached;
-    if (!horseQuery.data) return null;
+  const eventRows = useMemo<HistoryEvent[]>(
+    // The horse's name is the page title; repeating it on every frame is noise.
+    () => toHistoryEvents(events.events, { timezone, omitAnimalName: true }),
+    [events.events, timezone],
+  );
+  const alertRows = useMemo<HistoryEvent[]>(
+    () => toHistoryEvents(alerts.events, { timezone, omitAnimalName: true }),
+    [alerts.events, timezone],
+  );
 
-    const epoch =
-      Math.floor(
-        DateTime.now().minus({ minutes: 5 }).toSeconds() / 300,
-      ) * 300;
+  const passport = useMemo(
+    () => (isSample ? samplePassportFor(id) : horse.passport),
+    [isSample, id, horse.passport],
+  );
 
-    return joinHorseRow(horseQuery.data, horseQuery.data.stall, epoch);
-  }, [queryClient, id, horseQuery.data]);
+  const listData = useMemo<HistoryEvent[]>(() => {
+    if (activeTab === 'summary') return [];
+    if (isSample) {
+      return activeTab === 'events' ? sampleEventsFor(id, now) : sampleAlertsFor(id, now);
+    }
+    return activeTab === 'events' ? eventRows : alertRows;
+  }, [activeTab, isSample, id, now, eventRows, alertRows]);
 
-  const onTabChange = useCallback((value: DetailTab) => {
-    setActiveTab(value);
-  }, []);
+  const active = activeTab === 'alerts' ? alerts : events;
+  const tabLoading = activeTab !== 'summary' && !isSample && active.isLoading;
+  const tabError = activeTab !== 'summary' && !isSample && active.isError;
 
-  if (!horse && horseQuery.isLoading) {
+  const name = horse.row?.name ?? 'Horse';
+
+  const onRefresh = useCallback(() => {
+    void horse.refresh();
+    if (activeTab === 'events') void events.refetch();
+    if (activeTab === 'alerts') void alerts.refetch();
+  }, [horse, activeTab, events, alerts]);
+
+  const onEndReached = useCallback(() => {
+    if (activeTab === 'summary' || isSample) return;
+    if (active.hasNextPage && !active.isFetchingNextPage) void active.fetchNextPage();
+  }, [activeTab, isSample, active]);
+
+  const headerRight = useCallback(() => <HorseOverflowMenu name={name} />, [name]);
+
+  const screen = (
+    <Stack.Screen options={{ title: name, headerLargeTitle: false, headerRight }} />
+  );
+
+  // Offline with nothing cached: say so, rather than showing an error that
+  // blames the server for the phone's signal.
+  if (!isOnline && !horse.row) {
     return (
-      <ScrollView
-        style={{ backgroundColor: colors.background }}
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic">
-        <Stack.Screen options={{ title: 'Horse', headerLargeTitle: false }} />
+      <View style={[styles.stateShell, { backgroundColor: colors.background }]}>
+        {screen}
+        <HorsesNoInternet onRetry={horse.retry} enabled={isOnline} />
+      </View>
+    );
+  }
+
+  if (horse.isLoading) {
+    return (
+      <View style={[styles.stateShell, { backgroundColor: colors.background }]}>
+        {screen}
         <HorsesLoading />
-      </ScrollView>
-    );
-  }
-
-  if (!horse && horseQuery.isError) {
-    return (
-      <View style={[styles.stateShell, { backgroundColor: colors.background }]}>
-        <Stack.Screen options={{ title: 'Horse', headerLargeTitle: false }} />
-        <HorsesError onRetry={() => void horseQuery.refetch()} />
       </View>
     );
   }
 
-  if (!horse) {
+  if (horse.isError && !horse.row) {
     return (
       <View style={[styles.stateShell, { backgroundColor: colors.background }]}>
-        <Stack.Screen options={{ title: 'Horse', headerLargeTitle: false }} />
+        {screen}
+        <HorsesError onRetry={horse.retry} />
+      </View>
+    );
+  }
+
+  if (!horse.row && !isSample) {
+    return (
+      <View style={[styles.centred, { backgroundColor: colors.background }]}>
+        {screen}
         <Text style={[type.title3, { color: colors.foreground }]}>Horse not found</Text>
+        <Text style={[type.subhead, styles.centredText, { color: colors.secondary }]}>
+          It may have been removed from this organisation.
+        </Text>
       </View>
     );
   }
-
-  const name = horse?.name ?? 'Horse';
-  const stallName = horse?.stallName ?? 'No stall';
-  const hasImage = !!horse?.imageUri || !!horse?.blurhash;
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.content}
-      contentInsetAdjustmentBehavior="automatic">
-      <Stack.Screen options={{ title: name, headerLargeTitle: false }} />
+    <View style={[styles.page, { backgroundColor: colors.background }]}>
+      {screen}
+      <FlatList
+        data={listData}
+        keyExtractor={(item) => item.id}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => <EventCard event={item} />}
+        ItemSeparatorComponent={ListGap}
+        refreshControl={
+          <RefreshControl
+            refreshing={horse.isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.4}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <MediaTile
+              posterUri={horse.row?.imageUri}
+              blurhash={horse.row?.blurhash}
+              tag={horse.row && !horse.row.hasCamera ? { label: 'No camera' } : undefined}
+              accessibilityLabel={`${name} camera frame`}
+              style={styles.hero}
+            />
 
-      <MediaTile
-        posterUri={hasImage ? horse.imageUri : undefined}
-        blurhash={horse.blurhash}
-        accessibilityLabel={`${name} photo`}
-        style={[styles.media, { backgroundColor: colors.fillTonal }]}
+            <View style={styles.titleBlock}>
+              <Text style={[type.largeTitle, { color: colors.foreground }]}>{name}</Text>
+              <Text style={[type.headline, { color: colors.secondary }]}>
+                {horse.row?.stallName ?? 'No stall'}
+              </Text>
+            </View>
+
+            <SegmentedControl<DetailTab>
+              options={TABS}
+              value={activeTab}
+              onChange={setActiveTab}
+              width={Math.max(width - TAB_WIDTH_INSET, 260)}
+              accessibilityLabel="Horse sections"
+              testID="horse-detail-tabs"
+            />
+
+            {activeTab === 'summary' ? (
+              <View style={styles.summary}>
+                <HorseStallCard stallName={horse.row?.stallName} />
+                <HorsePassport fields={passport} />
+              </View>
+            ) : (
+              <View style={styles.tabIntro}>
+                <Text style={[type.footnote, { color: colors.tertiary }]}>
+                  {`Last ${EVENT_WINDOW_DAYS} days`}
+                </Text>
+                {activeTab === 'alerts' ? <ManageAlertsRow /> : null}
+                {isSample ? <SampleNote /> : null}
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          activeTab === 'summary' ? null : tabLoading ? (
+            <View style={styles.centre} testID="horse-tab-loading">
+              <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : tabError ? (
+            <HorsesError onRetry={() => void active.refetch()} />
+          ) : (
+            <EmptyTab tab={activeTab} />
+          )
+        }
+        ListFooterComponent={
+          active.isFetchingNextPage && activeTab !== 'summary' ? (
+            <ActivityIndicator color={colors.accent} style={styles.footer} />
+          ) : null
+        }
       />
+    </View>
+  );
+}
 
-      <View style={styles.titleRow}>
-        <Text style={[type.largeTitle, { color: colors.foreground }]}>{name}</Text>
-        <Text style={[type.headline, { color: colors.secondary }]}>{stallName}</Text>
+const ListGap = () => <View style={styles.gap} />;
+
+/**
+ * The header ⋮ — the same three actions as the list card, so a horse offers
+ * one menu wherever you meet it. All dimmed: the rewrite is read-only against
+ * production, and each row says what it will do rather than only that it is
+ * unavailable.
+ *
+ * This replaces the current app's settings cog (D1): with Details folded into
+ * the passport and Export deferred, Delete was the only thing left behind it.
+ */
+function HorseOverflowMenu({ name }: { name: string }) {
+  return (
+    <Menu
+      icon="overflow"
+      accessibilityLabel={`Options for ${name}`}
+      testID="horse-detail-menu"
+      width={44}
+      height={44}
+      title={name}
+      actions={[
+        {
+          id: 'edit',
+          label: 'Edit',
+          description: 'Coming soon — update this horse’s details.',
+          icon: 'edit',
+          disabled: true,
+        },
+        {
+          id: 'groups',
+          label: 'Manage Groups',
+          description: 'Coming soon — choose which groups this horse is in.',
+          icon: 'group',
+          disabled: true,
+        },
+        {
+          id: 'remove',
+          label: 'Remove',
+          description: 'Coming soon — remove this horse from your organisation.',
+          icon: 'remove',
+          destructive: true,
+          disabled: true,
+        },
+      ]}
+    />
+  );
+}
+
+/** Present and dimmed: it is an edit, and it is organisation-gated. */
+function ManageAlertsRow() {
+  const { colors } = useTokens();
+  return (
+    <View
+      style={[styles.manageRow, { backgroundColor: colors.bed }]}
+      testID="horse-manage-alerts">
+      <Icon name="settings" size={18} color={colors.tertiary} />
+      <View style={styles.manageText}>
+        <Text style={[type.subhead, { color: colors.secondary }]}>Manage alerts</Text>
+        <Text style={[type.footnote, { color: colors.tertiary }]}>
+          Coming soon — changing alert rules comes with the write side.
+        </Text>
       </View>
+    </View>
+  );
+}
 
-      <SegmentedControl<DetailTab>
-        options={TABS}
-        value={activeTab}
-        onChange={onTabChange}
-        width={Math.max(width - TAB_SEGMENT_WIDTH_OFFSET, 260)}
-        accessibilityLabel="Horse tabs"
-      />
+function SampleNote() {
+  const { colors } = useTokens();
+  return (
+    <View style={[styles.sampleNote, { backgroundColor: colors.fillTonal }]}>
+      <Icon name="info" size={14} color={colors.accent} />
+      <Text style={[type.footnote, styles.sampleText, { color: colors.secondary }]}>
+        Sample events — this is a preview horse.
+      </Text>
+    </View>
+  );
+}
 
-      <View style={[styles.tabPanel, { backgroundColor: colors.card }]}>
-        {activeTab === 'summary' ? (
-          <>
-            <Text style={[type.title3, { color: colors.foreground }]}>Horse summary</Text>
-            <Text
-              style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}
-            >
-              This tab currently shows card-level information only. In the rewrite, this is where
-              live in-stall / out-of-stall status, latest activity and quick metrics will live.
-            </Text>
-            {isSampleHorse ? (
-              <Text style={[type.footnote, { color: colors.accent, marginTop: space.sm }]}>Sample horse</Text>
-            ) : null}
-          </>
-        ) : activeTab === 'events' ? (
-          <>
-            <Text style={[type.title3, { color: colors.foreground }]}>Events</Text>
-            <Text
-              style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}
-            >
-              This tab is intentionally scaffolded while we wire live event pages and filters.
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={[type.title3, { color: colors.foreground }]}>Alerts</Text>
-            <Text
-              style={[type.subhead, { color: colors.secondary, marginTop: space.xs }]}
-            >
-              This tab is intentionally scaffolded. Alerts readout, threshold details, and action paths
-              are still to be connected.
-            </Text>
-          </>
-        )}
-      </View>
-
-    </ScrollView>
+function EmptyTab({ tab }: { tab: DetailTab }) {
+  const { colors } = useTokens();
+  const isAlerts = tab === 'alerts';
+  return (
+    <View style={[styles.state, { backgroundColor: colors.bed }]} testID={`horse-${tab}-empty`}>
+      <Icon name={isAlerts ? 'alerts' : 'info'} size={20} color={colors.accent} />
+      <Text style={[type.subhead, styles.stateText, { color: colors.secondary }]}>
+        {isAlerts
+          ? `No alerts for this horse in the last ${EVENT_WINDOW_DAYS} days.`
+          : `Nothing recorded for this horse in the last ${EVENT_WINDOW_DAYS} days.`}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: space.edge, paddingBottom: space.xxl, gap: space.md },
-  media: {
-    borderRadius: radius.lg,
+  page: { flex: 1 },
+  listContent: { padding: space.edge, paddingBottom: space.xxl },
+  header: { gap: space.md, paddingBottom: space.md },
+  hero: { borderRadius: radius.lg, borderCurve: 'continuous' },
+  titleBlock: { gap: space.xxs },
+  summary: { gap: space.md, paddingTop: space.xs },
+  tabIntro: { gap: space.sm, paddingTop: space.xs },
+  gap: { height: space.md },
+  footer: { paddingVertical: space.lg },
+  centre: { paddingVertical: space.xxl, alignItems: 'center' },
+  stateShell: { flex: 1, justifyContent: 'center' },
+  centred: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.edge, gap: space.xs },
+  centredText: { textAlign: 'center' },
+  manageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    padding: space.md,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    opacity: 0.85,
+  },
+  manageText: { flex: 1, gap: space.xxs },
+  sampleNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    padding: space.sm,
+    borderRadius: radius.sm,
     borderCurve: 'continuous',
   },
-  titleRow: { gap: space.xs },
-  tabPanel: {
-    marginTop: space.sm,
-    padding: space.md,
+  sampleText: { flex: 1 },
+  state: {
+    alignItems: 'center',
+    gap: space.sm,
+    padding: space.card,
     borderRadius: radius.md,
     borderCurve: 'continuous',
   },
-  stateShell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: space.edge,
-  },
+  stateText: { textAlign: 'center' },
 });
