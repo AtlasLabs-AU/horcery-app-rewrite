@@ -77,6 +77,20 @@ export function stallLiveStreamUrl(stall: IStall | undefined): string | undefine
   });
 }
 
+/**
+ * The still frame nearest `at`, or undefined when there is no monitor.
+ *
+ * The horse page needs this because its hero still is otherwise always the
+ * LATEST frame, whatever day the date bar is on — so on "Sun 16 Aug" you saw a
+ * picture from a minute ago with nothing saying so, and only discovered the
+ * mismatch by pressing play (caught on device, 2026-08-18).
+ */
+export function stallFrameUrl(stall: IStall | undefined, at: number): string | undefined {
+  if (!stallHasFrame(stall) || !stall) return undefined;
+  const [frame] = getStallMonitorThumbnailURLs(stall.stall_url, at);
+  return frame;
+}
+
 /** How much footage one tap of recorded playback covers. Matches the current app. */
 export const RECORDED_WINDOW_MINUTES = 60;
 

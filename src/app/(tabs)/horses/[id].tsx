@@ -32,7 +32,7 @@ import {
   samplePassportFor,
 } from '@/config/sample/horse-detail-sample';
 import { radius, space, type } from '@/constants/tokens';
-import { stallRecordedStreamUrl } from '@/hooks/horses-data';
+import { stallFrameUrl, stallRecordedStreamUrl } from '@/hooks/horses-data';
 import { deriveOverlay } from '@/hooks/horse-status-data';
 import { dayLabel, isToday } from '@/hooks/playhead-data';
 import { useHorseDetail } from '@/hooks/use-horse-detail';
@@ -225,6 +225,19 @@ export default function HorseDetailScreen() {
     : playhead.isLive
       ? horse.liveUri
       : stallRecordedStreamUrl(horse.stall, playhead.cursor);
+
+  /**
+   * The still under the hero follows the date bar too.
+   *
+   * `horse.row.imageUri` is always the LATEST frame, so on a past day the page
+   * showed a picture from a minute ago with nothing saying so — you only found
+   * out by pressing play and watching a different scene appear. On a past day
+   * the still is the frame nearest the cursor instead.
+   */
+  const posterUri =
+    !isSample && !playhead.isLive
+      ? (stallFrameUrl(horse.stall, playhead.cursor.toUnixInteger()) ?? horse.row?.imageUri)
+      : horse.row?.imageUri;
   const canStream = !!streamUri && !streamFailed;
   const streaming = wantsLive && canStream && isFocused;
 
@@ -320,7 +333,7 @@ export default function HorseDetailScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <MediaTile
-              posterUri={horse.row?.imageUri}
+              posterUri={posterUri}
               blurhash={horse.row?.blurhash}
               videoUri={streaming ? streamUri : undefined}
               live={streaming}
@@ -393,9 +406,9 @@ export default function HorseDetailScreen() {
                         status={status.status}
                         readings={status.readings}
                         atLabel={
-                          isToday(playhead.day, now)
+                          playhead.isLive
                             ? 'Live'
-                            : `${dayLabel(playhead.day, now)}, end of day`
+                            : `${dayLabel(playhead.day, now)}, ${playhead.cursor.toFormat('h:mm a')}`
                         }
                       />
                       {status.hasMonitor ? <BuiltInSettingsNote /> : null}
