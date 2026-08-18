@@ -28,6 +28,7 @@ Filenames are unchanged so existing references and greps keep working.
 | `Horcery_Horse_Details_Scope.md` | Horse Details — full scope, four slices, seven open decisions |
 | `Horcery_Alerts_Architecture.md` | Alerts (Manage + create/edit) — frontend architecture v2: domain layer, descriptors, barn-time windows + drift, route-level permissions, slices A0–A5 |
 | `Horcery_Localization_Agentic_Implementation_Plan.md` | i18n (requirements §4b, hardening H2) |
+| `Horcery_Parity_and_QA_Audit_2026-08-18.md` | **Whole-app** parity audit (old app vs rewrite, every feature area) + device QA pass + code-review bug list + decisions needed. Full per-capability sweep tables in `appendix/parity-sweeps-2026-08-18/`. |
 
 ## handovers/ — instructions written for Codex, and reviews of what came back
 
