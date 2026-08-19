@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard } from '@/components/for-you/card';
+import { SplitRow } from '@/components/ui/split-row';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { LinkButton } from '@/components/for-you/link-button';
 import { Menu } from '@/components/ui/menu';
@@ -28,7 +29,12 @@ export interface OrganizationCardProps {
 /**
  * Organization summary — name, local conditions, and the Horcery AI status.
  * Layout mirrors the current app: title row, metric row, hairline, AI row,
- * status line, tinted banner. On tokens; every row keeps its action inline.
+ * status line, tinted banner. On tokens.
+ *
+ * Every label-plus-action row here is a `SplitRow`, so at large text sizes the
+ * action drops to its own line rather than squeezing the label into "Mobile
+ * D…" and "S…" (device, 2026-08-19). The metric row wraps for the same reason:
+ * time, temperature and humidity ran off the right edge.
  */
 export function OrganizationCard({
   organizationName,
@@ -46,41 +52,46 @@ export function OrganizationCard({
   const { colors } = useTokens();
   return (
     <SectionCard testID="for-you-organization-card">
-      <View style={styles.titleRow}>
-        <View style={styles.titleGroup}>
-          <Text
-            style={[type.title3, styles.orgName, { color: colors.foreground }]}
-            numberOfLines={1}>
-            {organizationName}
-          </Text>
-          <Pressable
-            onPress={onManageOrganization}
-            disabled={!onManageOrganization}
-            hitSlop={12}
-            accessibilityRole={onManageOrganization ? 'button' : undefined}
-            accessibilityLabel={onManageOrganization ? 'Manage organization' : undefined}
-            accessibilityState={{ disabled: !onManageOrganization }}
-            testID="for-you-manage-organization">
-            <Icon
-              name="settings"
-              size={16}
-              color={onManageOrganization ? colors.accent : colors.dimmed}
-            />
-          </Pressable>
-        </View>
-        <Menu
-          label="Switch"
-          accessibilityLabel="Switch organization"
-          width={72}
-          actions={organizations.map((organization) => ({
-            id: organization.id,
-            label: organization.name,
-            selected: organization.id === organizationID,
-            onPress: () => onSelectOrganization(organization.id),
-          }))}
-          testID="for-you-switch-organization"
-        />
-      </View>
+      <SplitRow
+        style={styles.titleRow}
+        leading={
+          <>
+            <Text
+              style={[type.title3, styles.orgName, { color: colors.foreground }]}
+              numberOfLines={2}>
+              {organizationName}
+            </Text>
+            <Pressable
+              onPress={onManageOrganization}
+              disabled={!onManageOrganization}
+              hitSlop={12}
+              accessibilityRole={onManageOrganization ? 'button' : undefined}
+              accessibilityLabel={onManageOrganization ? 'Manage organization' : undefined}
+              accessibilityState={{ disabled: !onManageOrganization }}
+              testID="for-you-manage-organization">
+              <Icon
+                name="settings"
+                size={16}
+                color={onManageOrganization ? colors.accent : colors.dimmed}
+              />
+            </Pressable>
+          </>
+        }
+        trailing={
+          <Menu
+            label="Switch"
+            accessibilityLabel="Switch organization"
+            width={72}
+            actions={organizations.map((organization) => ({
+              id: organization.id,
+              label: organization.name,
+              selected: organization.id === organizationID,
+              onPress: () => onSelectOrganization(organization.id),
+            }))}
+            testID="for-you-switch-organization"
+          />
+        }
+      />
 
       <View style={styles.metricRow}>
         <Metric icon="clock" value={localTime} />
@@ -90,23 +101,35 @@ export function OrganizationCard({
 
       <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
-      <View style={styles.titleRow}>
-        <Text style={[type.headline, { color: colors.foreground }]}>Horcery AI</Text>
-        <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
-      </View>
+      <SplitRow
+        style={styles.titleRow}
+        leading={<Text style={[type.headline, { color: colors.foreground }]}>Horcery AI</Text>}
+        trailing={
+          <LinkButton label="See History" onPress={onSeeHistory} testID="for-you-ai-history" />
+        }
+      />
 
       <StatusLine status={alertStatus} />
 
       {alertStatus.kind === 'normal' || alertStatus.kind === 'today' ? (
-        <View style={[styles.banner, { backgroundColor: colors.bed }]}>
-          <View style={styles.bannerLeft}>
-            <Icon name="ai" size={16} color={colors.accent} />
-            <Text style={[type.subhead, styles.bannerText, { color: colors.secondary }]} numberOfLines={1}>
-              {`AI watching ${alertStatus.rulesConfigured} ${alertStatus.rulesConfigured === 1 ? 'metric' : 'metrics'}`}
-            </Text>
-          </View>
-          <LinkButton label="Manage Alerts" onPress={onManageAlerts} testID="for-you-manage-alerts" />
-        </View>
+        <SplitRow
+          style={[styles.banner, { backgroundColor: colors.bed }]}
+          leading={
+            <>
+              <Icon name="ai" size={16} color={colors.accent} />
+              <Text style={[type.subhead, styles.bannerText, { color: colors.secondary }]}>
+                {`AI watching ${alertStatus.rulesConfigured} ${alertStatus.rulesConfigured === 1 ? 'metric' : 'metrics'}`}
+              </Text>
+            </>
+          }
+          trailing={
+            <LinkButton
+              label="Manage Alerts"
+              onPress={onManageAlerts}
+              testID="for-you-manage-alerts"
+            />
+          }
+        />
       ) : null}
     </SectionCard>
   );
@@ -163,17 +186,7 @@ function Metric({ icon, value }: { icon: IconName; value: string }) {
 
 const styles = StyleSheet.create({
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.sm,
     minHeight: 32,
-  },
-  titleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    flexShrink: 1,
   },
   orgName: {
     flexShrink: 1,
@@ -181,7 +194,9 @@ const styles = StyleSheet.create({
   metricRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.lg,
+    flexWrap: 'wrap',
+    columnGap: space.lg,
+    rowGap: space.xs,
     marginTop: space.xs,
   },
   metric: {
@@ -209,9 +224,6 @@ const styles = StyleSheet.create({
     height: 12,
   },
   banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     borderRadius: radius.sm,
     borderCurve: 'continuous',
     paddingLeft: space.edge,
@@ -219,12 +231,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     marginTop: space.edge,
     gap: space.sm,
-  },
-  bannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    flexShrink: 1,
   },
   bannerText: {
     flexShrink: 1,

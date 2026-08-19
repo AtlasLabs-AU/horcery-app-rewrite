@@ -135,6 +135,38 @@ activesupport 6.1.7.10, and `concurrent-ruby >1.2.3` must stay uninstalled).
   QA accounts do. **Never create accounts or write data casually** — writes may
   land in production systems.
 
+### 3.5 Physical iPhone signing for the rewrite chart harness (2026-08-18)
+
+This is separate from rebuilding the legacy app in §3.2. The chart harness can be
+built locally for Inakshi's physical iPhone from:
+`/Users/inakshi/dev/horcery-app-rewrite-main/spikes/charts-harness/ios/HorceryChartsHarnessvictory.xcworkspace`.
+
+- Xcode is signed into `inakshi02@gmail.com` and the target uses
+  **Inakshi Tillekeratne (Personal Team)** with automatic signing.
+- The normal **login** keychain contains the valid certificate
+  `Apple Development: inakshi02@gmail.com (4K2C74L7T9)` **and its private key**.
+- That private key has the standard persistent Apple signing partitions
+  `apple-tool:`, `apple:` and `codesign:`. This was verified on 2026-08-18 by
+  signing the embedded Expo framework, installing the harness, and launching it
+  on the physical iPhone. Do not recreate this permission on each build.
+- A separate `Horcery Signing.keychain-db` also exists but is locked and is not
+  needed. Do not try passwords against it, select it as the default keychain,
+  revoke its certificate, or delete it during a build.
+- In Xcode, select **Inakshi's iPhone** (`00008150-000C61E01E99401C`) as the run
+  destination, then build/run. The first native React Native/Skia compilation is
+  slow; do not diagnose signing until compilation reaches the signing phase.
+- Subsequent builds should not ask for a signing password. If they do, stop and
+  confirm Xcode still references certificate `4K2C74L7T9`; do not create another
+  certificate or keychain. Inakshi enters any Mac login password herself; never
+  request, record, or type it.
+- Verify success by seeing the app install and launch on the physical phone; a
+  successful compile alone is not signing verification.
+- A Debug run uses the Metro URL and needs the project packager running (normally
+  port 8081 for this harness). For a self-contained measurement artifact, use a
+  Release build with an embedded JS bundle. Signing and Metro are separate: a
+  launched Debug shell showing `No script URL provided` means signing succeeded
+  but Metro/bundling is absent.
+
 ## 4. The forced-update wall (WILL hit you) and the bypass
 
 **Symptom:** after a restart the app hangs on splash ~60s+ then shows a full-screen
@@ -208,6 +240,42 @@ config sanity check (min ≤ latest, else fail open) + support link on the wall.
 - Session end: `stop-all-simulator-servers` **scoped** with
   `devices: ["09C755C6-BF27-4AC2-8D97-A9DA4C5E5442"]` — never unscoped (other
   agents share the tool-server).
+
+## 6a. The text-size pass — MANDATORY before any screen is "done"
+
+Added 2026-08-19 after every For You card was found truncating its own title.
+This is PRINCIPLES #13; the runbook step is here so it is part of the device
+pass rather than a thing to remember.
+
+**Look at every screen you touched at three text sizes.** Not one.
+
+```bash
+# default
+xcrun simctl ui <UDID> content_size large
+# one notch up — the size a lot of people over forty actually use
+xcrun simctl ui <UDID> content_size extra-extra-large
+# an accessibility size — where layouts fall apart, not just get tight
+xcrun simctl ui <UDID> content_size accessibility-extra-large
+```
+
+**Terminate and relaunch the app after each change.**
+
+```bash
+xcrun simctl terminate <UDID> com.atlaslabs.horcery.app
+```
+
+This is not optional politeness. iOS reports the new scale to an already-running
+app *before* its text re-renders, so a running app shows a hybrid — small text
+in tall rows, actions floating above their labels — that exists on no real
+device. Fifteen minutes were spent on 2026-08-19 diagnosing a "regression" that
+was only this. If a layout looks impossible, relaunch before believing it.
+
+**What you are looking for:** any `…` in a heading, name or button; any text
+running off the right edge; any label reduced to one word. Wrapping onto more
+lines is correct and expected — the page simply gets taller.
+
+**Restore the default when you are finished** (`content_size large`), or the
+next session inherits your setting and misreads every screenshot.
 
 ## 7. Known app issues (as of 2026-08-13) — don't rediscover these
 

@@ -110,7 +110,16 @@ export function Menu({
         testID={testID}
         style={({ pressed }) => [
           styles.trigger,
-          !!width && { width },
+          /*
+            A LABELLED trigger takes `width` as a floor, not a cap. As an exact
+            width it clipped its own label the moment text scaled — the
+            organization card's "Switch" rendered as "S…" one notch above the
+            default size, and no amount of fixing the row around it could help,
+            because the truncation was inside the control (device, 2026-08-19).
+            An icon trigger still gets an exact box: that number is its tap
+            target, and a tap target should not grow with the text.
+          */
+          !!width && (label ? { minWidth: width } : { width }),
           !!height && { minHeight: height },
           pressed && styles.pressed,
         ]}>

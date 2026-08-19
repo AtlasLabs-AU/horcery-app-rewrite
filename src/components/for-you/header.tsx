@@ -28,7 +28,11 @@ export function ForYouHeader({
   const { colors } = useTokens();
   return (
     <View style={styles.row}>
-      <Text style={[type.largeTitle, styles.greeting, { color: colors.foreground }]} numberOfLines={1}>
+      {/*
+        Two lines. At large text sizes a one-line greeting rendered as
+        "Hello…", which is a worse greeting than none (device, 2026-08-19).
+      */}
+      <Text style={[type.largeTitle, styles.greeting, { color: colors.foreground }]} numberOfLines={2}>
         {greeting}
       </Text>
       <View style={styles.actions}>

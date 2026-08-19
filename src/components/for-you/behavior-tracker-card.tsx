@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
+import { SplitRow } from '@/components/ui/split-row';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LinkButton } from '@/components/for-you/link-button';
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -107,13 +108,19 @@ export function BehaviorTrackerCard({
                 size={22}
                 color={isSelected ? colors.foreground : colors.tertiary}
               />
+              {/*
+                "Lying Down" and "People in Stall" are two words each; on one
+                line they became "Lying Do…" and "People in…" one notch above
+                the default text size. Two lines, centred, and the tile grows.
+              */}
               <Text
                 style={[
                   type.caption,
+                  styles.behaviorLabel,
                   isSelected && styles.selectedCaption,
                   { color: isSelected ? colors.foreground : colors.tertiary },
                 ]}
-                numberOfLines={1}>
+                numberOfLines={2}>
                 {behavior.label}
               </Text>
             </Pressable>
@@ -121,16 +128,21 @@ export function BehaviorTrackerCard({
         })}
       </View>
 
-      <View style={styles.selectedRow}>
-        <Text style={[type.title3, styles.selectedLabel, { color: colors.foreground }]}>
-          {selected?.label}
-        </Text>
-        <LinkButton
-          label="Switch to Stalls"
-          onPress={onSwitchToStalls}
-          testID="for-you-tracker-switch"
-        />
-      </View>
+      <SplitRow
+        style={styles.selectedRow}
+        leading={
+          <Text style={[type.title3, styles.selectedLabel, { color: colors.foreground }]}>
+            {selected?.label}
+          </Text>
+        }
+        trailing={
+          <LinkButton
+            label="Switch to Stalls"
+            onPress={onSwitchToStalls}
+            testID="for-you-tracker-switch"
+          />
+        }
+      />
 
       <ChartPlaceholder
         height={168}
@@ -160,6 +172,7 @@ const styles = StyleSheet.create({
   },
   behaviorRow: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: space.sm,
     marginTop: space.edge,
   },
@@ -174,13 +187,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  behaviorLabel: { textAlign: 'center' },
   selectedCaption: { fontWeight: '600' },
   selectedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginTop: space.edge,
-    gap: space.sm,
   },
   selectedLabel: {
     flexShrink: 1,

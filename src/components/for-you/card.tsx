@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { SplitRow } from '@/components/ui/split-row';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -10,9 +11,15 @@ import { radius, space, type } from '@/constants/tokens';
  * optional action flush right — on the SAME line, always).
  *
  * The header row is the fix for the misalignment Inakshi flagged 2026-08-15:
- * the action slot no longer accepts a self-sized native Host; the title group
- * shrinks and the action keeps its intrinsic width, so "See History" sits on
- * the title line at every text size.
+ * the action slot no longer accepts a self-sized native Host, so "See History"
+ * sits on the title line.
+ *
+ * It said "at every text size", and that was wrong. Shrinking the title against
+ * a fixed-width action means the title is the only thing that can give, and at
+ * one notch above the default text size it gave: "Behavior Tracker" rendered as
+ * "Behavior Trac…" on the largest iPhone we have (device, 2026-08-19 — the same
+ * fault the shipping app is patching in PR 2174). The row now stacks instead;
+ * `SplitRow` carries the reasoning.
  */
 export function SectionCard({
   children,
@@ -42,15 +49,23 @@ export function SectionHeader({
 }) {
   const { colors } = useTokens();
   return (
-    <View style={styles.headerRow}>
-      <View style={styles.titleGroup}>
-        <Text style={[type.title, styles.title, { color: colors.foreground }]} numberOfLines={1}>
-          {title}
-        </Text>
-        {adornment}
-      </View>
-      {action ? <View style={styles.action}>{action}</View> : null}
-    </View>
+    <SplitRow
+      style={styles.headerRow}
+      leading={
+        <>
+          {/*
+            Two lines, not one. A card title is the name of the thing you are
+            looking at; truncating it to make room for a button beside it gets
+            the priority exactly backwards.
+          */}
+          <Text style={[type.title, styles.title, { color: colors.foreground }]} numberOfLines={2}>
+            {title}
+          </Text>
+          {adornment}
+        </>
+      }
+      trailing={action}
+    />
   );
 }
 
@@ -64,24 +79,9 @@ const styles = StyleSheet.create({
     padding: space.card,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.sm,
     minHeight: 32,
-  },
-  titleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    flexShrink: 1,
   },
   title: {
     flexShrink: 1,
-  },
-  action: {
-    flexShrink: 0,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
   },
 });

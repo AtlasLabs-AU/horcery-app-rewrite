@@ -47,6 +47,39 @@ it doesn't go in. When two collide, the tie-break rule at the bottom applies.
     a label, and a 44pt target. Cheaper now than later, and it is what makes
     QA automation possible.
 
+13. **Legible at every text size** (added 2026-08-19, after the failure
+    below). The reader's text size is theirs, not ours. Text **wraps**; it
+    does not truncate, and it is never capped to protect a layout — the
+    people who turn the text up are the barn staff reading a phone at 6am in
+    poor light, and they are the last people to short-change.
+
+    In practice, three rules and one check:
+
+    - A label and its action share a line only while they fit. Use
+      `SplitRow`, which drops the action to its own line above
+      `STACK_ABOVE_SCALE`. Never a bare `flexDirection: 'row'` with
+      `justifyContent: 'space-between'` and a shrinking label — that layout
+      cannot do anything except eat the label.
+    - Titles and names get `numberOfLines={2}`, not `1`. A card title is the
+      name of the thing you are looking at; truncating it to make room for a
+      button beside it has the priority backwards.
+    - A fixed `width` on a control is a floor (`minWidth`) whenever it holds
+      text. As a cap it clips its own label and no amount of fixing the row
+      around it can help.
+    - **Every screen is looked at at three text sizes** before it is called
+      done — default, one notch up, and one accessibility size. Change the
+      size, then relaunch the app: iOS reports the new scale to a running app
+      before it re-renders the text, so a running app shows a state that
+      exists nowhere.
+
+    *Why this is a principle and not a bug report.* Every For You card broke
+    this on 2026-08-19 — "Behavior Trac…", "Mobile D…", "S…" — at one notch
+    above the default size, on the largest iPhone we own. Nothing caught it,
+    because every device pass and every screenshot until then had been taken
+    at the default size. The shipping app has the same fault and is being
+    patched for it one card at a time (PR 2174, `bugfix/HC84-35986`); we fixed
+    the row instead of the card so the next screen inherits it.
+
 ## Colour (decided by Inakshi, 2026-08-17)
 
 The look is **editorial**: white canvas, ink and grey doing the work, one
