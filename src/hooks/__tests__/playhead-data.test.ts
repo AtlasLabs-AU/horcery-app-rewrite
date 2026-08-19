@@ -6,8 +6,10 @@ import {
   clampDay,
   cursorFor,
   dayLabel,
+  isLiveInstant,
   isToday,
   latestSelectable,
+  LIVE_EPSILON_SECONDS,
   timeOfDaySeconds,
 } from '@/hooks/playhead-data';
 
@@ -101,5 +103,23 @@ describe('dayLabel', () => {
 
   it('falls back to a written date for anything else', () => {
     expect(dayLabel(NOW.minus({ days: 5 }), NOW)).toMatch(/^\w{3} \d+ \w{3}$/);
+  });
+});
+
+describe('isLiveInstant', () => {
+  const LATEST = latestSelectable(NOW);
+
+  it('treats the live edge, and a breath either side of it, as live', () => {
+    expect(isLiveInstant(LATEST.toSeconds(), LATEST.toSeconds())).toBe(true);
+    expect(
+      isLiveInstant(LATEST.minus({ seconds: LIVE_EPSILON_SECONDS }).toSeconds(), LATEST.toSeconds()),
+    ).toBe(true);
+  });
+
+  it('does not call a moment in the past live', () => {
+    // Scrubbing to the right-hand end must go back to FOLLOWING the barn, not
+    // pin the cursor to the instant the finger lifted — which looks identical
+    // to live for about a minute and is then simply wrong.
+    expect(isLiveInstant(LATEST.minus({ minutes: 1 }).toSeconds(), LATEST.toSeconds())).toBe(false);
   });
 });

@@ -1,6 +1,9 @@
 import type { DateTime } from 'luxon';
 
-import { BUFFER_OFFSET_SECONDS } from '@acme/config/constants/date-constants';
+import {
+  BUFFER_OFFSET_SECONDS,
+  EXTRA_LOADING_SECONDS,
+} from '@acme/config/constants/date-constants';
 
 /**
  * The play-head: which day you are looking at, and the instant within it.
@@ -79,6 +82,26 @@ export function cursorFor(day: DateTime, now: DateTime, atSeconds?: number): Dat
   const seconds = atSeconds ?? timeOfDaySeconds(latest);
   const candidate = day.startOf('day').plus({ seconds });
   return candidate > latest ? latest : candidate;
+}
+
+/**
+ * How close to the live edge still counts as live.
+ *
+ * The same constant the current app's timeline uses in
+ * `isTimeWithinLiveBuffer`, so a scrub that lands at the right-hand end
+ * returns to live here at exactly the moment it would there.
+ */
+export const LIVE_EPSILON_SECONDS = EXTRA_LOADING_SECONDS;
+
+/**
+ * Is this instant close enough to the live edge to count as live?
+ *
+ * `latest` is `latestSelectable(now)` — already behind real time by the
+ * stream's buffer offset — so this asks "did it land at the right-hand end",
+ * not "is it in the future".
+ */
+export function isLiveInstant(at: number, latest: number): boolean {
+  return Math.abs(latest - at) <= LIVE_EPSILON_SECONDS;
 }
 
 /** Is the selected day the organization's today? */

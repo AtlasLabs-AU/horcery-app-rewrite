@@ -20,6 +20,27 @@ jest.mock('expo-video', () => {
   };
 });
 
+// Reanimated 4 boots react-native-worklets at import time, which needs a native
+// module jest does not have — the failure is "Cannot read properties of
+// undefined (reading 'loadUnpackers')" from the import line, before a single
+// test runs. Its own mock replaces the runtime with synchronous stand-ins.
+//
+// Worklets do not execute under this mock, so it cannot test the scrubbing
+// timeline's MOTION — that is what the device pass is for. It can, and does,
+// test everything around it: the ticks that get drawn, the barn clock they are
+// labelled in, and the accessibility path that moves the play-head without a
+// drag.
+jest.mock('react-native-reanimated', () => ({
+  ...require('react-native-reanimated/mock'),
+  // The official mock omits this one ("ADD ME IF NEEDED" in its source). The
+  // timeline's live tick is a frame callback, so it is needed.
+  useFrameCallback: () => ({ setActive: jest.fn(), isActive: false }),
+}));
+
+// Gesture handler's own jest setup: stubs its native module and turns the
+// gesture builders into inert objects that still render their children.
+require('react-native-gesture-handler/jestSetup');
+
 // Silence the Reanimated startup warning in test output.
 global.__reanimatedWorkletInit = () => {};
 

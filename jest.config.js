@@ -6,6 +6,13 @@
  */
 module.exports = {
   preset: 'jest-expo',
+  // Reanimated 4 boots react-native-worklets at import time, and its `.native`
+  // entry point reaches for a native module jest does not have — importing
+  // anything from reanimated fails with "Cannot read properties of undefined
+  // (reading 'loadUnpackers')" before a test runs. Worklets ships this resolver
+  // for exactly that: it drops the `.native` extension inside the package so
+  // the JS implementation is loaded instead.
+  resolver: 'react-native-worklets/jest/resolver.js',
   // jest.env.js runs BEFORE modules load (src/config/env throws at import time
   // when endpoints are unset); jest.setup.js runs after the framework is ready.
   setupFiles: ['<rootDir>/jest.env.js'],

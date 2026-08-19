@@ -263,11 +263,43 @@ three, and do not attempt the whole thing in one go.**
 | V2 | **HD/SD toggle, audio on/off from stall `UserMetaData.audio_enable`** | **BUILD** — slice 4a | Small; part of V1's controls |
 | V3 | **Fullscreen with pinch-to-zoom** | **CHANGE** → native fullscreen | `expo-video`'s `VideoView` has native fullscreen on both platforms with system controls. Use it. Do not port the 749-line custom fullscreen view |
 | V4 | **Recorded playback at cursor** (60-minute window from cursor) | **BUILD** — slice 4b | Same MediaTile, `live=false`, `videoUri` = recorded URL at cursor. Cursor comes from the date toolbar (F5) initially |
-| V5 | **Horizontal scrubbable timeline** with zoom, segments, live-buffer detection, momentum | **BUILD — slice 4c, FULL PORT** (D2, decided 2026-08-17) | The 1,060-line widget, ported universal. Not the simplified version Claude recommended — Inakshi chose full parity. Must run on both platforms and be measured on the Redmi Note 12 before it is called done |
+| V5 | **Horizontal scrubbable timeline** with zoom, segments, live-buffer detection, momentum | **BUILT — slice 4c, 2026-08-19.** Verified on iOS against SM-93 (drag, momentum, detented pinch, day-change follow, return-to-live, recorded playback at the scrubbed instant). **Android still unmeasured** — see D2 | 480 lines across two files, not 1,060 across six. Drag, momentum and clamping run on the UI thread; the JS thread is asked only for a new tick window and the scrub bubble. **Zoom now works, which it never has in the shipping app** — see the §4.7a finding below |
 | V6 | **Create Clip** from the player | **BUILD** disabled-with-reason — slice 4a | Write side (clip creation is a mutation). But the button must exist so the composition is judged whole |
 | V7 | **"Adjust your monitor" overlay + Adjust Now** | **BUILD** — slice 4a (overlay) ; **DEFER** action | Overlay is honest state from `AppMetaData.adjustment_direction`. The action opens a reposition sheet — write side |
 | V8 | **Playback speed** | **REMOVE from live**; **BUILD in 4b (recorded)** | Shipping code wraps it in `{false && …}` with a `/* no-op */` handler — a placeholder icon, never wired. Useless on a live stream; genuinely useful on recorded playback and clips (1.5×/2× to skim the night). `expo-video` supports it natively with one property — a small addition to slice 4b, not a feature to design |
 | V9 | **Download video** | **REMOVE** from this page | Exists in the regular-controls variant only (clip playback), not the live variant. Belongs to clips |
+
+### 4.7a The zoom D2 chose does not work in the shipping app
+
+Found while building slice 4c, and worth recording because D2 was a decision to
+take *more* work in exchange for parity, and the parity was not there.
+
+In `84-horcery-app-react-native`, the timeline's zoom is dead code:
+
+- the pinch gesture is commented out (`horizontal-timeline-widget/index.tsx`,
+  lines 577–593);
+- `ZoomProvider` is mounted with `initialZoom={1}`;
+- nothing in the app calls `setZoom` or `updateZoom` — grep across `packages/`
+  and `apps/expo/src` returns only the widget's own definitions.
+
+So the shipping timeline runs at zoom 1 for its entire life, and six of the
+seven rungs of its tick ladder are unreachable. There is a likely reason it was
+abandoned: the widget renders thirteen fixed six-hour segments and draws every
+tick in each, so zoom 100 asks for roughly 9,400 tick views. The repository
+still carries the branches from the fight — `zoom-timeline-test`,
+`zoom-timeline-test-1`, `zoom-timeline-testing`, `timeline-desyncing--issue`,
+`timeline-ticking-background-state`.
+
+A literal "full port" would therefore have reproduced an inert feature. What
+was built instead ports the ladder **and makes pinch work**, by rendering only
+the ticks in view — which keeps the count near-constant at every zoom rather
+than exploding. Pinch moves between seven detents, one per rung, so every step
+visibly re-ladders and the JS thread redraws at most once per step.
+
+**This is more than the shipping app has, not less.** Flagged rather than
+quietly delivered, because it changes what "parity" means for this control: if
+Inakshi wants the timeline to behave exactly as customers see it today, the
+answer is to remove the pinch, not to add it.
 
 ### 4.8 Events tab
 
@@ -341,8 +373,13 @@ page.
 ### Slice 4 — "The watched horse page" (video)
 
 4a: live MediaTile + controls (HD, mute, fullscreen-native, clip button dimmed,
-adjust overlay) · 4b: recorded playback at cursor · 4c: timeline scrubber
-(simple version first).
+adjust overlay) · 4b: recorded playback at cursor · 4c: timeline scrubber.
+
+**All four shipped.** 4a and 4b device-verified 2026-08-18, 4c on 2026-08-19.
+The remaining gate on 4c is Android: it is written universal (gesture-handler +
+reanimated, no platform imports) but has not been run on the Redmi Note 12,
+which D2 made a condition of "done". That is blocked on task #12, the Android
+dev client.
 
 **Depends on:** MediaTile's live variant being proven on For You Snapshots
 first (H5). Recommend it lands there before here so the horse page inherits a
@@ -361,7 +398,7 @@ Ordered by how much the answer changes the build.
 | # | Question | My recommendation | Why it matters |
 |---|---|---|---|
 | D1 | Fold the settings page into the Summary Passport card and replace the cog with a ⋮ | **DECIDED 2026-08-17: Yes** | Removes a whole page and a navigation hop; every field is read-only anyway |
-| D2 | Timeline scrubber: port the zoomed segment timeline, or ship a simpler day-strip + time slider first | **DECIDED 2026-08-17: PORT THE FULL ZOOMED TIMELINE** (Inakshi, against Claude's 'simple first' recommendation) | Full parity from day one. Consequence accepted: slice 4c is the largest single piece of iOS-tuned gesture code in the app and its Android parity is unproven — it must be built universal (gesture-handler + reanimated on both platforms) and measured on the Redmi Note 12 before it is called done |
+| D2 | Timeline scrubber: port the zoomed segment timeline, or ship a simpler day-strip + time slider first | **DECIDED 2026-08-17: PORT THE FULL ZOOMED TIMELINE** (Inakshi, against Claude's 'simple first' recommendation). **BUILT 2026-08-19**, with one correction to what "full" meant — see §4.7a | Full parity from day one. Consequence accepted: slice 4c is the largest single piece of iOS-tuned gesture code in the app and its Android parity is unproven — it must be built universal (gesture-handler + reanimated on both platforms) and measured on the Redmi Note 12 before it is called done. **Universal: yes. Redmi: still outstanding**, blocked on task #12 |
 | D3 | Do not auto-pop the 'assign a stall monitor' sheet on open | **DECIDED 2026-08-17: don't auto-pop; inline CTA row** | Interruptive; the information is identical inline |
 | D4 | Remove the Feedback card from this page | **DECIDED 2026-08-17: remove** (consider More) | Marketing chrome inside a data page |
 | D5 | Text-only tabs (no icons), consistent with Review History | **DECIDED 2026-08-17: text only** | Already the editorial rule |

@@ -19,6 +19,7 @@ import { HorseStallCard } from '@/components/horses/horse-stall-card';
 import { HorseStatusStrip } from '@/components/horses/horse-status-strip';
 import { HorsesError, HorsesLoading, HorsesNoInternet } from '@/components/horses/horses-states';
 import { MediaTile } from '@/components/media/media-tile';
+import { ScrubTimeline } from '@/components/timeline/scrub-timeline';
 import { EventCard, type HistoryEvent } from '@/components/review-history/event-card';
 import { toHistoryEvents } from '@/components/review-history/event-rows';
 import { Icon } from '@/components/ui/icon';
@@ -32,9 +33,9 @@ import {
   samplePassportFor,
 } from '@/config/sample/horse-detail-sample';
 import { radius, space, type } from '@/constants/tokens';
-import { stallFrameUrl, stallRecordedStreamUrl } from '@/hooks/horses-data';
+import { stallFrameUrl, stallHasFrame, stallRecordedStreamUrl } from '@/hooks/horses-data';
 import { deriveOverlay } from '@/hooks/horse-status-data';
-import { dayLabel, isToday } from '@/hooks/playhead-data';
+import { dayLabel, isToday, latestSelectable } from '@/hooks/playhead-data';
 import { useHorseDetail } from '@/hooks/use-horse-detail';
 import { useHorseStatus } from '@/hooks/use-horse-status';
 import { useOnlineStatus } from '@/hooks/use-online-status';
@@ -275,6 +276,34 @@ export default function HorseDetailScreen() {
     setWantsLive((current) => !current);
   }, [setStreamFailed, setWantsLive]);
 
+  /**
+   * Scrubbing (slice 4c) commits an instant, not a day — the date bar and the
+   * timeline are two controls over one position. Both stop the hero first, for
+   * the reason `onChangeDay` gives: the stream URL is derived from the cursor,
+   * so a player left running would silently jump to a different hour.
+   */
+  const onScrub = useCallback(
+    (at: DateTime) => {
+      setWantsLive(false);
+      setStreamFailed(false);
+      playhead.setCursor(at);
+    },
+    [playhead, setWantsLive, setStreamFailed],
+  );
+
+  const onScrubbingChange = useCallback(
+    (active: boolean) => {
+      if (active) setWantsLive(false);
+    },
+    [setWantsLive],
+  );
+
+  /**
+   * Only a stall we can actually fetch frames for gets a timeline. Scrubbing a
+   * track for footage that does not exist is a dead control with a gesture.
+   */
+  const showTimeline = !isSample && stallHasFrame(horse.stall);
+
   const headerRight = useCallback(() => <HorseOverflowMenu name={name} />, [name]);
 
   const screen = (
@@ -374,6 +403,22 @@ export default function HorseDetailScreen() {
               }
               style={styles.hero}
             />
+
+            {/*
+              Directly under the hero, where the current app puts it: the
+              track you drag is next to the picture it changes.
+            */}
+            {showTimeline ? (
+              <ScrubTimeline
+                cursor={playhead.cursor}
+                latest={latestSelectable(now)}
+                earliest={horse.createdAt}
+                zone={timezone}
+                isLive={playhead.isLive}
+                onScrub={onScrub}
+                onScrubbingChange={onScrubbingChange}
+              />
+            ) : null}
 
             <View style={styles.titleBlock}>
               <Text style={[type.largeTitle, { color: colors.foreground }]}>{name}</Text>

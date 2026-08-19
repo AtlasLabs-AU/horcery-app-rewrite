@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthFlow } from '@/components/auth/auth-flow';
 import { AppError } from '@/components/app/app-error';
@@ -22,11 +23,20 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <SessionGate />
-      </ThemeProvider>
-    </QueryClientProvider>
+    /*
+      Required on Android for any gesture-handler gesture to receive touches at
+      all — the horse page's scrubbing timeline is the first (slice 4c). iOS
+      installs a root view automatically, so a missing wrapper here is the
+      classic bug that works perfectly on the simulator and does nothing on a
+      phone.
+    */
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <SessionGate />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 

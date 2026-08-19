@@ -135,6 +135,33 @@ module.exports = defineConfig([
     rules: restrict(PLATFORM_UI, CHART_RENDERERS),
   },
 
+  // ---- RE-OPEN: UI-thread animation --------------------------------------
+  // `react-hooks/immutability` (eslint-plugin-react-hooks 7.1.1, the React
+  // Compiler's rule set) does not know what a Reanimated shared value is. It
+  // sees a hook return being assigned to and reports "This value cannot be
+  // modified" — for `x.value = 1` in a plain callback, which is the library's
+  // entire API. Verified against a four-line probe component, not inferred
+  // from our own code being unusual.
+  //
+  // A shared value is a deliberately mutable box living on the UI thread; it
+  // is not React state and the compiler's immutability model does not apply to
+  // it. The rule cannot be taught otherwise here: `environment.customHooks`
+  // with `valueKind: 'mutable'` parses but changes nothing.
+  //
+  // So the rule is off for the one directory that owns gesture-driven
+  // animation, and nowhere else — the same shape as the boundaries above, and
+  // for the same reason: an allowance that names its directory cannot silently
+  // spread to the next screen someone writes. Everything the compiler is
+  // genuinely good at (exhaustive deps, set-state-in-effect, refs in render)
+  // stays on in here.
+  //
+  // Widening this to another directory is a decision to record, not a quiet
+  // edit. Revisit when eslint-plugin-react-hooks understands Reanimated.
+  {
+    files: ['src/components/timeline/**/*.{ts,tsx}'],
+    rules: { 'react-hooks/immutability': 'off' },
+  },
+
   // ---- Tests -------------------------------------------------------------
   // The boundary tests reference forbidden module names as data. Flat config
   // does not honour `/* eslint-env jest */`, so test globals are declared here.
