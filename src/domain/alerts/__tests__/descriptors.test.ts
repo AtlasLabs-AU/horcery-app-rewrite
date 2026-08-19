@@ -8,7 +8,7 @@ const by = (slug: string) => TYPES.find((t) => t.slug === slug)!;
 
 describe('resolveDescriptor — registry + server AppMetaData', () => {
   it('resolves all nine server types as known, none generic', () => {
-    const { list, bySlug } = resolveDescriptors(TYPES);
+    const { list, bySlug } = resolveDescriptors(TYPES, 'metric');
     expect(list.every((d) => !d.isGeneric)).toBe(true);
     expect([...bySlug.keys()].sort()).toEqual([
       'entering-stall',
@@ -24,7 +24,7 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
   });
 
   it('temperature: degrees, °C/°F, server presets 10/20/30/40 (same numbers in either unit system)', () => {
-    const d = resolveDescriptor(by('temperature'));
+    const d = resolveDescriptor(by('temperature'), 'metric');
     expect(d.threshold.kind).toBe('degrees');
     expect(d.threshold.unit).toEqual({ metric: '°C', imperial: '°F' });
     expect(d.threshold.presets?.map((p) => p.value)).toEqual([10, 20, 30, 40]);
@@ -34,13 +34,13 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
   });
 
   it('temp-change: presets 5/10/15/20 and a REQUIRED "within any"', () => {
-    const d = resolveDescriptor(by('temp-change'));
+    const d = resolveDescriptor(by('temp-change'), 'metric');
     expect(d.threshold.presets?.map((p) => p.value)).toEqual([5, 10, 15, 20]);
     expect(d.queryRange?.required).toBe(true);
   });
 
   it('lying-down-time: duration kind, presets from the SECONDS scale shown in minutes, two "based on" shapes', () => {
-    const d = resolveDescriptor(by('lying-down-time'));
+    const d = resolveDescriptor(by('lying-down-time'), 'metric');
     expect(d.threshold.kind).toBe('duration');
     expect(d.threshold.presets?.map((p) => p.value)).toEqual([15, 30, 45, 60, 90]);
     expect(d.basedOn?.map((o) => o.value)).toEqual([1, 2]);
@@ -48,14 +48,14 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
   });
 
   it('people-in-stall-time: same shape, its own scale and window minimum', () => {
-    const d = resolveDescriptor(by('people-in-stall-time'));
+    const d = resolveDescriptor(by('people-in-stall-time'), 'metric');
     expect(d.threshold.presets?.map((p) => p.value)).toEqual([5, 10, 15, 20]);
     expect(d.window.minMinutes).toBe(60);
     expect(d.category).toBe('presence');
   });
 
   it('light: selection Low/High from selectables; the duration scale feeds the TRIGGER presets', () => {
-    const d = resolveDescriptor(by('light'));
+    const d = resolveDescriptor(by('light'), 'metric');
     expect(d.threshold.kind).toBe('selection');
     expect(d.threshold.options).toEqual([
       { label: 'Low', value: 0 },
@@ -66,7 +66,7 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
   });
 
   it('lying-down-count: count with presets 1–5 and required "within any"', () => {
-    const d = resolveDescriptor(by('lying-down-count'));
+    const d = resolveDescriptor(by('lying-down-count'), 'metric');
     expect(d.threshold.kind).toBe('count');
     expect(d.threshold.presets?.map((p) => p.value)).toEqual([1, 2, 3, 4, 5]);
     expect(d.queryRange?.required).toBe(true);
@@ -74,13 +74,13 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
 
   it('boolean presence types: entering / exiting / people-in-stall', () => {
     for (const slug of ['entering-stall', 'exiting-stall', 'people-in-stall']) {
-      const d = resolveDescriptor(by(slug));
+      const d = resolveDescriptor(by(slug), 'metric');
       expect(d.threshold.kind).toBe('boolean');
       expect(d.category).toBe('presence');
       expect(d.threshold.presets).toBeUndefined();
     }
-    expect(resolveDescriptor(by('people-in-stall')).triggerDuration?.presetsMinutes).toEqual([1, 5, 10, 20, 30]);
-    expect(resolveDescriptor(by('entering-stall')).triggerDuration).toBeUndefined();
+    expect(resolveDescriptor(by('people-in-stall'), 'metric').triggerDuration?.presetsMinutes).toEqual([1, 5, 10, 20, 30]);
+    expect(resolveDescriptor(by('entering-stall'), 'metric').triggerDuration).toBeUndefined();
   });
 
   it('an unknown slug (e.g. rolling-count, which the server does NOT have) falls back to generic and says so', () => {
@@ -90,7 +90,7 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
       name: 'Rolling Events',
       category: 2,
       AppMetaData: { sensitivity_scale: { '0': { name: '1', value: 1 } } },
-    });
+    }, 'metric');
     expect(d.isGeneric).toBe(true);
     expect(d.slug).toBe('generic');
     expect(d.name).toBe('Rolling Events');
@@ -101,9 +101,9 @@ describe('resolveDescriptor — registry + server AppMetaData', () => {
 
   it('a malformed AppMetaData never throws', () => {
     expect(() =>
-      resolveDescriptor({ id: 'y', slug: 'temperature', name: 'T', AppMetaData: { sensitivity_scale: 'nope' } }),
+      resolveDescriptor({ id: 'y', slug: 'temperature', name: 'T', AppMetaData: { sensitivity_scale: 'nope' } }, 'metric'),
     ).not.toThrow();
-    expect(() => resolveDescriptor({ id: 'z', slug: 'light', name: 'L', AppMetaData: null })).not.toThrow();
+    expect(() => resolveDescriptor({ id: 'z', slug: 'light', name: 'L', AppMetaData: null }, 'metric')).not.toThrow();
   });
 });
 

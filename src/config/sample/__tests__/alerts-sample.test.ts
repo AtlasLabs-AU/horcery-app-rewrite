@@ -5,7 +5,7 @@ import { resolveDescriptors } from '@/domain/alerts/descriptors';
 import { describeRule } from '@/domain/alerts/view';
 
 describe('Alerts sample preview', () => {
-  const { byId } = resolveDescriptors(SAMPLE_ALERT_TYPES);
+  const { byId } = resolveDescriptors(SAMPLE_ALERT_TYPES, 'metric');
   const ctx = {
     descriptorsById: byId,
     units: 'metric' as const,

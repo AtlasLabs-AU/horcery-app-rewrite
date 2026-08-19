@@ -6,7 +6,7 @@ import { SAMPLE_ALERT_RULES, SAMPLE_ALERT_TYPES, SAMPLE_CURRENT_MEMBER_ID } from
 import { resolveDescriptors } from '@/domain/alerts/descriptors';
 import { describeRule, type AlertRuleView } from '@/domain/alerts/view';
 
-const { byId } = resolveDescriptors(SAMPLE_ALERT_TYPES);
+const { byId } = resolveDescriptors(SAMPLE_ALERT_TYPES, 'metric');
 const JAN = DateTime.fromISO('2026-01-15T12:00:00Z'); // winter: the July-saved sample has drifted
 
 function view(id: string, now = JAN): AlertRuleView {

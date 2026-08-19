@@ -9,7 +9,7 @@ import { formReducer, useAlertRuleForm } from '@/hooks/alerts/use-alert-rule-for
 
 import typesFixture from '@/domain/alerts/__fixtures__/alert-types.json';
 
-const { bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[]);
+const { bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[], 'metric');
 const ZONE = 'America/Chicago';
 const NOW = DateTime.fromISO('2026-07-15T12:00:00Z');
 

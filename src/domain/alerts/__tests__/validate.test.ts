@@ -7,7 +7,7 @@ import { isValid, validate } from '../validate';
 
 import typesFixture from '../__fixtures__/alert-types.json';
 
-const { bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[]);
+const { bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[], 'metric');
 const ZONE = 'America/Chicago';
 const d = (slug: string) => bySlug.get(slug)!;
 const form = (slug: string, patch: Partial<AlertRuleForm> = {}): AlertRuleForm => ({

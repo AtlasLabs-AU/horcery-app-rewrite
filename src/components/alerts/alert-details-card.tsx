@@ -8,6 +8,7 @@ import { AlertCondition } from '@/config/enums/alert-conditions';
 import { radius, space, type } from '@/constants/tokens';
 import { formatMinutes } from '@/domain/alerts/summary';
 import type { AlertRuleForm, AlertTypeDescriptor, FieldErrors, Units } from '@/domain/alerts/types';
+import { matchPreset } from '@/domain/alerts/units';
 import type { FormAction } from '@/hooks/alerts/use-alert-rule-form';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -77,7 +78,10 @@ export function AlertDetailsCard({
   let thresholdField: React.ReactNode = null;
   if (kind === 'degrees' || kind === 'count' || kind === 'number') {
     const presets = descriptor.threshold.presets ?? [];
-    const onPreset = presets.some((p) => p.value === form.thresholdValue) && !form.isCustom;
+    // Tolerant match: a stored 26.7 °C reads back as 80.1 °F, which IS the
+    // 80 °F preset one rounding step away — see `matchPreset`.
+    const matched = matchPreset(presets, form.thresholdValue);
+    const onPreset = matched != null && !form.isCustom;
     const options = [
       ...presets.map((p) => ({ label: `${p.label}${unit ? ` ${unit}` : ''}`, value: String(p.value) })),
       ...(descriptor.threshold.allowCustom ? [{ label: 'Custom', value: CUSTOM }] : []),
@@ -89,7 +93,7 @@ export function AlertDetailsCard({
         {options.length > 1 ? (
           <SegmentedControl<string>
             options={options}
-            value={onPreset ? String(form.thresholdValue) : CUSTOM}
+            value={onPreset ? String(matched) : CUSTOM}
             onChange={(v) => {
               if (disabled) return;
               if (v === CUSTOM) dispatch({ type: 'custom', value: true });

@@ -27,7 +27,7 @@ const ZONE = orgFixture.timezone as string; // America/Chicago
 // A fixed summer instant; the rules were authored in summer (A0 §2.2).
 const ON = DateTime.fromISO('2026-07-15T12:00:00Z');
 
-const { byId } = resolveDescriptors(TYPES);
+const { byId } = resolveDescriptors(TYPES, 'metric');
 
 /** A rule saved with `display_value` was authored in imperial units. */
 function unitsFor(rule: ServerAlertRule): Units {

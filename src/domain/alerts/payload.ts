@@ -29,26 +29,8 @@ import type { AlertFilter } from '@/config/enums/alert-filter';
 
 import { scopeFromRule, selectionToApi, targetToApi } from './scope';
 import type { AlertRuleForm, AlertTypeDescriptor, AlertWindow, ServerAlertRule, Units } from './types';
+import { celsiusToFahrenheit, deltaCToF, deltaFToC, fahrenheitToCelsius, round1 } from './units';
 import { buildWindowMetadata, fromStorage, readWindowMetadata, toStorage, windowFromMetadata } from './window';
-
-// ------------------------------------------------------------ units
-
-export function celsiusToFahrenheit(c: number): number {
-  return (c * 9) / 5 + 32;
-}
-export function fahrenheitToCelsius(f: number): number {
-  return ((f - 32) * 5) / 9;
-}
-/** Temperature DELTAS convert without the 32 offset. */
-export function deltaCToF(c: number): number {
-  return (c * 9) / 5;
-}
-export function deltaFToC(f: number): number {
-  return (f * 5) / 9;
-}
-export function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
 
 // ------------------------------------------------------------ HH:MM:SS
 

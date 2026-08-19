@@ -10,7 +10,7 @@ import { validate } from '@/domain/alerts/validate';
 
 import typesFixture from '@/domain/alerts/__fixtures__/alert-types.json';
 
-const { list, bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[]);
+const { list, bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[], 'metric');
 const ZONE = 'America/Chicago';
 
 describe('AlertDetailsCard renders every real alert type from its descriptor', () => {

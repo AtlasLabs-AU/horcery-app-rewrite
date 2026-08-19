@@ -20,7 +20,9 @@ import type {
   SelectionOption,
   ServerAlertType,
   ThresholdPreset,
+  Units,
 } from '../types';
+import { displayPresets } from '../units';
 import { GENERIC, REGISTRY, type RegistryEntry } from './registry';
 
 // ------------------------------------------------------------ scales
@@ -91,7 +93,7 @@ export const CATEGORY_LABEL: Record<DescriptorCategory, string> = {
 
 // ------------------------------------------------------------ resolve
 
-export function resolveDescriptor(alertType: ServerAlertType): AlertTypeDescriptor {
+export function resolveDescriptor(alertType: ServerAlertType, units: Units): AlertTypeDescriptor {
   const slug = alertType.slug ?? '';
   const entry: RegistryEntry | undefined = REGISTRY[slug];
   const base = entry ?? GENERIC;
@@ -107,10 +109,13 @@ export function resolveDescriptor(alertType: ServerAlertType): AlertTypeDescript
     allowCustom: base.threshold.allowCustom,
   };
   if (threshold.kind === 'duration') {
-    // The duration scale IS the threshold scale for duration types.
+    // The duration scale IS the threshold scale for duration types. Minutes
+    // are unit-independent — never projected.
     if (durationScale.length) threshold.presets = durationScale.map((m) => ({ label: String(m), value: m }));
   } else if (presets.length) {
-    threshold.presets = presets;
+    // The server's scale is in STORAGE units; the descriptor contract says
+    // presets are in DISPLAY units. Degrees are the only kind that differ.
+    threshold.presets = threshold.kind === 'degrees' ? displayPresets(presets, slug, units) : presets;
   }
   if (threshold.kind === 'selection' && options.length) threshold.options = options;
 
@@ -138,13 +143,16 @@ export function resolveDescriptor(alertType: ServerAlertType): AlertTypeDescript
   };
 }
 
-/** Resolve every server type; index by id and by slug. */
-export function resolveDescriptors(types: ServerAlertType[]): {
+/** Resolve every server type in the user's units; index by id and by slug. */
+export function resolveDescriptors(
+  types: ServerAlertType[],
+  units: Units,
+): {
   list: AlertTypeDescriptor[];
   byId: Map<string, AlertTypeDescriptor>;
   bySlug: Map<string, AlertTypeDescriptor>;
 } {
-  const list = types.map(resolveDescriptor);
+  const list = types.map((t) => resolveDescriptor(t, units));
   const byId = new Map<string, AlertTypeDescriptor>();
   const bySlug = new Map<string, AlertTypeDescriptor>();
   for (const d of list) {
