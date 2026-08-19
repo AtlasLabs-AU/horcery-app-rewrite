@@ -28,6 +28,23 @@ jest.mock('@/config/previews', () => ({
   },
 }));
 
+/**
+ * The card reads the organization's `timezone` and `chart_start_time` — the
+ * customer owns the barn day, we only fall back to 6 AM. Mocked at the hook
+ * boundary because the real one reaches the auth store and its native
+ * key-value storage, which this test has no business booting.
+ *
+ * `chart_start_time: null` is the common production case: most organizations
+ * never set one, so the fallback is the path worth exercising here.
+ */
+jest.mock('@/hooks/use-session', () => ({
+  useSession: () => ({
+    status: 'signed-in',
+    email: 'qa@example.com',
+    organization: { timezone: 'America/Chicago', chart_start_time: null },
+  }),
+}));
+
 afterEach(() => {
   mockPreviews.lyingDownSampleData = false;
 });

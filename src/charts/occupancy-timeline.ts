@@ -222,8 +222,11 @@ export function buildOccupancyTimeline(
   // yesterday's barn day.
   const nowKey = now.minus({ hours: input.dayStartHour ?? 0 }).toFormat(DAY_KEY);
   const dayStartHour = input.dayStartHour ?? 0;
-  if (!Number.isInteger(dayStartHour) || dayStartHour < 0 || dayStartHour > 23) {
-    throw new RangeError(`dayStartHour must be an integer 0-23, got ${dayStartHour}`);
+  // Fractional is allowed: the organization's `chart_start_time` carries
+  // minutes, so a barn that starts at 05:30 is 5.5 here. Integer-only would
+  // have silently rounded a real customer setting.
+  if (!Number.isFinite(dayStartHour) || dayStartHour < 0 || dayStartHour >= 24) {
+    throw new RangeError(`dayStartHour must be 0 to <24, got ${dayStartHour}`);
   }
   const selected = calendarDate(input.selectedDate, zone).plus({ hours: dayStartHour });
 

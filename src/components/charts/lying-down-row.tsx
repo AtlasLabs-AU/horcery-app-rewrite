@@ -462,10 +462,19 @@ export function LyingDownRow({
   );
 }
 
-/** Five ticks across the barn day, e.g. 6 AM · 12 PM · 6 PM · 12 AM · 6 AM. */
+/**
+ * Five ticks across the barn day, e.g. 6 AM · 12 PM · 6 PM · 12 AM · 6 AM.
+ *
+ * The start comes from the organization's `chart_start_time`, so it can carry
+ * minutes: a barn starting at 05:30 must read "5:30 AM", not "5 AM". Minutes
+ * appear only when there are any, so the common on-the-hour case stays short.
+ */
 function axisLabels(dayStartHour: number): string[] {
-  const base = DateTime.fromObject({ hour: dayStartHour });
-  return [0, 6, 12, 18, 24].map((offset) => base.plus({ hours: offset }).toFormat('h a'));
+  const hour = Math.floor(dayStartHour);
+  const minute = Math.round((dayStartHour - hour) * 60);
+  const base = DateTime.fromObject({ hour, minute });
+  const format = minute === 0 ? 'h a' : 'h:mm a';
+  return [0, 6, 12, 18, 24].map((offset) => base.plus({ hours: offset }).toFormat(format));
 }
 
 const styles = StyleSheet.create({

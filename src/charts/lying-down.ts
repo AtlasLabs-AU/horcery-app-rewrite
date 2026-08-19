@@ -188,8 +188,33 @@ export function inStallDisagrees(day: LyingDownDay): boolean {
   return day.totalSeconds > day.inStallSeconds + 60;
 }
 
-/** Barn day for Horcery: horses rest overnight, so 6 AM keeps a night whole. */
+/**
+ * Barn day fallback: horses rest overnight, so 6 AM keeps a night whole.
+ *
+ * Not our invention — the shipping app falls back to the same `'06:00:00'` when
+ * an organization has not set one. This is the DEFAULT, never the rule: the
+ * organization owns the value (Inakshi, 2026-08-19). Use `dayStartHourFrom`.
+ */
 export const DEFAULT_DAY_START_HOUR = 6;
+
+/**
+ * The organization's barn-day start, as (possibly fractional) hours.
+ *
+ * `chart_start_time` is an `HH:mm:ss` (or `HH:mm`) wall-clock string on the
+ * organization record, settable by the customer, and it carries MINUTES — a
+ * barn that starts at 05:30 is 5.5 here rather than being rounded to 5 or 6.
+ * Anything absent or unparseable falls back to 6, matching the shipping app
+ * rather than failing the chart.
+ */
+export function dayStartHourFrom(chartStartTime: string | null | undefined): number {
+  if (!chartStartTime) return DEFAULT_DAY_START_HOUR;
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(chartStartTime.trim());
+  if (!match) return DEFAULT_DAY_START_HOUR;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return DEFAULT_DAY_START_HOUR;
+  return hour + minute / 60;
+}
 
 /** Running total through the day, sampled at each bout edge. */
 function cumulativeFor(day: LyingDownDay): CumulativePoint[] {

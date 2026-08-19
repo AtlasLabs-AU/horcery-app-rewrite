@@ -6,7 +6,7 @@ import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { SplitRow } from '@/components/ui/split-row';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LyingDownRow } from '@/components/charts/lying-down-row';
-import { buildLyingDownWeek } from '@/charts/lying-down';
+import { buildLyingDownWeek, dayStartHourFrom } from '@/charts/lying-down';
 import {
   inStallOvernight,
   inStallWithTurnout,
@@ -20,13 +20,18 @@ import { LinkButton } from '@/components/for-you/link-button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
 import { TextTabs } from '@/components/ui/text-tabs';
+import { useSession } from '@/hooks/use-session';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
 export type TrackerPeriod = 'daily' | 'weekly';
 
-/** Organization zone. Comes from the org profile once the API is wired. */
-const ZONE = 'America/Chicago';
+/**
+ * Fallback zone, used only until the organization record arrives. The zone and
+ * the barn-day start both belong to the organization (`timezone` and
+ * `chart_start_time`), which is where the shipping app reads them from too.
+ */
+const FALLBACK_ZONE = 'America/Chicago';
 /**
  * Fallback only, used for the single frame before the container reports its
  * real width. It used to be the actual value passed to every row, which pinned
@@ -88,6 +93,10 @@ export function BehaviorTrackerCard({
   const [period, setPeriod] = useState<TrackerPeriod>('daily');
   const [selectedId, setSelectedId] = useState(behaviors[0]?.id);
   const [rowWidth, setRowWidth] = useState(CARD_WIDTH_FALLBACK);
+  const { organization } = useSession();
+  const zone = organization?.timezone || FALLBACK_ZONE;
+  // The customer owns the barn day. 6 AM is only what we fall back to.
+  const dayStartHour = dayStartHourFrom(organization?.chart_start_time);
   const selected = behaviors.find((b) => b.id === selectedId) ?? behaviors[0];
 
   // Fixture-backed until the observation API exists. Gated so it can never
@@ -109,7 +118,10 @@ export function BehaviorTrackerCard({
      * badged "Usual" on the strength of no observations at all — and it is
      * logged for Data Science alongside the thresholds, not papered over here.
      */
-    const now = DateTime.now().setZone(ZONE).startOf('day').plus({ hours: 5 });
+    const now = DateTime.now()
+      .setZone(zone)
+      .startOf('day')
+      .plus({ hours: dayStartHour === 0 ? 23 : dayStartHour - 1 });
     const build = (
       result: ReturnType<typeof typicalWeek>,
       inStall?: ReturnType<typeof typicalWeek>,
@@ -118,7 +130,8 @@ export function BehaviorTrackerCard({
         result,
         inStallResult: inStall,
         selectedDate: now.toFormat('yyyy-MM-dd'),
-        zone: ZONE,
+        zone,
+        dayStartHour,
         now,
       });
     // Verdict and average come from the backend in production. These are
@@ -182,7 +195,7 @@ export function BehaviorTrackerCard({
       horse('Juniper', 'low', build(lowToday(now), inStallWithTurnout(now)), true),
       horse('Pepper', 'no-data', build(monitorWentOffline(now)), false),
     ];
-  }, []);
+  }, [zone, dayStartHour]);
 
   return (
     <SectionCard testID="for-you-behavior-tracker">

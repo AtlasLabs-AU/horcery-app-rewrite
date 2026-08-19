@@ -9,6 +9,8 @@ import {
   formatDuration,
   headline,
   type LyingDownComparison,
+  dayStartHourFrom,
+  DEFAULT_DAY_START_HOUR,
 } from '@/charts/lying-down';
 import type { PrometheusRangeSeries } from '@/charts/occupancy-timeline';
 
@@ -346,5 +348,34 @@ describe('an impossible denominator', () => {
     });
     expect(week.today!.inStallSeconds).toBeNull();
     expect(inStallDisagrees(week.today!)).toBe(false);
+  });
+});
+
+/**
+ * The barn day belongs to the organization, not to us (Inakshi, 2026-08-19).
+ * `chart_start_time` is a customer-settable wall-clock string, and 6 AM is only
+ * the fallback — the same one the shipping app uses.
+ */
+describe('dayStartHourFrom', () => {
+  it('reads a whole hour from the organization', () => {
+    expect(dayStartHourFrom('06:00:00')).toBe(6);
+    expect(dayStartHourFrom('00:00:00')).toBe(0);
+    expect(dayStartHourFrom('23:00')).toBe(23);
+  });
+
+  it('keeps minutes rather than rounding a real setting away', () => {
+    expect(dayStartHourFrom('05:30:00')).toBe(5.5);
+    expect(dayStartHourFrom('05:45')).toBe(5.75);
+  });
+
+  it('falls back to 6 rather than failing the chart', () => {
+    // Unset is the common case: most organizations never touch the setting.
+    expect(dayStartHourFrom(null)).toBe(DEFAULT_DAY_START_HOUR);
+    expect(dayStartHourFrom(undefined)).toBe(DEFAULT_DAY_START_HOUR);
+    expect(dayStartHourFrom('')).toBe(DEFAULT_DAY_START_HOUR);
+    // And so is nonsense, which must not throw on a customer's home screen.
+    expect(dayStartHourFrom('not a time')).toBe(DEFAULT_DAY_START_HOUR);
+    expect(dayStartHourFrom('25:00:00')).toBe(DEFAULT_DAY_START_HOUR);
+    expect(dayStartHourFrom('06:75:00')).toBe(DEFAULT_DAY_START_HOUR);
   });
 });
