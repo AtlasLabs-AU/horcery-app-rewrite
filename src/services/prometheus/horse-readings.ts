@@ -20,12 +20,40 @@ function toNumber(raw: string | undefined): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
+export interface PointReading {
+  value: number;
+  /** Prometheus sample time, in Unix seconds. */
+  observedAt: number;
+}
+
+function toPoint(result: IQuery | undefined): PointReading | undefined {
+  const value = toNumber(result?.value?.[1]);
+  const observedAt = result?.value?.[0];
+  if (value == null || observedAt == null || !Number.isFinite(observedAt)) return undefined;
+  return { value, observedAt };
+}
+
 /** The value of an instant query's first (and usually only) result. */
 export function firstPointValue(
   response: IGenericResponse<IPrometheus> | undefined,
 ): number | undefined {
   const result = response?.data?.result?.[0] as IQuery | undefined;
   return toNumber(result?.value?.[1]);
+}
+
+/**
+ * A score-card measurement must identify one horse, not silently choose the
+ * first of several tagged results. The new Activeness query returns one
+ * `id`-tagged result for today's one-horse-per-stall model. If that model ever
+ * changes, returning no reading is safer than describing the wrong horse.
+ */
+export function singlePointReading(
+  response: IGenericResponse<IPrometheus> | undefined,
+): PointReading | undefined {
+  const points = ((response?.data?.result ?? []) as IQuery[])
+    .map((result) => toPoint(result))
+    .filter((point): point is PointReading => point != null);
+  return points.length === 1 ? points[0] : undefined;
 }
 
 /**
@@ -39,4 +67,13 @@ export function metricPointValue(
 ): number | undefined {
   const results = (response?.data?.result ?? []) as IQuery[];
   return toNumber(results.find((item) => item.metric?.__name__ === metricName)?.value?.[1]);
+}
+
+
+export function metricPointReading(
+  response: IGenericResponse<IPrometheus> | undefined,
+  metricName: string,
+): PointReading | undefined {
+  const results = (response?.data?.result ?? []) as IQuery[];
+  return toPoint(results.find((item) => item.metric?.__name__ === metricName));
 }

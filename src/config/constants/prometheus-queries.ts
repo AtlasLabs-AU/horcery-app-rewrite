@@ -34,9 +34,16 @@ export const ANIMAL_IN_STALL = 'avg_over_time(horse_in_stall[1m30s])';
 export const STATISTICS_CARD_DATA =
   '{__name__=~"external_temperature|average_volume|humidity|lux",handler="SENSOR_SERVICE"}';
 
-/** `ACTIVENESS_QUERY` — movement, used for the Activeness reading. */
+/**
+ * The current Activeness score-card measurement.
+ *
+ * Data Science supplied this replacement on 2026-07-28; Inakshi confirmed on
+ * 2026-08-18 that it is the newest definition and supersedes both the legacy
+ * app and the still-stale Mobile Queries sheet. Keep that provenance beside
+ * the query so an older inventory cannot silently roll it back.
+ */
 export const ACTIVENESS_STATISTICS_DATA =
-  '((sum_over_time(abs(deriv(deriv(avg_over_time(activeness_in_stall[15s])[1m:])[1m:]))[2m:])) / on(instance) (((avg_over_time(horse_in_stall[1m])) > 0.5)) or on(instance) (activeness_in_stall * 0))';
+  'avg_over_time((horse_head_wither_abs_orientation_angle{animal_type="horse"} + horse_tail_wither_abs_orientation_angle{animal_type="horse"})[30s:5s])';
 
 /** Metric names inside the statistics response. */
 export const SENSOR_METRIC = {
@@ -67,7 +74,7 @@ export const NOISE_LEVELS = [
 ] as const;
 
 export const ACTIVENESS_LEVELS = [
-  { label: 'High', value: 0.05 },
-  { label: 'Med', value: 0.01 },
-  { label: 'Low', value: 0.01 },
+  { label: 'High', value: 900 },
+  { label: 'Normal', value: 100 },
+  { label: 'Low', value: 0 },
 ] as const;

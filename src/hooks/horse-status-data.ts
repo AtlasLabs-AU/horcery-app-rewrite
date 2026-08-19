@@ -98,13 +98,77 @@ function categorise(
 }
 
 export const noiseCategory = (value: number | undefined) => categorise(value, NOISE_LEVELS);
-export const activenessCategory = (value: number | undefined) =>
-  categorise(value, ACTIVENESS_LEVELS);
+
+/**
+ * Data Science's score-card bands are not all inclusive in the same
+ * direction: 100 and 900 are Normal; only a value strictly above 900 is High.
+ * Keeping this explicit prevents a generic `>=` threshold helper from turning
+ * the boundary value 900 into High.
+ */
+export function activenessCategory(value: number | undefined): string | undefined {
+  if (value == null || Number.isNaN(value)) return undefined;
+  if (value > ACTIVENESS_LEVELS[0].value) return 'High';
+  if (value >= ACTIVENESS_LEVELS[1].value) return 'Normal';
+  return 'Low';
+}
 
 /** Celsius in, the user's unit out. */
 export function formatTemperature(celsius: number | undefined, isMetric: boolean) {
   if (celsius == null || Number.isNaN(celsius)) return undefined;
   return isMetric ? `${Math.round(celsius)}°C` : `${Math.round(celsius * 1.8 + 32)}°F`;
+}
+
+export type ScoreCardState =
+  | 'available'
+  | 'cached'
+  | 'loading'
+  | 'out-of-stall'
+  | 'unavailable';
+
+export interface ScoreCardDisplay {
+  value: string;
+  state: ScoreCardState;
+  detail?: string;
+}
+
+/** The live cache is intentionally short: an old barn reading must not look current. */
+export const LIVE_SCORE_CACHE_MS = 15 * 60 * 1000;
+
+export function deriveScoreCardDisplay({
+  value,
+  canQuery,
+  isLoading,
+  isError,
+  isLive,
+  isOnline,
+  cacheAgeMs,
+  horseIsOut = false,
+}: {
+  value: string | undefined;
+  canQuery: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  isLive: boolean;
+  isOnline: boolean;
+  cacheAgeMs: number | undefined;
+  horseIsOut?: boolean;
+}): ScoreCardDisplay {
+  if (horseIsOut) return { value: 'Out of stall', state: 'out-of-stall' };
+  if (!canQuery) return { value: 'Unavailable', state: 'unavailable' };
+
+  const hasValue = value != null;
+  if (isLoading && !hasValue) return { value: 'Checking…', state: 'loading' };
+  if (!hasValue) return { value: 'Unavailable', state: 'unavailable' };
+
+  if (isLive && cacheAgeMs != null && (!isOnline || isError)) {
+    if (cacheAgeMs > LIVE_SCORE_CACHE_MS) {
+      return { value: 'Unavailable', state: 'unavailable' };
+    }
+    const minutes = Math.max(1, Math.floor(cacheAgeMs / 60_000));
+    return { value, state: 'cached', detail: `Updated ${minutes} min ago` };
+  }
+
+  return { value, state: 'available' };
 }
 
 /**

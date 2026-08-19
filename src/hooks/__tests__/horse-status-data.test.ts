@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import type { IStall } from '@acme/services/api/stall-monitor-management/stall';
 import {
   activenessCategory,
+  deriveScoreCardDisplay,
   deriveInStallStatus,
   deriveOverlay,
   formatTemperature,
@@ -81,12 +82,18 @@ describe('deriveInStallStatus', () => {
 });
 
 describe('noiseCategory / activenessCategory', () => {
-  it('categorises by the current app\'s thresholds', () => {
+  it('categorises noise by the current app\'s thresholds', () => {
     expect(noiseCategory(65)).toBe('High');
     expect(noiseCategory(45)).toBe('Med');
     expect(noiseCategory(5)).toBe('Low');
-    expect(activenessCategory(0.06)).toBe('High');
-    expect(activenessCategory(0.02)).toBe('Med');
+  });
+
+  it('uses the newest Data Science activeness bands at their exact boundaries', () => {
+    expect(activenessCategory(0)).toBe('Low');
+    expect(activenessCategory(99.999)).toBe('Low');
+    expect(activenessCategory(100)).toBe('Normal');
+    expect(activenessCategory(900)).toBe('Normal');
+    expect(activenessCategory(900.001)).toBe('High');
   });
 
   it('returns undefined rather than a wrong category for a missing value', () => {
@@ -104,6 +111,65 @@ describe('formatTemperature', () => {
 
   it('returns undefined for a missing reading rather than "NaN°"', () => {
     expect(formatTemperature(undefined, true)).toBeUndefined();
+  });
+});
+
+describe('deriveScoreCardDisplay', () => {
+  const available = {
+    value: 'Normal',
+    canQuery: true,
+    isLoading: false,
+    isError: false,
+    isLive: true,
+    isOnline: true,
+    cacheAgeMs: 0,
+  };
+
+  it('keeps zero-derived and normal values available', () => {
+    expect(deriveScoreCardDisplay(available)).toEqual({
+      value: 'Normal',
+      state: 'available',
+    });
+  });
+
+  it('distinguishes loading, unavailable and out of stall', () => {
+    expect(
+      deriveScoreCardDisplay({ ...available, value: undefined, isLoading: true }),
+    ).toMatchObject({ value: 'Checking…', state: 'loading' });
+    expect(
+      deriveScoreCardDisplay({ ...available, value: undefined, isError: true }),
+    ).toMatchObject({ value: 'Unavailable', state: 'unavailable' });
+    expect(
+      deriveScoreCardDisplay({ ...available, value: undefined, horseIsOut: true }),
+    ).toMatchObject({ value: 'Out of stall', state: 'out-of-stall' });
+  });
+
+  it('labels a recent offline value and expires it after fifteen minutes', () => {
+    expect(
+      deriveScoreCardDisplay({
+        ...available,
+        isOnline: false,
+        cacheAgeMs: 6 * 60_000,
+      }),
+    ).toEqual({ value: 'Normal', state: 'cached', detail: 'Updated 6 min ago' });
+    expect(
+      deriveScoreCardDisplay({
+        ...available,
+        isOnline: false,
+        cacheAgeMs: 16 * 60_000,
+      }),
+    ).toMatchObject({ value: 'Unavailable', state: 'unavailable' });
+  });
+
+  it('does not expire a historical value merely because the phone is offline', () => {
+    expect(
+      deriveScoreCardDisplay({
+        ...available,
+        isLive: false,
+        isOnline: false,
+        cacheAgeMs: 60 * 60_000,
+      }),
+    ).toMatchObject({ value: 'Normal', state: 'available' });
   });
 });
 

@@ -72,7 +72,8 @@ import { useTokens } from '@/hooks/use-tokens';
  * Request budget on a cold open of Summary: the animal (1), the organization
  * for its timezone (1, usually cached by For You), the group list (1, usually
  * cached by the Horses list), and — only for a horse with a monitor — the
- * in-stall and sensor queries (2). The current app's Summary tab costs ~30
+ * in-stall, sensor-bundle and activeness queries (3). The current app's
+ * Summary tab costs ~30
  * (scope §1.7).
  */
 
@@ -109,6 +110,7 @@ export default function HorseDetailScreen() {
   const timezone = useOrganizationTimezone();
   const now = useOrganizationNow(timezone);
   const [activeTab, setActiveTab] = useState<DetailTab>('summary');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   /**
    * The hero streams only when asked, and only while this screen is on top.
    * Slice 4a proved the tile on For You's Snapshots first; the horse page
@@ -136,6 +138,8 @@ export default function HorseDetailScreen() {
   const status = useHorseStatus({
     stall: horse.stall,
     cursor: playhead.cursor,
+    isLive: playhead.isLive,
+    nowMillis: now.toMillis(),
     enabled: !isSample && overlay === 'none',
   });
 
@@ -190,11 +194,19 @@ export default function HorseDetailScreen() {
     ? `Last ${EVENT_WINDOW_DAYS} days`
     : `${EVENT_WINDOW_DAYS} days to ${dayLabel(playhead.day, now)}`;
 
-  const onRefresh = useCallback(() => {
-    void horse.refresh();
-    if (activeTab === 'summary') status.refetch();
-    if (activeTab === 'events') void events.refetch();
-    if (activeTab === 'alerts') void alerts.refetch();
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const tabRefresh =
+        activeTab === 'summary'
+          ? status.refetch()
+          : activeTab === 'events'
+            ? events.refetch()
+            : alerts.refetch();
+      await Promise.all([horse.refresh(), tabRefresh]);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [horse, activeTab, status, events, alerts]);
 
   const onEndReached = useCallback(() => {
@@ -322,7 +334,7 @@ export default function HorseDetailScreen() {
         ItemSeparatorComponent={ListGap}
         refreshControl={
           <RefreshControl
-            refreshing={horse.isRefreshing}
+            refreshing={isRefreshing || horse.isRefreshing}
             onRefresh={onRefresh}
             tintColor={colors.accent}
             colors={[colors.accent]}

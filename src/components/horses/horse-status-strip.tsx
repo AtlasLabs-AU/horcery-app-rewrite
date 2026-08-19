@@ -8,7 +8,7 @@ import {
   IN_STALL_LABELS,
   type InStallStatus,
 } from '@/hooks/horse-status-data';
-import type { HorseReading } from '@/hooks/use-horse-status';
+import type { HorseReading, HorseReadingLabel } from '@/hooks/use-horse-status';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -42,6 +42,14 @@ export function HorseStatusStrip({
   const tone = STATUS_TONE[status];
   const color =
     tone === 'ok' ? colors.statusOk : tone === 'alert' ? colors.statusAlert : colors.tertiary;
+  const readingByLabel = new Map(readings.map((reading) => [reading.label, reading]));
+  const fixedReadings = SCORE_CARD_LABELS.map<HorseReading>((label) =>
+    readingByLabel.get(label) ?? {
+      label,
+      value: 'Unavailable',
+      state: 'unavailable',
+    },
+  );
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card }]} testID="horse-status-strip">
@@ -59,30 +67,43 @@ export function HorseStatusStrip({
 
       <Text style={[type.caption, { color: colors.dimmed }]}>{atLabel}</Text>
 
-      {readings.length > 0 ? (
-        <View style={[styles.readings, { borderTopColor: colors.divider }]}>
-          {readings.map((reading, index) => (
-            <Fragment key={reading.label}>
-              {index > 0 ? (
-                <View style={[styles.separator, { backgroundColor: colors.divider }]} />
+      <View style={[styles.readings, { borderTopColor: colors.divider }]}>
+        {fixedReadings.map((reading, index) => (
+          <Fragment key={reading.label}>
+            {index > 0 ? (
+              <View style={[styles.separator, { backgroundColor: colors.divider }]} />
+            ) : null}
+            <View
+              style={styles.reading}
+              accessible
+              accessibilityLabel={`${reading.label}: ${reading.value}${
+                reading.detail ? `. ${reading.detail}` : ''
+              }`}>
+              <Icon
+                name={READING_ICON[reading.label]}
+                size={15}
+                color={colors.tertiary}
+              />
+              <Text
+                selectable
+                style={[type.headline, styles.readingValue, { color: colors.foreground }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}>
+                {reading.value}
+              </Text>
+              <Text style={[type.caption, { color: colors.tertiary }]} numberOfLines={1}>
+                {reading.label}
+              </Text>
+              {reading.detail ? (
+                <Text style={[type.caption, { color: colors.dimmed }]} numberOfLines={1}>
+                  {reading.detail}
+                </Text>
               ) : null}
-              <View style={styles.reading}>
-                <Icon
-                  name={READING_ICON[reading.label] ?? 'info'}
-                  size={15}
-                  color={colors.tertiary}
-                />
-                <Text style={[type.headline, { color: colors.foreground }]} numberOfLines={1}>
-                  {reading.value}
-                </Text>
-                <Text style={[type.caption, { color: colors.tertiary }]} numberOfLines={1}>
-                  {reading.label}
-                </Text>
-              </View>
-            </Fragment>
-          ))}
-        </View>
-      ) : null}
+            </View>
+          </Fragment>
+        ))}
+      </View>
     </View>
   );
 }
@@ -102,11 +123,16 @@ const STATUS_TONE: Record<InStallStatus, 'ok' | 'alert' | 'neutral'> = {
   unavailable: 'neutral',
 };
 
-const READING_ICON: Record<string, IconName> = {
+const SCORE_CARD_LABELS: HorseReadingLabel[] = [
+  'Activeness',
+  'Temperature',
+  'Noise Level',
+];
+
+const READING_ICON: Record<HorseReadingLabel, IconName> = {
   Activeness: 'rolling',
   Temperature: 'temperature',
-  Noise: 'sound',
-  Humidity: 'humidity',
+  'Noise Level': 'sound',
 };
 
 const styles = StyleSheet.create({
@@ -127,5 +153,6 @@ const styles = StyleSheet.create({
     marginTop: space.xxs,
   },
   separator: { width: StyleSheet.hairlineWidth, marginHorizontal: space.sm },
-  reading: { flex: 1, alignItems: 'center', gap: space.xxs },
+  reading: { flex: 1, alignItems: 'center', gap: space.xxs, minWidth: 0 },
+  readingValue: { textAlign: 'center' },
 });

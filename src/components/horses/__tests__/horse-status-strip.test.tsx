@@ -57,13 +57,14 @@ describe('HorseStatusStrip', () => {
     expect(past.getByText('Yesterday, end of day')).toBeTruthy();
   });
 
-  it('renders only the readings that actually answered', async () => {
+  it('keeps all three score-card positions stable when a reading is unavailable', async () => {
     const view = await render(
       <HorseStatusStrip
         status="in-stall"
         readings={[
-          { label: 'Temperature', value: '18°C' },
-          { label: 'Noise', value: 'Low' },
+          { label: 'Activeness', value: 'Unavailable', state: 'unavailable' },
+          { label: 'Temperature', value: '18°C', state: 'available' },
+          { label: 'Noise Level', value: 'Low', state: 'available' },
         ]}
         atLabel="Live"
       />,
@@ -71,8 +72,27 @@ describe('HorseStatusStrip', () => {
 
     expect(view.getByText('18°C')).toBeTruthy();
     expect(view.getByText('Low')).toBeTruthy();
-    // Activeness did not answer, so it is absent rather than shown as "N/A" —
-    // the current app prints N/A, which reads as a measured value of nothing.
-    expect(view.queryByText('Activeness')).toBeNull();
+    expect(view.getByText('Activeness')).toBeTruthy();
+    expect(view.getByText('Noise Level')).toBeTruthy();
+    expect(view.getByText('Unavailable')).toBeTruthy();
+  });
+
+  it('shows when a displayed value came from the recent offline cache', async () => {
+    const view = await render(
+      <HorseStatusStrip
+        status="in-stall"
+        readings={[
+          {
+            label: 'Activeness',
+            value: 'Normal',
+            state: 'cached',
+            detail: 'Updated 6 min ago',
+          },
+        ]}
+        atLabel="Live"
+      />,
+    );
+
+    expect(view.getByText('Updated 6 min ago')).toBeTruthy();
   });
 });

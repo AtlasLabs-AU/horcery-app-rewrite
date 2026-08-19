@@ -13,6 +13,7 @@ import {
 } from '@/config/constants/prometheus-queries';
 import {
   activenessCategory,
+  deriveScoreCardDisplay,
   deriveInStallStatus,
   formatTemperature,
   noiseCategory,
@@ -20,12 +21,21 @@ import {
 } from '@/hooks/horse-status-data';
 import { stallHasMetrics, stallHasMonitor } from '@/hooks/horses-data';
 import { liveSliceFor } from '@/hooks/playhead-data';
-import { firstPointValue, metricPointValue } from '@/services/prometheus/horse-readings';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import {
+  firstPointValue,
+  metricPointReading,
+  singlePointReading,
+} from '@/services/prometheus/horse-readings';
 
+
+export type HorseReadingLabel = 'Activeness' | 'Temperature' | 'Noise Level';
 
 export interface HorseReading {
-  label: string;
+  label: HorseReadingLabel;
   value: string;
+  state: ReturnType<typeof deriveScoreCardDisplay>['state'];
+  detail?: string;
 }
 
 export interface HorseStatus {
@@ -35,7 +45,7 @@ export interface HorseStatus {
   hasMonitor: boolean;
   isLoading: boolean;
   isError: boolean;
-  refetch: () => void;
+  refetch: () => Promise<void>;
 }
 
 /**
@@ -53,13 +63,18 @@ export interface HorseStatus {
 export function useHorseStatus({
   stall,
   cursor,
+  isLive,
+  nowMillis,
   enabled = true,
 }: {
   stall: IStall | undefined;
   cursor: DateTime;
+  isLive: boolean;
+  nowMillis: number;
   enabled?: boolean;
 }): HorseStatus {
   const isMetric = useAuthStore((s) => s.userPreferences?.isMetric ?? true);
+  const isOnline = useOnlineStatus();
 
   const hasMonitor = stallHasMonitor(stall);
   const canQuery = stallHasMetrics(stall);
@@ -89,7 +104,6 @@ export function useHorseStatus({
   const activeness = useQuery({
     ...queries.prometheus.query(baseUrl, ACTIVENESS_STATISTICS_DATA, [
       { key: 'time', value: `${atSeconds}` },
-      { key: 'step', value: '15' },
     ]),
     enabled: active,
   });
@@ -107,43 +121,75 @@ export function useHorseStatus({
   );
 
   const readings = useMemo<HorseReading[]>(() => {
-    if (!active) return [];
-    const rows: HorseReading[] = [];
+    const activenessPoint = singlePointReading(activeness.data);
+    const temperaturePoint = metricPointReading(sensors.data, SENSOR_METRIC.temperature);
+    const noisePoint = metricPointReading(sensors.data, SENSOR_METRIC.noise);
 
-    const activenessLabel = activenessCategory(firstPointValue(activeness.data));
-    if (activenessLabel) rows.push({ label: 'Activeness', value: activenessLabel });
+    const activenessDisplay = deriveScoreCardDisplay({
+      value: activenessCategory(activenessPoint?.value),
+      canQuery: active,
+      isLoading: activeness.isPending && active,
+      isError: activeness.isError,
+      isLive,
+      isOnline,
+      cacheAgeMs: activeness.dataUpdatedAt ? Math.max(0, nowMillis - activeness.dataUpdatedAt) : undefined,
+      horseIsOut: status === 'out-of-stall',
+    });
+    const temperatureDisplay = deriveScoreCardDisplay({
+      value: formatTemperature(temperaturePoint?.value, isMetric),
+      canQuery: active,
+      isLoading: sensors.isPending && active,
+      isError: sensors.isError,
+      isLive,
+      isOnline,
+      cacheAgeMs: sensors.dataUpdatedAt ? Math.max(0, nowMillis - sensors.dataUpdatedAt) : undefined,
+    });
+    const noiseDisplay = deriveScoreCardDisplay({
+      value: noiseCategory(noisePoint?.value),
+      canQuery: active,
+      isLoading: sensors.isPending && active,
+      isError: sensors.isError,
+      isLive,
+      isOnline,
+      cacheAgeMs: sensors.dataUpdatedAt ? Math.max(0, nowMillis - sensors.dataUpdatedAt) : undefined,
+    });
 
-    const temperature = formatTemperature(
-      metricPointValue(sensors.data, SENSOR_METRIC.temperature),
-      isMetric,
-    );
-    if (temperature) rows.push({ label: 'Temperature', value: temperature });
-
-    const noise = noiseCategory(metricPointValue(sensors.data, SENSOR_METRIC.noise));
-    if (noise) rows.push({ label: 'Noise', value: noise });
-
-    const humidity = metricPointValue(sensors.data, SENSOR_METRIC.humidity);
-    if (humidity != null) rows.push({ label: 'Humidity', value: `${Math.round(humidity)}%` });
-
-    return rows;
-  }, [active, activeness.data, sensors.data, isMetric]);
+    return [
+      { label: 'Activeness', ...activenessDisplay },
+      { label: 'Temperature', ...temperatureDisplay },
+      { label: 'Noise Level', ...noiseDisplay },
+    ];
+  }, [
+    active,
+    activeness.data,
+    activeness.dataUpdatedAt,
+    activeness.isError,
+    activeness.isPending,
+    sensors.data,
+    sensors.dataUpdatedAt,
+    sensors.isError,
+    sensors.isPending,
+    isMetric,
+    isLive,
+    isOnline,
+    nowMillis,
+    status,
+  ]);
 
   const { refetch: refetchInStall } = inStall;
   const { refetch: refetchSensors } = sensors;
   const { refetch: refetchActiveness } = activeness;
 
-  const refetch = useCallback(() => {
-    void refetchInStall();
-    void refetchSensors();
-    void refetchActiveness();
+  const refetch = useCallback(async () => {
+    await Promise.all([refetchInStall(), refetchSensors(), refetchActiveness()]);
   }, [refetchInStall, refetchSensors, refetchActiveness]);
 
   return {
     status,
     readings,
     hasMonitor,
-    isLoading: active && (inStall.isPending || sensors.isPending),
-    isError: inStall.isError || sensors.isError,
+    isLoading: active && (inStall.isPending || sensors.isPending || activeness.isPending),
+    isError: inStall.isError || sensors.isError || activeness.isError,
     refetch,
   };
 }
