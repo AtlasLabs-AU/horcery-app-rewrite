@@ -5,7 +5,7 @@ import { useTokens } from '@/hooks/use-tokens';
 import { space, type } from '@/constants/tokens';
 
 /**
- * "Hello Horcery" plus the three header actions (search, customize, menu).
+ * "Hello Horcery" plus the two current header actions (customize, menu).
  *
  * The current app draws these as SVG assets; here they are SF Symbols via
  * `expo-symbols`, so they inherit the system weight and scale automatically.
@@ -18,12 +18,10 @@ import { space, type } from '@/constants/tokens';
  */
 export function ForYouHeader({
   greeting = 'Hello Horcery',
-  onSearch,
   onCustomize,
   onMenu,
 }: {
   greeting?: string;
-  onSearch?: () => void;
   onCustomize?: () => void;
   onMenu?: () => void;
 }) {
@@ -34,13 +32,6 @@ export function ForYouHeader({
         {greeting}
       </Text>
       <View style={styles.actions}>
-        <HeaderIcon
-          name="search"
-          label="Search"
-          hint="Opens search"
-          onPress={onSearch}
-          testID="for-you-search-button"
-        />
         <HeaderIcon
           name="customize"
           label="Customize for you page"
@@ -61,13 +52,11 @@ export function ForYouHeader({
 function HeaderIcon({
   name,
   label,
-  hint,
   onPress,
   testID,
 }: {
   name: IconName;
   label: string;
-  hint?: string;
   onPress?: () => void;
   testID?: string;
 }) {
@@ -80,7 +69,6 @@ function HeaderIcon({
       hitSlop={12}
       accessibilityRole={wired ? 'button' : undefined}
       accessibilityLabel={wired ? label : undefined}
-      accessibilityHint={wired ? hint : undefined}
       accessibilityState={{ disabled: !wired }}
       testID={testID}
       style={({ pressed }) => (pressed && wired ? styles.pressed : undefined)}>

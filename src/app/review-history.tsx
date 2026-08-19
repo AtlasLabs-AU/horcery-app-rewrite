@@ -75,6 +75,7 @@ export default function ReviewHistoryScreen() {
   const [selectedDay, setSelectedDay] = useState<DateTime | null>(null);
   /** Multi-select, like the current app's sheet. Empty means "no filter". */
   const [behaviors, setBehaviors] = useState<BehaviorKey[]>([]);
+  const [playingEventId, setPlayingEventId] = useState<string | null>(null);
 
   // Default to the barn's today, and follow it if the day rolls over while
   // the screen is open.
@@ -127,6 +128,10 @@ export default function ReviewHistoryScreen() {
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const togglePlayback = useCallback((id: string) => {
+    setPlayingEventId((current) => (current === id ? null : id));
+  }, []);
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
@@ -206,7 +211,16 @@ export default function ReviewHistoryScreen() {
           <FlatList
             data={visibleRows}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <EventCard event={item} />}
+            renderItem={({ item }) => (
+              <EventCard
+                event={item}
+                playing={playingEventId === item.id}
+                onPress={item.videoUri ? () => togglePlayback(item.id) : undefined}
+                onPlaybackError={() =>
+                  setPlayingEventId((current) => (current === item.id ? null : current))
+                }
+              />
+            )}
             contentContainerStyle={styles.listContent}
             onEndReached={onEndReached}
             onEndReachedThreshold={0.4}

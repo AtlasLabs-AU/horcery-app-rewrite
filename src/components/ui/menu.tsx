@@ -1,7 +1,11 @@
 // Default export AND a named export of the same name; the alias keeps the
 // import-rule happy without pretending they are the same thing.
-import { default as NativeSheet, BottomSheetView } from '@expo/ui/community/bottom-sheet';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  default as NativeSheet,
+  BottomSheetView,
+  type BottomSheetMethods,
+} from '@expo/ui/community/bottom-sheet';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
@@ -60,6 +64,7 @@ export function Menu({
 }: MenuProps) {
   const { colors } = useTokens();
   const [open, setOpen] = useState(false);
+  const sheetRef = useRef<BottomSheetMethods>(null);
   const empty = actions.length === 0;
   const backdrop = useSheetBackdrop();
 
@@ -71,14 +76,26 @@ export function Menu({
     return () => backdrop.release();
   }, [open, backdrop]);
 
+  /**
+   * The sheet is a native modal hosted outside this React Native view tree.
+   * Updating `index` alone did not dismiss it from a press inside that host on
+   * iOS (the visible Close button became a no-op), even though a swipe and an
+   * outside tap still worked. Close the native presentation through its own
+   * ref; `onClose` is the single place that then reconciles React state and
+   * releases the backdrop.
+   */
+  const closeSheet = useCallback(() => {
+    sheetRef.current?.close();
+  }, []);
+
   const runAction = useCallback(
     (action: MenuAction) => {
       if (action.disabled) return;
       // A filter stays open so the next tap is a tap, not a re-open.
-      if (!multiSelect) setOpen(false);
+      if (!multiSelect) closeSheet();
       action.onPress?.();
     },
-    [multiSelect],
+    [multiSelect, closeSheet],
   );
 
   return (
@@ -109,6 +126,7 @@ export function Menu({
       </Pressable>
 
       <NativeSheet
+        ref={sheetRef}
         index={open ? 0 : -1}
         onClose={() => setOpen(false)}
         onDismiss={() => setOpen(false)}
@@ -126,7 +144,7 @@ export function Menu({
                 {title ?? accessibilityLabel}
               </Text>
               <Pressable
-                onPress={() => setOpen(false)}
+                onPress={closeSheet}
                 hitSlop={12}
                 accessibilityRole="button"
                 accessibilityLabel={multiSelect ? 'Done' : 'Close'}

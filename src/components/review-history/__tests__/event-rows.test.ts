@@ -55,6 +55,37 @@ describe('toHistoryEvent', () => {
     expect(toHistoryEvent(event()).durationLabel).toBe('42m');
   });
 
+  it('builds the real still and recorded stream only from a streamable stall', () => {
+    const mapped = toHistoryEvent(
+      event({
+        end_time: '2026-08-15T23:14:00.000Z',
+        stall: {
+          name: 'Stall 2',
+          stall_url: 'https://monitor.example/live/sm-93/dash/manifest.mpd',
+          UserMetaData: { audio_enable: true },
+        } as never,
+      }),
+    );
+
+    expect(mapped.posterUri).toMatch(
+      /^https:\/\/monitor\.example\/live\/sm-93\/frames\/\d+\.jpeg$/,
+    );
+    expect(mapped.videoUri).toContain('/stream_management/audio_video/93/');
+    expect(mapped.videoUri).toContain('?quality=low');
+
+    const unstreamable = toHistoryEvent(
+      event({
+        stall: {
+          name: 'Stall 2',
+          stall_url: 'https://monitor.example/live/no-monitor/dash/manifest.mpd',
+          UserMetaData: {},
+        } as never,
+      }),
+    );
+    expect(unstreamable.posterUri).toBeUndefined();
+    expect(unstreamable.videoUri).toBeUndefined();
+  });
+
   it('marks alerts and partial-rolling ids as alerts', () => {
     expect(toHistoryEvent(event({ event_type: EVENT_TYPE_ID.alert })).isAlert).toBe(true);
     [103, 104, 105].forEach((typeId) => {

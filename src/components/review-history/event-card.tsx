@@ -19,6 +19,7 @@ export interface HistoryEvent {
   /** Behaviour events carry footage; reported ones carry a note instead. */
   hasClip: boolean;
   posterUri?: string;
+  videoUri?: string;
   blurhash?: string;
   durationLabel?: string;
   animalName?: string;
@@ -52,26 +53,37 @@ export interface HistoryEvent {
  */
 export function EventCard({
   event,
+  playing = false,
   onPress,
+  onPlaybackError,
 }: {
   event: HistoryEvent;
+  playing?: boolean;
   onPress?: () => void;
+  onPlaybackError?: () => void;
 }) {
   const { colors } = useTokens();
+  const canPlay = !!event.videoUri && !!onPress;
+  const hasVisual = !!event.posterUri || !!event.blurhash || !!event.videoUri;
 
-  if (event.hasClip) {
+  if (event.hasClip && hasVisual) {
     return (
       <MediaTile
         posterUri={event.posterUri}
         blurhash={event.blurhash}
+        videoUri={playing ? event.videoUri : undefined}
+        live={playing}
+        onPlaybackError={onPlaybackError}
         title={event.animalName ?? event.stallName ?? event.title}
         subtitle={`${event.title} · ${event.timeLabel}`}
         subtitleIcon={event.icon}
         badge={event.durationLabel}
-        showPlayBadge
+        showPlayBadge={canPlay && !playing}
         tag={event.isAlert ? { label: event.title, tone: 'alert' } : undefined}
-        onPress={onPress}
-        accessibilityLabel={`${event.title}, ${event.animalName ?? event.stallName ?? ''}, ${event.timeLabel}`}
+        onPress={canPlay ? onPress : undefined}
+        accessibilityLabel={`${event.title}, ${event.animalName ?? event.stallName ?? ''}, ${event.timeLabel}${
+          canPlay ? (playing ? ', tap to stop video' : ', tap to play video') : ''
+        }`}
         testID={`history-event-${event.id}`}
       />
     );
@@ -96,6 +108,7 @@ export function EventCard({
         {event.stallName ? <InfoRow label="Stall" value={event.stallName} /> : null}
         {event.reporter ? <InfoRow label="Reported by" value={event.reporter} /> : null}
         {event.note ? <InfoRow label="Notes" value={event.note} /> : null}
+        {event.hasClip ? <InfoRow label="Footage" value="Unavailable" /> : null}
       </View>
     </View>
   );

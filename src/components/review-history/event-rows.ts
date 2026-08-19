@@ -4,6 +4,11 @@ import type { IEvent } from '@acme/services/api/event-management/event';
 import { EVENT_TYPE_ID } from '@acme/config/constants/event-types';
 import type { HistoryEvent } from '@/components/review-history/event-card';
 import type { IconName } from '@/components/ui/icon-names';
+import {
+  getStallIdFromURL,
+  getStallMonitorThumbnailURLs,
+  getStallMonitorVideoURL,
+} from '@acme/config/utils/stall-monitor-video-helper';
 
 /**
  * The one place an API event becomes a drawable row.
@@ -77,6 +82,34 @@ export function toHistoryEvent(event: IEvent, options: EventRowOptions = {}): Hi
   const stall = typeof event.stall_id === 'object' ? event.stall_id : event.stall;
   const durationSeconds = Number(event.duration ?? 0);
   const animalName = event.animal?.animal_name ?? event.animal?.registered_name;
+  const start = event.start_time ? DateTime.fromISO(event.start_time) : null;
+  const explicitEnd = event.end_time ? DateTime.fromISO(event.end_time) : null;
+  const startEpoch = start?.isValid ? start.toUnixInteger() : undefined;
+  const endEpoch = explicitEnd?.isValid
+    ? explicitEnd.toUnixInteger()
+    : startEpoch !== undefined && durationSeconds > 0
+      ? startEpoch + Math.ceil(durationSeconds)
+      : undefined;
+  const monitorId = stall?.stall_url ? getStallIdFromURL(stall.stall_url) : NaN;
+  const canBuildFootage =
+    durationSeconds > 0 &&
+    startEpoch !== undefined &&
+    endEpoch !== undefined &&
+    endEpoch > startEpoch &&
+    monitorId > 0;
+  const posterUri =
+    canBuildFootage && stall?.stall_url
+      ? getStallMonitorThumbnailURLs(stall.stall_url, startEpoch)[0]
+      : undefined;
+  const videoUri = canBuildFootage
+    ? getStallMonitorVideoURL({
+        stallId: monitorId,
+        startTime: startEpoch,
+        endTime: endEpoch,
+        type: stall?.UserMetaData?.audio_enable ? 'audio_video' : 'video',
+        quality: 'low',
+      })
+    : undefined;
 
   return {
     id: event.id ?? `${event.start_time}-${typeId}`,
@@ -87,6 +120,8 @@ export function toHistoryEvent(event: IEvent, options: EventRowOptions = {}): Hi
     // current app added to History but never back-ported to For You.
     hasClip: durationSeconds > 0,
     durationLabel: durationSeconds > 0 ? formatDuration(durationSeconds) : undefined,
+    posterUri,
+    videoUri,
     blurhash: event.event_blur_hash,
     animalName: omitAnimalName ? undefined : animalName,
     stallName: stall?.name,

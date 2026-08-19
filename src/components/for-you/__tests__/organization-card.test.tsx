@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { OrganizationCard } from '@/components/for-you/organization-card';
 import type { AlertStatus } from '@/hooks/use-alert-status';
@@ -100,5 +100,22 @@ describe('OrganizationCard alert status', () => {
     const manage = view.getByTestId('for-you-manage-alerts');
     expect(manage.props.accessibilityRole).toBeUndefined();
     expect(manage.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('makes Manage Alerts a real action when the screen wires it', async () => {
+    const onManageAlerts = jest.fn();
+    const view = await render(
+      <OrganizationCard
+        {...baseProps}
+        alertStatus={{ kind: 'normal', rulesConfigured: 2 }}
+        onManageAlerts={onManageAlerts}
+      />,
+    );
+
+    const manage = view.getByTestId('for-you-manage-alerts');
+    expect(manage.props.accessibilityRole).toBe('button');
+    expect(manage.props.accessibilityState?.disabled).toBe(false);
+    await fireEvent.press(manage);
+    expect(onManageAlerts).toHaveBeenCalledTimes(1);
   });
 });

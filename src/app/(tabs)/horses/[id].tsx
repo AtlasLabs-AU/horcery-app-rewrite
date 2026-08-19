@@ -118,6 +118,7 @@ export default function HorseDetailScreen() {
    * inherits it rather than being the place it runs for the first time.
    */
   const [wantsLive, setWantsLive] = useState(false);
+  const [playingEventId, setPlayingEventId] = useState<string | null>(null);
   const [streamFailed, setStreamFailed] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
 
@@ -223,9 +224,10 @@ export default function HorseDetailScreen() {
       return () => {
         setIsFocused(false);
         setWantsLive(false);
+        setPlayingEventId(null);
       };
       // Setters are stable, but the React Compiler requires them declared.
-    }, [setIsFocused, setWantsLive]),
+    }, [setIsFocused, setWantsLive, setPlayingEventId]),
   );
 
   /**
@@ -259,22 +261,38 @@ export default function HorseDetailScreen() {
       // Stop first: the stream URL changes with the cursor, and a player left
       // running would silently jump to a different hour.
       setWantsLive(false);
+      setPlayingEventId(null);
       setStreamFailed(false);
       playhead.setDay(next);
     },
-    [playhead, setWantsLive, setStreamFailed],
+    [playhead, setWantsLive, setPlayingEventId, setStreamFailed],
   );
 
   const onBackToToday = useCallback(() => {
     setWantsLive(false);
+    setPlayingEventId(null);
     setStreamFailed(false);
     playhead.resetToToday();
-  }, [playhead, setWantsLive, setStreamFailed]);
+  }, [playhead, setWantsLive, setPlayingEventId, setStreamFailed]);
 
   const onToggleLive = useCallback(() => {
     setStreamFailed(false);
+    setPlayingEventId(null);
     setWantsLive((current) => !current);
-  }, [setStreamFailed, setWantsLive]);
+  }, [setStreamFailed, setPlayingEventId, setWantsLive]);
+
+  const onToggleEvent = useCallback((eventId: string) => {
+    // The page owns one decoder budget: an event and the hero never play at
+    // the same time, and tapping a second event replaces the first.
+    setWantsLive(false);
+    setPlayingEventId((current) => (current === eventId ? null : eventId));
+  }, [setWantsLive, setPlayingEventId]);
+
+  const onChangeTab = useCallback((tab: DetailTab) => {
+    setWantsLive(false);
+    setPlayingEventId(null);
+    setActiveTab(tab);
+  }, [setWantsLive, setPlayingEventId, setActiveTab]);
 
   /**
    * Scrubbing (slice 4c) commits an instant, not a day — the date bar and the
@@ -285,10 +303,11 @@ export default function HorseDetailScreen() {
   const onScrub = useCallback(
     (at: DateTime) => {
       setWantsLive(false);
+      setPlayingEventId(null);
       setStreamFailed(false);
       playhead.setCursor(at);
     },
-    [playhead, setWantsLive, setStreamFailed],
+    [playhead, setWantsLive, setPlayingEventId, setStreamFailed],
   );
 
   const onScrubbingChange = useCallback(
@@ -359,7 +378,16 @@ export default function HorseDetailScreen() {
         keyExtractor={(item) => item.id}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <EventCard event={item} />}
+        renderItem={({ item }) => (
+          <EventCard
+            event={item}
+            playing={playingEventId === item.id}
+            onPress={item.videoUri ? () => onToggleEvent(item.id) : undefined}
+            onPlaybackError={() =>
+              setPlayingEventId((current) => (current === item.id ? null : current))
+            }
+          />
+        )}
         ItemSeparatorComponent={ListGap}
         refreshControl={
           <RefreshControl
@@ -446,7 +474,7 @@ export default function HorseDetailScreen() {
             <SegmentedControl<DetailTab>
               options={TABS}
               value={activeTab}
-              onChange={setActiveTab}
+              onChange={onChangeTab}
               width={Math.max(width - TAB_WIDTH_INSET, 260)}
               accessibilityLabel="Horse sections"
               testID="horse-detail-tabs"

@@ -32,6 +32,35 @@ describe('no dead controls on the screens', () => {
     const undefineds = body.match(/on[A-Z]\w*=\{undefined\}/g) ?? [];
 
     expect([...noOps, ...undefineds]).toEqual([]);
+    expect(body).toContain('onManageAlerts={openAlerts}');
+  });
+
+  it('removes retired Home search instead of leaving an inert icon', () => {
+    const header = read(join('components', 'for-you', 'header.tsx'));
+
+    expect(header).not.toContain('for-you-search-button');
+    expect(header).not.toMatch(/name="search"/);
+    expect(header).not.toContain('onSearch');
+  });
+
+  it('only renders Give Feedback when it has a real destination', () => {
+    const more = read(join('app', '(tabs)', 'more.tsx'));
+
+    expect(more).toContain('const feedbackUrl = config.web.FEEDBACK_FORM_URL.trim()');
+    expect(more).toMatch(/\{feedbackUrl \? \([\s\S]*onPress=\{openFeedback\}/);
+    expect(more).toContain('Linking.openURL(feedbackUrl)');
+  });
+
+  it('dismisses the native sheet through its imperative close method', () => {
+    const menu = read(join('components', 'ui', 'menu.tsx'));
+
+    // A state-only `setOpen(false)` from inside the native host left the
+    // visible X inert on iOS. Every app sheet uses this shared wrapper, so the
+    // close affordance and action rows must both call the native modal itself.
+    expect(menu).toContain('sheetRef.current?.close()');
+    expect(menu).toContain('ref={sheetRef}');
+    expect(menu).toContain('onPress={closeSheet}');
+    expect(menu).toContain("accessibilityLabel={multiSelect ? 'Done' : 'Close'}");
   });
 
   it('never claims a control is a button unconditionally', () => {

@@ -71,6 +71,7 @@ export default function ForYouScreen() {
 
   const openMenu = useCallback(() => router.push('/menu'), []);
   const openHistory = useCallback(() => router.push('/review-history'), []);
+  const openAlerts = useCallback(() => router.push('/alerts'), []);
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
@@ -103,6 +104,7 @@ export default function ForYouScreen() {
             humidity={preview ? SAMPLE_FOR_YOU.conditions.humidity : undefined}
             alertStatus={alertStatus}
             onSeeHistory={openHistory}
+            onManageAlerts={openAlerts}
           />
 
           <SnapshotsCard snapshots={visibleSnapshots} paused={!isFocused} />

@@ -15,7 +15,13 @@ jest.mock('expo-symbols', () => {
 jest.mock('expo-video', () => {
   const React = require('react');
   return {
-    useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn(), loop: true, muted: true }),
+    useVideoPlayer: () => ({
+      play: jest.fn(),
+      pause: jest.fn(),
+      addListener: jest.fn(() => ({ remove: jest.fn() })),
+      loop: true,
+      muted: true,
+    }),
     VideoView: (props) => React.createElement('VideoView', props),
   };
 });

@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/ui/icon';
+import { useToast } from '@/components/ui/toast';
+import { config } from '@/config/env';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 import { BottomTabInset } from '@/constants/theme';
@@ -23,7 +25,14 @@ import { BottomTabInset } from '@/constants/theme';
  */
 export default function MoreScreen() {
   const { colors } = useTokens();
+  const { showToast } = useToast();
   const openAlerts = () => router.push('/alerts');
+  const feedbackUrl = config.web.FEEDBACK_FORM_URL.trim();
+  const openFeedback = () => {
+    void Linking.openURL(feedbackUrl).catch(() =>
+      showToast('Feedback could not be opened.'),
+    );
+  };
 
   return (
     <View style={[styles.page, { backgroundColor: colors.background }]}>
@@ -70,29 +79,32 @@ export default function MoreScreen() {
             />
           </View>
 
-          <View style={[styles.feedbackCard, { backgroundColor: colors.bed }]}>
-            <Text style={[type.headline, { color: colors.foreground }]}>
-              {'We’d love to hear from you! 🐴'}
-            </Text>
-            <Text style={[type.subhead, { color: colors.secondary }]}>
-              Your feedback helps us build features that truly support your
-              horses and your stable life.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Give Feedback"
-              testID="more-feedback"
-              style={({ pressed }) => [
-                styles.feedbackButton,
-                { backgroundColor: colors.card },
-                pressed && styles.pressed,
-              ]}>
-              <Icon name="feedback" size={16} color={colors.accent} />
-              <Text style={[type.headline, { color: colors.accent }]}>
-                Give Feedback
+          {feedbackUrl ? (
+            <View style={[styles.feedbackCard, { backgroundColor: colors.bed }]}>
+              <Text style={[type.headline, { color: colors.foreground }]}>
+                {'We’d love to hear from you! 🐴'}
               </Text>
-            </Pressable>
-          </View>
+              <Text style={[type.subhead, { color: colors.secondary }]}>
+                Your feedback helps us build features that truly support your
+                horses and your stable life.
+              </Text>
+              <Pressable
+                onPress={openFeedback}
+                accessibilityRole="button"
+                accessibilityLabel="Give Feedback"
+                testID="more-feedback"
+                style={({ pressed }) => [
+                  styles.feedbackButton,
+                  { backgroundColor: colors.card },
+                  pressed && styles.pressed,
+                ]}>
+                <Icon name="feedback" size={16} color={colors.accent} />
+                <Text style={[type.headline, { color: colors.accent }]}>
+                  Give Feedback
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </View>
