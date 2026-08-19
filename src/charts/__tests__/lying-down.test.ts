@@ -14,6 +14,9 @@ import {
   lyingDownVerdict,
   DEFAULT_DEVIATION_THRESHOLD_PERCENT,
   buildLyingDownWeekly,
+  hasEnoughHistory,
+  usualByNow,
+  elapsedFractionOfDay,
 } from '@/charts/lying-down';
 import type { PrometheusRangeSeries } from '@/charts/occupancy-timeline';
 
@@ -537,5 +540,68 @@ describe('buildLyingDownWeekly', () => {
     expect(summary.usualDailyAverageSeconds).toBeNull();
     expect(summary.verdict).toBe('unknown');
     for (const day of summary.days) expect(day.usualSeconds).toBeNull();
+  });
+});
+
+/**
+ * "Enough to judge?" — the two gates on the verdict (Inakshi, 2026-08-19).
+ *
+ * Ported from the shipping app's `shouldShowAverageLine`, which uses the same
+ * seven-day and four-week windows but only hides the average LINE. Its verdict
+ * still shows, and when its deviation cannot be computed it falls back to
+ * "usual" — so a stall installed yesterday reports every horse normal on no
+ * evidence. Here the windows gate the claim itself.
+ */
+describe('hasEnoughHistory', () => {
+  it('needs a week for the daily view and four weeks for the weekly one', () => {
+    expect(hasEnoughHistory(NOW.minus({ days: 8 }).toISO(), 'daily', NOW)).toBe(true);
+    expect(hasEnoughHistory(NOW.minus({ days: 6 }).toISO(), 'daily', NOW)).toBe(false);
+    expect(hasEnoughHistory(NOW.minus({ weeks: 5 }).toISO(), 'weekly', NOW)).toBe(true);
+    // Old enough to judge a day, still too new to judge a week.
+    expect(hasEnoughHistory(NOW.minus({ days: 8 }).toISO(), 'weekly', NOW)).toBe(false);
+  });
+
+  it('fails closed on a date it cannot read', () => {
+    // We do not judge a horse we cannot date.
+    expect(hasEnoughHistory(null, 'daily', NOW)).toBe(false);
+    expect(hasEnoughHistory(undefined, 'daily', NOW)).toBe(false);
+    expect(hasEnoughHistory('not a date', 'daily', NOW)).toBe(false);
+  });
+});
+
+/**
+ * Compare like with like. Judging today's part-day total against the horse's
+ * WHOLE-day normal badges every horse "Low" all morning — that is a clock, not a
+ * welfare signal.
+ */
+describe('usualByNow', () => {
+  const curve = [
+    { fractionOfDay: 0, lowSeconds: 0, highSeconds: 0 },
+    { fractionOfDay: 1, lowSeconds: 3600, highSeconds: 3600 },
+  ];
+
+  it('returns the normal for how much of the day has actually passed', () => {
+    // NOW is 18:00 and the barn day starts at 06:00, so exactly half has passed.
+    const built = buildLyingDownWeek({
+      result: series([['2026-08-19T01:00:00', '2026-08-19T01:30:00']]),
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    expect(elapsedFractionOfDay(built)).toBeCloseTo(0.5, 2);
+    expect(usualByNow(built, curve)).toBeCloseTo(1800, 0);
+    // ...which is well under the whole-day 3600 the old comparison used.
+    expect(usualByNow(built, curve)!).toBeLessThan(3600);
+  });
+
+  it('has no answer without a curve, rather than falling back to a daily total', () => {
+    const built = buildLyingDownWeek({
+      result: series([]),
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    expect(usualByNow(built, undefined)).toBeNull();
+    expect(usualByNow(built, [])).toBeNull();
   });
 });

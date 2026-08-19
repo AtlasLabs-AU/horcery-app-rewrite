@@ -11,6 +11,8 @@ import {
   inStallDisagrees,
   type LyingDownDay,
   type LyingDownWeek,
+  sampleUsualCurve,
+  type UsualCurvePoint,
   type Verdict,
 } from '@/charts/lying-down';
 
@@ -85,7 +87,7 @@ export interface LyingDownRowProps {
    * dashed curve runs through its middle, and the spread belongs on the horse's
    * own screen where one horse has the whole display.
    */
-  usualCurve?: { fractionOfDay: number; lowSeconds: number; highSeconds: number }[];
+  usualCurve?: UsualCurvePoint[];
   width: number;
 }
 
@@ -96,29 +98,6 @@ const STRIP_HEIGHT = 6;
 /** Fixed columns, so five badges and five figures each share one axis. */
 const BADGE_COLUMN = 88;
 const FIGURE_COLUMN = 78;
-
-/** Linear interpolation between the supplied cumulative checkpoints. */
-function sampleCurve(
-  curve: { fractionOfDay: number; lowSeconds: number; highSeconds: number }[],
-  f: number,
-): { low: number; high: number } {
-  const first = curve[0]!;
-  if (f <= first.fractionOfDay) return { low: first.lowSeconds, high: first.highSeconds };
-  for (let i = 1; i < curve.length; i++) {
-    const a = curve[i - 1]!;
-    const b = curve[i]!;
-    if (f <= b.fractionOfDay) {
-      const span = b.fractionOfDay - a.fractionOfDay || 1;
-      const t = (f - a.fractionOfDay) / span;
-      return {
-        low: a.lowSeconds + (b.lowSeconds - a.lowSeconds) * t,
-        high: a.highSeconds + (b.highSeconds - a.highSeconds) * t,
-      };
-    }
-  }
-  const last = curve.at(-1)!;
-  return { low: last.lowSeconds, high: last.highSeconds };
-}
 
 function fraction(at: number, day: LyingDownDay): number {
   const span = day.nextMidnight - day.start;
@@ -203,14 +182,14 @@ function DashedCurve({
   toY,
   colour,
 }: {
-  curve: { fractionOfDay: number; lowSeconds: number; highSeconds: number }[];
+  curve: readonly UsualCurvePoint[];
   width: number;
   toY: (seconds: number) => number;
   colour: string;
 }) {
   const samples = Array.from({ length: BAND_SLICES }, (_, i) => {
     const f = i / (BAND_SLICES - 1);
-    const { low, high } = sampleCurve(curve, f);
+    const { low, high } = sampleUsualCurve(curve, f);
     return { x: f * width, y: toY((low + high) / 2) };
   });
 

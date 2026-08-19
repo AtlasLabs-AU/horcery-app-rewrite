@@ -12,7 +12,9 @@ import {
   buildLyingDownWeekly,
   dayStartHourFrom,
   deviationPercentOf,
+  hasEnoughHistory,
   lyingDownVerdict,
+  usualByNow,
 } from '@/charts/lying-down';
 import {
   inStallOvernight,
@@ -189,20 +191,32 @@ export function BehaviorTrackerCard({
     ) => {
       const avg = usualDailySeconds;
       const todaySeconds = week.today?.totalSeconds ?? null;
+      const range = withRange && avg !== null ? curve(avg) : undefined;
+      /**
+       * Compared against the normal for HOW MUCH OF THE DAY HAS PASSED, not the
+       * whole-day normal. Judging a part-day against a full day badged every
+       * horse "Low" all morning — a clock, not a welfare signal.
+       */
+      const usualSoFar = usualByNow(week, range);
       // The verdict is derived, never hardcoded — so the badge cannot drift out
       // of step with the numbers printed beside it, which it twice did while
       // these were literals.
-      const verdict = lyingDownVerdict({
-        deviationPercent: deviationPercentOf(todaySeconds, avg),
-        valueSeconds: todaySeconds,
-        usualSeconds: avg,
-      });
+      // No verdict without the history to back one (Inakshi, 2026-08-19).
+      const verdict = enoughDailyHistory
+        ? lyingDownVerdict({
+            deviationPercent: deviationPercentOf(todaySeconds, usualSoFar),
+            valueSeconds: todaySeconds,
+            usualSeconds: usualSoFar,
+          })
+        : todaySeconds === null
+          ? ('no-data' as const)
+          : ('unknown' as const);
       return {
         name,
         verdict,
         avg,
         week,
-        range: withRange && avg !== null ? curve(avg) : undefined,
+        range,
         /**
          * Weekly normals per weekday come from `weeklyLyingDownAvg` in
          * production. The preview has no such history, so every weekday gets
@@ -210,13 +224,34 @@ export function BehaviorTrackerCard({
          * weekend/weekday pattern — a flat reference is honest, a made-up
          * rhythm would be the phone asserting something nobody measured.
          */
-        weekly: buildLyingDownWeekly(week, {
+        weekly: buildLyingDownWeeklyGated(week, {
           usualSecondsByWeekday:
             avg === null
               ? undefined
               : Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((d) => [d, avg])),
         }),
       };
+    };
+
+    /**
+     * The stall's age, which decides whether "normal for this horse" means
+     * anything yet. Comes from the stall record in production; the preview
+     * states a long-established stall so the sample horses show their intended
+     * states. A brand-new stall is therefore NOT exercised on screen — it is
+     * covered by `hasEnoughHistory`'s own tests.
+     */
+    const stallCreatedAt = now.minus({ months: 6 }).toISO();
+    const enoughDailyHistory = hasEnoughHistory(stallCreatedAt, 'daily', now);
+    const enoughWeeklyHistory = hasEnoughHistory(stallCreatedAt, 'weekly', now);
+
+    const buildLyingDownWeeklyGated = (
+      week: ReturnType<typeof build>,
+      options: Parameters<typeof buildLyingDownWeekly>[1],
+    ) => {
+      const summary = buildLyingDownWeekly(week, options);
+      if (enoughWeeklyHistory) return summary;
+      // Four weeks is the shipping app's own window for a weekly average.
+      return { ...summary, verdict: 'unknown' as const };
     };
 
     const MIN = 60;

@@ -620,3 +620,94 @@ export function buildLyingDownWeekly(
     }),
   };
 }
+
+/* ------------------------------------------------------------------------- */
+/* Enough to judge?                                                           */
+/* ------------------------------------------------------------------------- */
+
+/** One checkpoint on a horse's usual cumulative progress through the barn day. */
+export interface UsualCurvePoint {
+  fractionOfDay: number;
+  lowSeconds: number;
+  highSeconds: number;
+}
+
+/** Linear interpolation between the supplied cumulative checkpoints. */
+export function sampleUsualCurve(
+  curve: readonly UsualCurvePoint[],
+  f: number,
+): { low: number; high: number } {
+  const first = curve[0]!;
+  if (f <= first.fractionOfDay) return { low: first.lowSeconds, high: first.highSeconds };
+  for (let i = 1; i < curve.length; i++) {
+    const a = curve[i - 1]!;
+    const b = curve[i]!;
+    if (f <= b.fractionOfDay) {
+      const span = b.fractionOfDay - a.fractionOfDay || 1;
+      const t = (f - a.fractionOfDay) / span;
+      return {
+        low: a.lowSeconds + (b.lowSeconds - a.lowSeconds) * t,
+        high: a.highSeconds + (b.highSeconds - a.highSeconds) * t,
+      };
+    }
+  }
+  const last = curve.at(-1)!;
+  return { low: last.lowSeconds, high: last.highSeconds };
+}
+
+/** How much of today's barn day has elapsed, 0 to 1. */
+export function elapsedFractionOfDay(week: LyingDownWeek): number {
+  const day = week.today;
+  if (!day) return 0;
+  const span = day.nextMidnight - day.start;
+  if (span <= 0) return 0;
+  return Math.min(1, Math.max(0, (day.end - day.start) / span));
+}
+
+/**
+ * This horse's normal **for how much of the day has actually passed**.
+ *
+ * The comparison has to be like for like. Judging today's total against the
+ * horse's whole-DAY normal marks every horse "Low" all morning, because a horse
+ * three hours into its day has not had a full day's rest yet — which is not a
+ * welfare signal, it is a clock. The shipping app avoids this by comparing
+ * today-so-far against the same elapsed window on previous days; this is the
+ * same idea using the curve Data Science already supplies.
+ *
+ * Returns `null` without a curve: no curve means no honest comparison at this
+ * point in the day, and a whole-day average is not a substitute for one.
+ */
+export function usualByNow(
+  week: LyingDownWeek,
+  usualCurve: readonly UsualCurvePoint[] | undefined,
+): number | null {
+  if (!usualCurve || usualCurve.length === 0) return null;
+  const { low, high } = sampleUsualCurve(usualCurve, elapsedFractionOfDay(week));
+  return (low + high) / 2;
+}
+
+/**
+ * Whether this stall has existed long enough for "normal for this horse" to
+ * mean anything: seven days for the daily view, four weeks for the weekly one.
+ *
+ * Ported from the shipping app's `shouldShowAverageLine`, which uses exactly
+ * these windows — but there it only hides the average LINE, while the verdict
+ * still shows. Worse, when its deviation cannot be computed the app falls back
+ * to "usual", so a stall installed yesterday reports every horse as normal on no
+ * evidence at all. Here the same rule gates the VERDICT, which is the claim that
+ * actually needs the history behind it.
+ *
+ * Unknown or unparseable creation dates fail closed — we do not judge a horse we
+ * cannot date.
+ */
+export function hasEnoughHistory(
+  createdAt: string | null | undefined,
+  timeframe: 'daily' | 'weekly',
+  now: DateTime,
+): boolean {
+  if (!createdAt) return false;
+  const created = DateTime.fromISO(createdAt);
+  if (!created.isValid) return false;
+  const cutoff = timeframe === 'daily' ? now.minus({ days: 7 }) : now.minus({ weeks: 4 });
+  return created <= cutoff;
+}
