@@ -12,7 +12,7 @@ Complies with `docs/architecture/CHART_ENGINEERING_STANDARD.md`.
 | Status | `building` — implemented behind `PREVIEWS.lyingDownSampleData`, fixture-backed, not customer-reachable |
 | Screens | For You → Behavior Tracker → Lying Down (Daily). One row per horse, stacked |
 | Entity | horse |
-| Data Science owner | Unassigned — **PENDING**, see §11 |
+| Data Science owner | Anuvathan Saththivinayagam implements the lying-down queries (data-team meeting 2026-07-23); Nadim is referenced for data-science questions. **To confirm** which of them owns this chart's meaning |
 | Data Science approval | **pending** (query correction and per-horse usual curve both unapproved) |
 | Product owner | Inakshi |
 | Product approval | 2026-08-19 (customer question, presentation, colour rule, barn-day source) |
@@ -262,6 +262,46 @@ customer with fifty is unspecified.
 **R5 — Per-horse usual curve is a stand-in.** The preview synthesises the curve
 from the sample week. Production must use `dailyLyingDownAvg`, which is not yet
 ported.
+
+## What is already decided elsewhere
+
+Found in the team-transcript digest and the Mobile Queries sheet on 2026-08-19,
+after this specification first recorded several of these as unknown. Recorded
+here so the same questions are not asked again.
+
+- **Build order is fixed.** Lying-down queries first, then activeness charts,
+  then the behaviour-tracker resolution increase, then sleep charts
+  (DRAFT-D-2026-07-23-02). Lying Down being first is deliberate, not incidental.
+- **The data team has already offered to return computed levels.** For
+  activeness: "thresholding currently happens in the mobile app (levels 0–3); the
+  data team can instead return the levels directly" (2026-07-23). Asking them for
+  a *signed* deviation, or for the verdict itself, is therefore consistent with
+  an offer they have already made for a sibling chart — not a new imposition.
+  This is the cleanest route out of exception §11-E2.
+- **The usual curve's coarseness is a known, active workstream.** Increasing the
+  behaviour-tracker resolution from six-hourly to hourly is on the backlog with
+  a named obstacle — "the direct query currently returns only 4 values; 24 would
+  need 24 stacked queries" — and an agreed fallback of cumulative calculation in
+  the frontend (2026-07-23). Our four-checkpoint curve is that same 4-value
+  limitation, and the agreed fallback is what this app already does.
+- **The Mobile Queries sheet tracks this chart's query as needing change**
+  (row "Shows when animal is lying down or resting", `Query_Changes: Needed`),
+  but still records the OLD `horse_sitting` form and contains no per-id query, no
+  `animal_type` label and no thresholds. It is a change tracker, not a
+  specification — so it neither confirms nor contradicts §11-E1.
+- **Lying-down queries have a track record of defects.** "Lying down events less
+  than" returned incorrect results (assigned to Vikum), and the alerts test sheet
+  records repeated `Fail` rows against lying-down conditions marked "Query
+  Issue". This raises rather than lowers the value of checking §11-E1 before it
+  ships.
+- **The average-value presentation was already questioned by the team** — "line-
+  down chart average-value visualization looks poor in the Figma-suggested UI"
+  (2026-07-27), with a follow-up to consult on a better presentation. The
+  redesign here is consistent with that, and predates neither.
+
+**Still genuinely unknown, and not written down anywhere found:** the rationale
+for the 25 % deviation threshold, a per-day threshold, the staleness rule, and
+what the badge should say before enough of the barn day has elapsed to judge.
 
 ---
 
