@@ -179,3 +179,37 @@ gracefully where it isn't.
   first, then the seven.
 - Anything that violates a principle is either fixed or written down as an
   explicit, dated exception with the reason — never left implicit.
+
+## How to report to Inakshi (decided 2026-08-19)
+
+Applies to every agent working in this repo — Claude, GPT, any other. It is a
+rule about the reply, not about the work: the work stays as rigorous as ever, and
+the reasoning goes in code comments, commit messages and specifications, where it
+is searchable. The chat message is a briefing, not the evidence.
+
+**Inakshi is not an engineer.** She is the product owner and makes every real
+decision here, so a reply that she cannot act on is a failed reply, however
+correct it is. The job is to bring her with you: name the thing, say what it
+means in plain terms, then ask.
+
+Every response uses these headings, and skips any that are empty:
+
+- **What I did** — plain statements of completed work.
+- **What I found** — facts, numbers, evidence. One idea per bullet.
+- **Decisions for you** — numbered, each with the options and a recommendation.
+- **Next** — what happens if she says nothing.
+
+Rules for the writing:
+
+- **Bullets, not paragraphs.** No wall of text. If a bullet needs a second
+  sentence, it is probably two bullets or belongs in a document.
+- **Simple English.** Every technical term gets a plain-language gloss the first
+  time it appears, or it does not appear. "The query returns how far today is
+  from normal, but not which way" — not "the query is wrapped in `abs()`".
+- **Say what it means for the product**, not only what it is. A finding without a
+  consequence is trivia.
+- **Lead with the answer.** The reasoning that produced it belongs in the repo.
+- **Never bury a decision.** Anything needing Inakshi appears under its own
+  heading, numbered, with a recommendation — never as an aside in a paragraph.
+- **Be honest in the same format.** Bad news, reversals and mistakes are bullets
+  under "What I found" like anything else, stated plainly and without a preamble.
