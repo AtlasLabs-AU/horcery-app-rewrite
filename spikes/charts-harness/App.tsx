@@ -35,6 +35,7 @@ import {
   type VictoryRenderMode,
 } from './src/renderer';
 import { CatalogueRendererHost, RendererHost } from './src/renderer-host';
+import { LyingDownCard } from './src/renderers/lying-down-card';
 import {
   advanceRemountSequence,
   startRemountSequence,
@@ -65,7 +66,7 @@ export default function App() {
   const chartWidth = windowWidth - 32;
 
   const [rendererId, setRendererId] = useState<RendererId>(DEFAULT_RENDERER_ID);
-  const [screenMode, setScreenMode] = useState<'timeline' | 'catalogue'>('timeline');
+  const [screenMode, setScreenMode] = useState<'timeline' | 'catalogue' | 'lying-down'>('timeline');
   const [scenarioIndex, setScenarioIndex] = useState(() =>
     STRESS_TEST_BUILD
       ? Math.max(0, scenarios.findIndex((scenario) => scenario.name === 'worst-case'))
@@ -197,11 +198,12 @@ export default function App() {
           options={[
             { id: 'timeline', label: 'People In Stall' },
             { id: 'catalogue', label: 'Catalogue scalability' },
+            { id: 'lying-down', label: 'Lying Down' },
           ]}
           value={screenMode}
           onChange={(id) => {
             setRenderSignal(null);
-            setScreenMode(id as 'timeline' | 'catalogue');
+            setScreenMode(id as 'timeline' | 'catalogue' | 'lying-down');
           }}
           testIDPrefix="scope"
         />
@@ -310,7 +312,9 @@ export default function App() {
         {MEMORY_SEQUENCE_BUILD ? null : remountControl}
 
         <Text style={styles.purpose}>{scenario.purpose}</Text>
-        </> : (
+        </> : screenMode === 'lying-down' ? (
+          <LyingDownCard width={chartWidth} />
+        ) : (
           <CataloguePanel
             rendererId={rendererId}
             width={chartWidth}
