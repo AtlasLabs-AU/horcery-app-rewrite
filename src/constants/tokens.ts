@@ -48,6 +48,65 @@ const media = {
   mediaWell: '#1A1D23',
 } as const;
 
+/**
+ * Chart colours — the "editorial chart palette" the chart engineering standard
+ * (§5) reserved by name and never defined. Decided by Inakshi 2026-08-19.
+ *
+ * The app chrome is ink and grey because chrome should recede. A chart is the
+ * opposite: it is the content, and a farm manager has to spot the odd horse out
+ * of five before reading a word. So charts get real colour — two hues, rationed:
+ *
+ * - **`chartData` (denim)** is every ordinary reading. It appears on every row,
+ *   which is precisely why it carries no verdict: it is the colour of "data".
+ * - **`chartDeviation` (ochre)** replaces it when a reading falls outside this
+ *   horse's own usual range. On a normal morning it never appears — that is what
+ *   makes it worth looking at. It is deliberately NOT `statusAlert`: red still
+ *   means "we are telling you something is wrong", ochre means "this is not this
+ *   horse's normal". See PRINCIPLES.md "Colour": deviation may be coloured,
+ *   severity may not.
+ * - Everything else — reference lines, the in-stall strip — stays neutral,
+ *   because context should not compete with the reading.
+ *
+ * Denim against ochre is also the one pairing that survives all three kinds of
+ * colour blindness; blue/green and red/green both collapse, and red and green
+ * are spoken for by `statusAlert`/`statusOk` anyway.
+ *
+ * Contrast against the canvas, measured: denim 6.08:1 light / 8.66:1 dark;
+ * ochre 3.78:1 / 9.36:1; `chartReference` 3.61:1 / 3.68:1 — all clear WCAG
+ * 1.4.11's 3:1 for a meaningful graphic. `chartDeviationInk` on
+ * `chartDeviationBed` is 7.16:1 / 7.62:1, clearing 4.5:1 for small text; ochre
+ * itself is 3.78:1 and so may be a fill but must never be type. `chartBand` and
+ * `chartTrack` sit below 3:1 deliberately: each has its value written in words
+ * directly beside it, which is 1.4.11's own exemption, and darkening them would
+ * make context shout over the reading.
+ */
+const chartLight = {
+  /** Every ordinary reading. Denim. */
+  chartData: '#41618C',
+  /** A reading outside this horse's usual range. Ochre — never red. */
+  chartDeviation: '#B4711E',
+  /** Bed behind a deviation badge. */
+  chartDeviationBed: '#EFE4D8',
+  /** Text on that bed — the darkest shade of the same family, never ochre. */
+  chartDeviationInk: '#6B3F0A',
+  /** Dashed "usual" line and other reference geometry. */
+  chartReference: '#7B8494',
+  /** Fill of a usual RANGE, when Data Science supplies one. */
+  chartBand: '#E7EAEE',
+  /** Observation coverage — the in-stall strip. Context, never the message. */
+  chartTrack: '#C9CDD2',
+} as const;
+
+const chartDark = {
+  chartData: '#8FAFD4',
+  chartDeviation: '#E3A853',
+  chartDeviationBed: '#3A2A14',
+  chartDeviationInk: '#E8B96E',
+  chartReference: '#6A6A75',
+  chartBand: '#1E2128',
+  chartTrack: '#3A3A42',
+} as const;
+
 export const palette = {
   light: {
     /** Canvas behind everything. */
@@ -75,6 +134,7 @@ export const palette = {
     /** Status. Red is for real alerts and validation only — never data. */
     statusOk: '#2E9E6B',
     statusAlert: '#D9484A',
+    ...chartLight,
     ...media,
   },
   dark: {
@@ -94,6 +154,7 @@ export const palette = {
     divider: '#2A2A31',
     statusOk: '#3BC08A',
     statusAlert: '#F0595E',
+    ...chartDark,
     ...media,
   },
 } as const;
@@ -116,6 +177,13 @@ export const type = {
   subhead: { fontSize: 15, fontWeight: '400', fontFamily: rounded },
   footnote: { fontSize: 13, fontWeight: '400', fontFamily: rounded },
   caption: { fontSize: 12, fontWeight: '400', fontFamily: rounded },
+  /**
+   * Smallest step (requirements R3.2). Chart axis ticks and nothing else —
+   * added 2026-08-19 because the lying-down row had been inventing 9 px and
+   * 10.5 px sizes off-ramp, which is the same class of mistake as a colour
+   * literal but is not caught by `no-color-literals`.
+   */
+  micro: { fontSize: 10, fontWeight: '400', fontFamily: rounded },
   eyebrow: {
     fontSize: 12,
     fontWeight: '600',

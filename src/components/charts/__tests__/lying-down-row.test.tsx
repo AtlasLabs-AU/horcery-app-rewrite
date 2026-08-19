@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 import { LyingDownRow } from '@/components/charts/lying-down-row';
 import { buildLyingDownWeek } from '@/charts/lying-down';
 import { typicalWeek, monitorWentOffline, noData } from '@/charts/fixtures/lying-down';
+import { palette } from '@/constants/tokens';
 
 const ZONE = 'America/Chicago';
 const NOW = DateTime.fromISO('2026-08-19T18:20:00', { zone: ZONE });
@@ -114,6 +115,70 @@ describe('LyingDownRow', () => {
     // Barn day starts at 6 AM, so the axis opens and closes there.
     expect(screen.getAllByText('6 AM').length).toBe(2);
     expect(screen.queryByText('12 AM')).toBeTruthy();
+  });
+
+  /**
+   * The colour rule, pinned as behaviour rather than left to review.
+   *
+   * PRINCIPLES.md allows a reading to be coloured when it DEVIATES from this
+   * horse's own usual range, and forbids colouring it by how bad the deviation
+   * is. So there are exactly two series colours and the choice between them
+   * depends only on the verdict — never on the magnitude, and never on red.
+   */
+  describe('colour', () => {
+    function readingColour(node: { props: Record<string, unknown> }): string | undefined {
+      const style = node.props.style as { backgroundColor?: string } | undefined;
+      return style?.backgroundColor;
+    }
+
+    it('draws an ordinary reading in the data colour', async () => {
+      await render(
+        <LyingDownRow
+          horseName="Apollo"
+          week={week(typicalWeek(NOW))}
+          verdict="usual"
+          averageSeconds={3.5 * 3600}
+          width={340}
+        />,
+      );
+      expect(readingColour(screen.getByTestId('lying-down-reading'))).toBe(
+        palette.light.chartData,
+      );
+    });
+
+    it.each(['low', 'high'] as const)(
+      'draws a %s reading in the deviation colour, not the alert colour',
+      async (verdict) => {
+        await render(
+          <LyingDownRow
+            horseName="Juniper"
+            week={week(typicalWeek(NOW))}
+            verdict={verdict}
+            averageSeconds={2.9 * 3600}
+            width={340}
+          />,
+        );
+        const colour = readingColour(screen.getByTestId('lying-down-reading'));
+        expect(colour).toBe(palette.light.chartDeviation);
+        // Severity is never coloured: a low day and a high day look the same,
+        // and neither borrows red from real alerts.
+        expect(colour).not.toBe(palette.light.statusAlert);
+      },
+    );
+
+    it('treats missing data as an absence, not a deviation', async () => {
+      await render(
+        <LyingDownRow
+          horseName="Pepper"
+          week={week(noData)}
+          verdict="no-data"
+          averageSeconds={2.6 * 3600}
+          width={340}
+        />,
+      );
+      // Nothing is drawn at all — an absence must not be dressed as a reading.
+      expect(screen.queryByTestId('lying-down-reading')).toBeNull();
+    });
   });
 
   it('survives a monitor that went offline mid-week', async () => {

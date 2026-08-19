@@ -89,6 +89,16 @@ migration input, not a second system.
   full-saturation brand for small emphasis. Rejected on device by Inakshi.*
 - Status rules, in writing in the file: metric/horse data is **never** colored
   by how good or bad it is; red is for actual alerts and form validation only.
+- **Chart palette (added 2026-08-19).** Charts are the one place the interface
+  carries real colour, because a chart is content rather than chrome and a
+  manager must spot the odd horse among five before reading a word. Two hues:
+  `chartData` denim `#41618C` / `#8FAFD4` for every ordinary reading, and
+  `chartDeviation` ochre `#B4711E` / `#E3A853` when a reading falls outside that
+  animal's own usual range — plus `chartDeviationBed`/`Ink`, `chartReference`,
+  `chartBand`, `chartTrack` for badges and context. The governing line is
+  **deviation may be coloured; severity may not**: ochre never means "bad" and
+  never becomes red. Rationale, contrast measurements and colour-blindness
+  reasoning: `PRINCIPLES.md` "Colour" and `CHART_ENGINEERING_STANDARD.md` §5a.
 
 ### R3.2 typography
 

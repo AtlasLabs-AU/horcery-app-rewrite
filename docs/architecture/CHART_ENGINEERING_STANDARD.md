@@ -157,6 +157,38 @@ Rules:
 - Colour must not be the only carrier of meaning.
 - Red and green retain their app-wide status meaning; ordinary series use the
   editorial chart palette.
+
+### 5a. The editorial chart palette (defined 2026-08-19)
+
+This section had reserved a palette by name without ever defining it, which is
+why the first lying-down row was built in ink and grey and failed to be readable
+at a glance. The values live in `src/constants/tokens.ts`; the rule is in
+`PRINCIPLES.md` under "Colour".
+
+| Token | Role |
+|---|---|
+| `chartData` | Every ordinary reading. Present on every row, so it carries no verdict — it is the colour of "data". |
+| `chartDeviation` | A reading outside that animal's own usual range. Replaces `chartData`; never accompanies it. |
+| `chartDeviationBed` / `chartDeviationInk` | Badge fill and its text. Ochre is 3.78:1 and may be a fill but never type. |
+| `chartReference` | Dashed usual lines and other reference geometry. |
+| `chartBand` | Fill of a usual *range*, when Data Science supplies one. |
+| `chartTrack` | Observation coverage. Context, never the message. |
+
+- **Deviation may be coloured; severity may not.** A low reading and a high one
+  are the same ochre. Nothing in a chart is ever `statusAlert` red.
+- **Two hues, and the second is rationed.** If `chartDeviation` appears on most
+  rows on a normal day, the thresholds are wrong — raise it with Data Science
+  rather than restyling the chart.
+- **Contrast.** Anything carrying meaning clears WCAG 1.4.11's 3:1 against the
+  canvas. A tinted band cannot reach it at any usable opacity, which is why a
+  reading is drawn as a filled area with a stroked edge rather than as a thin
+  line over a pale band. `chartBand` and `chartTrack` sit below 3:1 only where
+  1.4.11's text exemption applies — their value is written in words beside them.
+- **Colour blindness.** Series colours must remain distinguishable to
+  protanopes, deuteranopes and tritanopes. Denim/ochre satisfies this;
+  blue/green and red/green do not, and red and green are reserved anyway.
+- **Type.** Chart labels come from the ramp, `micro` at the smallest. A chart
+  that "needs" an off-ramp size means the ramp is missing a step — add it.
 - Do not copy legacy interaction or visual complexity without proving that it
   helps the customer answer the question.
 

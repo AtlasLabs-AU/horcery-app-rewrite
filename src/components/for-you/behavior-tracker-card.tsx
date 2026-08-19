@@ -11,7 +11,7 @@ import {
   inStallOvernight,
   inStallWithTurnout,
   monitorWentOffline,
-  outMostOfDay,
+  lowToday,
   settledSleeper,
   typicalWeek,
 } from '@/charts/fixtures/lying-down';
@@ -121,23 +121,45 @@ export function BehaviorTrackerCard({
         lowSeconds: avg * share! * 0.72,
         highSeconds: avg * share! * 1.28,
       }));
+    /**
+     * The sample average is measured from the sample week, never invented.
+     *
+     * Hardcoding it put both "Usual" horses well below their own usual line, so
+     * the badge said one thing and the picture said the opposite — on screen it
+     * read as a bug in the chart. Sample data that contradicts itself hides real
+     * contradictions, which is the same trap that produced the impossible
+     * in-stall denominator. Completed days only: today is still in progress and
+     * would drag the mean down.
+     */
+    const measuredAverage = (week: ReturnType<typeof build>) => {
+      const completed = week.days
+        .filter((d) => d !== week.today && d.totalSeconds !== null)
+        .map((d) => d.totalSeconds as number);
+      if (completed.length === 0) return null;
+      return completed.reduce((a, b) => a + b, 0) / completed.length;
+    };
+
+    const horse = (
+      name: string,
+      verdict: 'usual' | 'low' | 'no-data',
+      week: ReturnType<typeof build>,
+      withRange: boolean,
+    ) => {
+      const avg = measuredAverage(week);
+      return {
+        name,
+        verdict,
+        avg,
+        week,
+        range: withRange && avg !== null ? curve(avg) : undefined,
+      };
+    };
+
     return [
-      {
-        name: 'Apollo', verdict: 'usual' as const, avg: 2.6 * 3600,
-        week: build(typicalWeek(now), inStallWithTurnout(now)), range: curve(2.6 * 3600),
-      },
-      {
-        name: 'Bubbles', verdict: 'usual' as const, avg: 4.1 * 3600,
-        week: build(settledSleeper(now), inStallOvernight(now)), range: curve(4.1 * 3600),
-      },
-      {
-        name: 'Juniper', verdict: 'low' as const, avg: 2.9 * 3600,
-        week: build(outMostOfDay(now), inStallWithTurnout(now)), range: curve(2.9 * 3600),
-      },
-      {
-        name: 'Pepper', verdict: 'no-data' as const, avg: 2.6 * 3600,
-        week: build(monitorWentOffline(now)), range: undefined,
-      },
+      horse('Apollo', 'usual', build(typicalWeek(now), inStallWithTurnout(now)), true),
+      horse('Bubbles', 'usual', build(settledSleeper(now), inStallOvernight(now)), true),
+      horse('Juniper', 'low', build(lowToday(now), inStallWithTurnout(now)), true),
+      horse('Pepper', 'no-data', build(monitorWentOffline(now)), false),
     ];
   }, []);
 

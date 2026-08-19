@@ -313,6 +313,24 @@ export function formatDuration(seconds: number): string {
 }
 
 /**
+ * The same duration as a display figure rather than as prose: `1h 40m`.
+ *
+ * Not a second formatting system — a deliberate split by role. The row's today
+ * figure is the largest thing on it and is read as a quantity, where the spaces
+ * and the word "min" cost width without adding meaning; the average beside it
+ * is read as a sentence and keeps `formatDuration`. Charts show one horse's
+ * figure per row across five rows, so the width matters.
+ */
+export function formatDurationCompact(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds / 60));
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+/**
  * The headline sentence. Returns `null` when there is nothing honest to say,
  * so a caller cannot accidentally render "0 min" over missing observations.
  */

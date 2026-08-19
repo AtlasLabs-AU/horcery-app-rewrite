@@ -94,9 +94,28 @@ cash out in colour, and it is enforced by `src/__tests__/no-color-literals`:
   icons, headers, avatars, pills or backgrounds. Lifted to mauve in dark so
   it still reads as purple.
 - **Status is the only other chroma**, rationed: red for a real alert or a
-  validation error, green for confirmed-good. Data is never coloured by how
-  "good" it is. On a monochrome page one red pill is unmissable — that is
-  the point.
+  validation error, green for confirmed-good. On a monochrome page one red pill
+  is unmissable — that is the point.
+- **Charts are the exception, and they get real colour** (amended by Inakshi,
+  2026-08-19). Chrome should recede; a chart *is* the content. A manager with
+  five horses has to spot the odd one out before reading a word, and a chart
+  drawn only in ink and grey cannot do that job. Two hues, in
+  `src/constants/tokens.ts`: `chartData` (denim) for every ordinary reading, and
+  `chartDeviation` (ochre) when a reading falls outside that animal's own usual
+  range. Context — reference lines, coverage strips — stays neutral.
+- **The rule this replaces**, and the line that governs it: **deviation may be
+  coloured; severity may not.** Ochre says "this is not this horse's normal".
+  Red still says "we are telling you something is wrong", and nothing but a real
+  alert may say that. So a low day and a high day look identical, a worse day
+  looks no redder than a mildly odd one, and no chart ever traffic-lights a
+  reading. Because ochre appears only on the exception, a normal morning is
+  still a one-accent page — the rationing IS the design, and if ochre ever
+  becomes routine the thresholds are wrong, not the palette.
+- **Colour is never the only carrier.** Every coloured state is also a word, a
+  number and a position — ochre and denim are 1.6:1 apart in lightness, so on a
+  greyscale screen the colour alone says nothing. Denim against ochre is chosen
+  because it is the one pair that survives all three kinds of colour blindness;
+  blue/green and red/green both collapse, and red and green are spoken for.
 - **Selection by tone and weight**, never by an inverted block: a light well
   and headline weight, or a text tab with an underline. Icons sit bare — no
   tinted circles behind them.

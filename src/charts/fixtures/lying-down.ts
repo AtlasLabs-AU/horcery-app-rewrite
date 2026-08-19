@@ -83,6 +83,32 @@ export function settledSleeper(now: DateTime): PrometheusRangeSeries[] {
   return seriesFrom(now, SETTLED_PLAN);
 }
 
+/**
+ * A normal week, then a today that is genuinely short — the case a "Low" badge
+ * is FOR.
+ *
+ * `outMostOfDay` cannot play this role: every day in it is short, so the horse's
+ * own average is short too and today is perfectly usual for that horse. Badging
+ * it "Low" made the badge contradict the picture. A deviation fixture has to
+ * deviate from its OWN history, which is the whole basis of the verdict.
+ *
+ * The barn day runs 06:00 → 06:00, so "today" is the tail of the sixth day plus
+ * the early hours of the seventh: both are trimmed here.
+ */
+const LOW_TODAY_PLAN = [
+  TYPICAL_PLAN[0],
+  TYPICAL_PLAN[1],
+  TYPICAL_PLAN[2],
+  TYPICAL_PLAN[3],
+  TYPICAL_PLAN[4],
+  [[1, 51], [3, 29]],
+  [[2, 14]],
+] as const;
+
+export function lowToday(now: DateTime): PrometheusRangeSeries[] {
+  return seriesFrom(now, LOW_TODAY_PLAN);
+}
+
 /** Turned out most of the day — in stall only in the early morning. */
 const OUT_ALL_DAY_PLAN = [
   [[0, 40]], [[1, 35]], [[0, 52]], [[1, 28]], [[0, 44]], [[1, 30]], [[0, 36]],
