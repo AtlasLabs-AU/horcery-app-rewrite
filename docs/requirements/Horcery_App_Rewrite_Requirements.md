@@ -503,8 +503,14 @@ types removed in §2.
   (re-confirmed 2026-08-17).** All write actions are disabled-with-reason for
   every user until the write side; permissions gate them before any goes live.
 
-- **Charts renderer choice** — deferred to a measured spike, NOT to opinion.
-  See §6a for the agreed approach and §9 for the correction that produced it.
+- **Charts renderer choice** — ~~deferred to a measured spike~~ **RESOLVED
+  2026-08-19: Victory Native on Skia.** ECharts (SVG and Skia) rejected — it fails
+  §6a's interaction-freeze and worst-case-smoothness gates on a physical mid-range
+  Android, unrecoverably, while being fine on a premium iPhone. Full reasoning,
+  measurements, reversal conditions and the untested gaps are in
+  `docs/decisions/CHART_RENDERER_DECISION.md`. §6a below records the approach that
+  produced the decision and remains the authority for the gates; §9 records the
+  correction that produced the approach.
 - The old app's codebase is **read-only reference** — never edited by this project
   (exception: the provisioning bug fix already reported separately, which lands in
   the old app via the dev team).
