@@ -78,6 +78,9 @@ Jira/Confluence as its own item, in their language.
 for comparison (EAS cloud build, argent, QA login). Credentials are **not** in
 this file; it says where they live.
 
+`Horcery_Rewrite_iPhone_Run.md` — the short, verified procedure for running the
+Expo 57 rewrite already installed on Inakshi's physical iPhone.
+
 ## Where the dev team is
 
 The rewrite repo is Inakshi, Claude and Codex. The dev team works on the
