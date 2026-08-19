@@ -85,7 +85,7 @@ describe('architecture boundaries', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('has no chart renderer installed yet — the §6a spike has not run', () => {
+  it('has exactly one chart renderer installed — Victory, per the §6a decision', () => {
     const pkg = JSON.parse(
       readFileSync(join(SRC, '..', 'package.json'), 'utf8'),
     );
@@ -93,12 +93,28 @@ describe('architecture boundaries', () => {
       ...pkg.dependencies,
       ...pkg.devDependencies,
     });
-    const renderers = deps.filter((d) =>
-      /echarts|victory-native|react-native-skia/.test(d),
-    );
 
-    // Delete this assertion when the spike concludes and a winner is adopted.
-    expect(renderers).toEqual([]);
+    // Decided 2026-08-19 (docs/decisions/CHART_RENDERER_DECISION.md): Victory
+    // Native on Skia. ECharts is rejected — it failed §6a's interaction-freeze
+    // and worst-case-smoothness gates on a physical mid-range Android,
+    // unrecoverably, three times out of three.
+    expect(deps).toContain('victory-native');
+    expect(deps).toContain('@shopify/react-native-skia');
+
+    // §6a permits ONE chart engine in production. This is the assertion that
+    // keeps the rejected one from creeping back in alongside it.
+    expect(deps.filter((d) => /echarts|zrender/.test(d))).toEqual([]);
+  });
+
+  it('never reaches into spikes/ — throwaway measurement code stays outside the app', () => {
+    // spikes/charts-harness has its OWN package.json with both chart renderers.
+    // It imports the app's domain layer; the app must never import it back,
+    // or the "no renderer installed" assertion above would be true in name only.
+    const offenders = files
+      .filter(({ body }) => /from ['"][^'"]*\bspikes\//.test(body))
+      .map(({ rel }) => rel);
+
+    expect(offenders).toEqual([]);
   });
 
   it('keeps PromQL and Prometheus out of everything but the data layer', () => {

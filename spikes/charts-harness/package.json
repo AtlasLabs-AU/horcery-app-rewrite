@@ -1,0 +1,52 @@
+{
+  "name": "charts-harness",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@shopify/react-native-skia": "2.6.2",
+    "@wuba/react-native-echarts": "^3.1.1",
+    "echarts": "^6.1.0",
+    "expo": "~57.0.13",
+    "expo-dev-client": "~57.0.12",
+    "expo-status-bar": "~57.0.1",
+    "luxon": "^3.7.2",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.10.1",
+    "victory-native": "^41.26.0",
+    "zrender": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.4",
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "test:transform": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/axis-ticks.test.mts src/remount-sequence.test.mts src/renderers/victory-continuous.test.mts src/renderers/victory-transform.test.mts",
+    "test:measure": "cd measure && python3 -m unittest framestats_test.py",
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "ios:echarts-release": "HORCERY_RENDERER=echarts-skia expo run:ios --configuration Release",
+    "ios:victory-release": "HORCERY_RENDERER=victory expo run:ios --configuration Release",
+    "android:echarts-release": "HORCERY_RENDERER=echarts-skia expo run:android --variant release",
+    "android:victory-release": "HORCERY_RENDERER=victory expo run:android --variant release",
+    "android:victory-stress-release": "HORCERY_RENDERER=victory EXPO_PUBLIC_HORCERY_STRESS_TEST=1 expo run:android --variant release",
+    "web": "expo start --web"
+  },
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "exclude": [
+        "expo-dev-client",
+        "expo-dev-launcher",
+        "expo-dev-menu",
+        "expo-dev-menu-interface",
+        "react-native-svg"
+      ]
+    }
+  }
+}

@@ -42,7 +42,7 @@ it doesn't go in. When two collide, the tie-break rule at the bottom applies.
     code and enabled only deliberately.
 11. **Measured, not asserted.** Performance claims come with numbers.
     Layout claims come with on-device screenshots, light and dark. "It should
-    be faster" is not a result.
+    be faster" is not a result. See 13–15: a number on its own is not proof.
 12. **Accessible by default.** Every interactive element carries a role,
     a label, and a 44pt target. Cheaper now than later, and it is what makes
     QA automation possible.
@@ -113,6 +113,37 @@ cash out in colour, and it is enforced by `src/__tests__/no-color-literals`:
 - Every value lives in `src/constants/tokens.ts`; light and dark carry the
   same keys. A screen that "needs" a colour literal means the palette is
   missing a role — add the role.
+## The three learned the hard way (charts spike, 2026-08-18)
+
+These are not proposals. Each one is written down because we nearly got a
+decision wrong, and the near-miss is named so the lesson keeps its teeth.
+
+14. **A good score can be the symptom, not the proof.** In the charts spike one
+    chart library scored *perfectly* on the smoothness measurement — "no slow
+    updates at all" — while the app sat frozen under Inakshi's finger. It scored
+    perfectly *because* it had stopped drawing: something that draws nothing can
+    never draw slowly. Before any measurement is believed, confirm the thing
+    actually worked — did the picture change, did the app answer a touch. And
+    when a person says it felt slow and the numbers say it was fine, the person
+    is the one to trust until the gap is explained. Inakshi's "very slow" and
+    "basically unusable" were right on both occasions the numbers disagreed.
+
+15. **Reality sets the test, not our imagination.** We spent days stress-testing
+    the charts with 6,720 events in a week. When we finally queried the real
+    monitors, a real week contained **36 to 350**. We had been failing candidates
+    on a load roughly nineteen times heavier than anything a customer produces,
+    and nearly chose on that basis. Before optimising or rejecting anything for
+    performance, measure what the real data actually is. Keep an extreme case if
+    it is useful, but label it as extreme and never let it outrank the realistic
+    one.
+
+16. **Simulators rank; real devices decide.** The same chart code, with the same
+    data, drew comfortably on a simulated top-end iPhone and was completely
+    unusable on a real mid-range Android — three times, needing a force-stop each
+    time. A simulator runs on a laptop's power and will forgive what a customer's
+    phone will not. Use simulators to compare options quickly; never let one
+    certify that something is fast enough to ship. Anything not tested on real
+    hardware is written down as untested, not assumed to be fine.
 
 ## Tie-break
 

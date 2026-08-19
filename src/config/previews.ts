@@ -52,4 +52,14 @@ export const PREVIEWS = {
    * always the real ones from the API; only the rules are invented.
    */
   sampleAlertsData: __DEV__ && optedIn,
+  /**
+   * Lying Down chart drawn from FIXTURE data, so the design can be judged
+   * on-device before the observation API exists.
+   *
+   * Gated for the same reason as the others, and arguably a stronger one: a
+   * monitoring chart showing invented horse data is more dangerous than a fake
+   * sign-in button, because a customer would have no way to tell. The card
+   * carries a visible "Sample data" marker whenever this flag renders it.
+   */
+  lyingDownSampleData: __DEV__ && optedIn,
 } as const;
