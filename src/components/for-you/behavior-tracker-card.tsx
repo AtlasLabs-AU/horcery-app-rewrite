@@ -95,7 +95,21 @@ export function BehaviorTrackerCard({
   // real data even on Inakshi's own device.
   const sampleHorses = useMemo(() => {
     if (!PREVIEWS.lyingDownSampleData) return null;
-    const now = DateTime.now().setZone(ZONE);
+    /**
+     * The sample clock is pinned to 05:00 — late in the barn day, after the
+     * night's rest — so the preview always shows a complete day.
+     *
+     * Tied to the real clock it showed four zeros for the whole hour after the
+     * 06:00 rollover, which is correct behaviour and useless as a preview: you
+     * cannot judge a chart with nothing in it. Pinning also makes the preview
+     * deterministic, so two screenshots taken hours apart are comparable.
+     *
+     * The live chart uses the real clock. The empty-early-morning state this
+     * hides is a genuine open question — a horse an hour into the barn day is
+     * badged "Usual" on the strength of no observations at all — and it is
+     * logged for Data Science alongside the thresholds, not papered over here.
+     */
+    const now = DateTime.now().setZone(ZONE).startOf('day').plus({ hours: 5 });
     const build = (
       result: ReturnType<typeof typicalWeek>,
       inStall?: ReturnType<typeof typicalWeek>,
