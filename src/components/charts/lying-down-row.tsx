@@ -3,6 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useTokens } from '@/hooks/use-tokens';
 
+import { BADGE, badgeInkFor, badgeStyleFor } from './lying-down-badge';
+
 import {
   formatDuration,
   formatDurationCompact,
@@ -61,24 +63,6 @@ import {
 
 /** Re-exported for convenience; the type itself is domain, not presentation. */
 export type { Verdict };
-
-/**
- * Deviation — and only deviation — is coloured. "Usual" is the default state
- * and so is the quiet one: five green pills on a normal morning would spend the
- * app's only positive colour on the case that needs no attention. "No data" is
- * hollow, because visually absent is what it means.
- */
-type BadgeTone = 'quiet' | 'deviation' | 'absent';
-
-const BADGE: Record<Verdict, { label: string; tone: BadgeTone }> = {
-  usual: { label: 'Usual', tone: 'quiet' },
-  low: { label: 'Low', tone: 'deviation' },
-  high: { label: 'High', tone: 'deviation' },
-  // Far from normal, direction unavailable — see `lyingDownVerdict`.
-  unusual: { label: 'Unusual', tone: 'deviation' },
-  'no-data': { label: 'No data', tone: 'absent' },
-  unknown: { label: 'No history', tone: 'absent' },
-};
 
 export interface LyingDownRowProps {
   horseName: string;
@@ -338,18 +322,8 @@ export function LyingDownRow({
           seconds: point.totalSeconds,
         }));
 
-  const badgeStyle =
-    badge.tone === 'deviation'
-      ? { backgroundColor: colors.chartDeviationBed }
-      : badge.tone === 'quiet'
-        ? { backgroundColor: colors.bed }
-        : { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.divider };
-  const badgeInk =
-    badge.tone === 'deviation'
-      ? colors.chartDeviationInk
-      : badge.tone === 'quiet'
-        ? colors.secondary
-        : colors.tertiary;
+  const badgeStyle = badgeStyleFor(badge.tone, colors);
+  const badgeInk = badgeInkFor(badge.tone, colors);
 
   return (
     <View style={[styles.row, { width, paddingVertical: space.edge }]}>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { BehaviorTrackerCard } from '@/components/for-you/behavior-tracker-card';
 
@@ -69,7 +69,39 @@ describe('BehaviorTrackerCard', () => {
     expect(screen.getByText('Juniper')).toBeTruthy();
     expect(screen.getByText('Pepper')).toBeTruthy();
     // And the states that matter are visible without tapping anything.
-    expect(screen.getByText('Low')).toBeTruthy();
+    expect(screen.getAllByText('Low').length).toBeGreaterThan(0);
     expect(screen.getByText('No data')).toBeTruthy();
+  });
+
+  /**
+   * Pins what each sample horse is FOR.
+   *
+   * Their normals are stated rather than measured from the week on screen —
+   * measuring was circular and made every weekly badge read "Usual". Stated
+   * numbers can drift away from the fixtures instead, which is exactly how the
+   * badge contradicted its own chart twice. This is the guard: if a fixture or a
+   * normal changes so the demonstration no longer demonstrates, this fails.
+   */
+  it('shows the states each sample horse exists to demonstrate', async () => {
+    mockPreviews.lyingDownSampleData = true;
+    await render(<BehaviorTrackerCard />);
+
+    // Daily judges TODAY. Juniper had a bad day; Willow is short every day.
+    expect(screen.getAllByText('Low')).toHaveLength(2);
+    // Two steady horses, plus a monitor that went offline.
+    expect(screen.getAllByText('Usual')).toHaveLength(2);
+    expect(screen.getByText('No data')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('for-you-tracker-period-weekly'));
+    // Confirm the tab actually switched before reading badges off it: an
+    // un-awaited press left the assertions on the daily view, still passing for
+    // the wrong reason. "Today" is the weekly axis's last column.
+    expect(screen.getAllByText('Today').length).toBeGreaterThan(0);
+
+    // Weekly judges the WEEK, so Juniper's single bad day no longer shows —
+    // its week was normal. Only Willow, short all week, stays Low. That
+    // difference between the two tabs is the point of having both.
+    expect(screen.getAllByText('Low')).toHaveLength(1);
+    expect(screen.getByText('Willow')).toBeTruthy();
   });
 });

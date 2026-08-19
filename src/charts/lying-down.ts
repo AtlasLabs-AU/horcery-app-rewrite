@@ -216,9 +216,12 @@ export interface LyingDownVerdictInput {
   deviationPercent: number | null;
   /** Fallback `DEFAULT_DEVIATION_THRESHOLD_PERCENT` when unset. */
   thresholdPercent?: number;
-  /** Today's total so far. `null` means unobserved, never zero. */
-  todaySeconds: number | null;
-  /** This horse's own normal for the same point in the day. */
+  /**
+   * The measured value being judged — today's total on the daily view, the
+   * week's daily average on the weekly one. `null` means unobserved, never zero.
+   */
+  valueSeconds: number | null;
+  /** This horse's own normal for the same span. */
   usualSeconds: number | null;
 }
 
@@ -245,16 +248,25 @@ export interface LyingDownVerdictInput {
 export function lyingDownVerdict({
   deviationPercent,
   thresholdPercent = DEFAULT_DEVIATION_THRESHOLD_PERCENT,
-  todaySeconds,
+  valueSeconds,
   usualSeconds,
 }: LyingDownVerdictInput): Verdict {
-  if (todaySeconds === null) return 'no-data';
+  if (valueSeconds === null) return 'no-data';
   if (deviationPercent === null || !Number.isFinite(deviationPercent)) return 'unknown';
   if (usualSeconds === null) return 'unknown';
   if (Math.abs(deviationPercent) <= thresholdPercent) return 'usual';
-  if (todaySeconds < usualSeconds) return 'low';
-  if (todaySeconds > usualSeconds) return 'high';
+  if (valueSeconds < usualSeconds) return 'low';
+  if (valueSeconds > usualSeconds) return 'high';
   return 'unusual';
+}
+
+/** Percent away from normal — the shape Data Science's query returns (no sign). */
+export function deviationPercentOf(
+  valueSeconds: number | null,
+  usualSeconds: number | null,
+): number | null {
+  if (valueSeconds === null || usualSeconds === null || usualSeconds === 0) return null;
+  return (Math.abs(valueSeconds - usualSeconds) / usualSeconds) * 100;
 }
 
 /**
@@ -498,4 +510,113 @@ export function boutDescription(bout: LyingDownBout, zone: string): string {
   const from = DateTime.fromSeconds(bout.enter, { zone }).toFormat('h:mm a');
   const to = DateTime.fromSeconds(bout.exit, { zone }).toFormat('h:mm a');
   return `Lying down, ${from} to ${to}, ${formatDuration(bout.exit - bout.enter)}`;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Weekly                                                                     */
+/* ------------------------------------------------------------------------- */
+
+/** One bar on the weekly view. */
+export interface LyingDownWeeklyDay {
+  key: string;
+  /** Narrow weekday initial for the axis, e.g. `M`. */
+  weekday: string;
+  /** `null` when the monitor saw nothing — drawn as an empty slot, never a zero bar. */
+  totalSeconds: number | null;
+  /** This horse's normal for this weekday. `null` when unknown. */
+  usualSeconds: number | null;
+  /** Today is still accumulating, so its bar is incomplete by definition. */
+  isToday: boolean;
+  verdict: Verdict;
+}
+
+export interface LyingDownWeeklySummary {
+  days: LyingDownWeeklyDay[];
+  /**
+   * This week's average across COMPLETE days. Today is excluded: a day three
+   * hours old would drag the mean down and make every week look poor by
+   * breakfast. `null` when no complete day was observed.
+   */
+  dailyAverageSeconds: number | null;
+  /** This horse's usual daily average, from the same weekday normals. */
+  usualDailyAverageSeconds: number | null;
+  /** Complete days actually observed, out of six. Fewer means say so. */
+  observedDays: number;
+  /** The week's verdict — the span the weekly chart is about. */
+  verdict: Verdict;
+}
+
+export interface BuildLyingDownWeeklyInput {
+  /**
+   * This horse's normal for each weekday, keyed by Luxon weekday (1 = Monday).
+   * From Data Science's `weeklyLyingDownAvg`, which averages each weekday over
+   * four weeks — so a horse whose routine differs at weekends is compared
+   * against its own Saturday, not against a flat weekly mean.
+   */
+  usualSecondsByWeekday?: Partial<Record<number, number>>;
+  thresholdPercent?: number;
+}
+
+/**
+ * The weekly view: one bar per day, judged against this horse's own normal.
+ *
+ * Same rule as the daily view — Data Science's threshold decides whether a value
+ * is unusual, the direction comes from comparing it with the normal — applied
+ * twice: once per bar, so the customer can see WHICH day was off, and once for
+ * the week as a whole, which is what the badge reports (Inakshi, 2026-08-19: the
+ * badge and the chart must describe the same span).
+ *
+ * Today is never judged. Its bar is incomplete, so calling a half-finished day
+ * "Low" would be wrong every morning.
+ */
+export function buildLyingDownWeekly(
+  week: LyingDownWeek,
+  { usualSecondsByWeekday, thresholdPercent }: BuildLyingDownWeeklyInput = {},
+): LyingDownWeeklySummary {
+  const days: LyingDownWeeklyDay[] = week.days.map((day) => {
+    const at = DateTime.fromSeconds(day.start, { zone: week.zone });
+    const usualSeconds = usualSecondsByWeekday?.[at.weekday] ?? null;
+    return {
+      key: day.key,
+      weekday: at.toFormat('ccccc'),
+      totalSeconds: day.totalSeconds,
+      usualSeconds,
+      isToday: day.isToday,
+      verdict: day.isToday
+        ? 'unknown'
+        : lyingDownVerdict({
+            deviationPercent: deviationPercentOf(day.totalSeconds, usualSeconds),
+            thresholdPercent,
+            valueSeconds: day.totalSeconds,
+            usualSeconds,
+          }),
+    };
+  });
+
+  const complete = days.filter((day) => !day.isToday && day.totalSeconds !== null);
+  const dailyAverageSeconds =
+    complete.length === 0
+      ? null
+      : complete.reduce((sum, day) => sum + (day.totalSeconds as number), 0) / complete.length;
+
+  const usualValues = days
+    .filter((day) => !day.isToday && day.usualSeconds !== null)
+    .map((day) => day.usualSeconds as number);
+  const usualDailyAverageSeconds =
+    usualValues.length === 0
+      ? null
+      : usualValues.reduce((sum, value) => sum + value, 0) / usualValues.length;
+
+  return {
+    days,
+    dailyAverageSeconds,
+    usualDailyAverageSeconds,
+    observedDays: complete.length,
+    verdict: lyingDownVerdict({
+      deviationPercent: deviationPercentOf(dailyAverageSeconds, usualDailyAverageSeconds),
+      thresholdPercent,
+      valueSeconds: dailyAverageSeconds,
+      usualSeconds: usualDailyAverageSeconds,
+    }),
+  };
 }

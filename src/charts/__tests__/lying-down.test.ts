@@ -13,6 +13,7 @@ import {
   DEFAULT_DAY_START_HOUR,
   lyingDownVerdict,
   DEFAULT_DEVIATION_THRESHOLD_PERCENT,
+  buildLyingDownWeekly,
 } from '@/charts/lying-down';
 import type { PrometheusRangeSeries } from '@/charts/occupancy-timeline';
 
@@ -396,20 +397,20 @@ describe('lyingDownVerdict', () => {
 
   it('is usual while inside the threshold, however the day sits', () => {
     expect(
-      lyingDownVerdict({ deviationPercent: 12, todaySeconds: HOUR, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: 12, valueSeconds: HOUR, usualSeconds: 2 * HOUR }),
     ).toBe('usual');
     // Exactly on the threshold is still usual — the query says "more than".
     expect(
-      lyingDownVerdict({ deviationPercent: 25, todaySeconds: HOUR, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: 25, valueSeconds: HOUR, usualSeconds: 2 * HOUR }),
     ).toBe('usual');
   });
 
   it('reads direction from today against this horse own normal', () => {
     expect(
-      lyingDownVerdict({ deviationPercent: 80, todaySeconds: 0.3 * HOUR, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: 80, valueSeconds: 0.3 * HOUR, usualSeconds: 2 * HOUR }),
     ).toBe('low');
     expect(
-      lyingDownVerdict({ deviationPercent: 80, todaySeconds: 4 * HOUR, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: 80, valueSeconds: 4 * HOUR, usualSeconds: 2 * HOUR }),
     ).toBe('high');
   });
 
@@ -418,7 +419,7 @@ describe('lyingDownVerdict', () => {
       lyingDownVerdict({
         deviationPercent: 40,
         thresholdPercent: 50,
-        todaySeconds: HOUR,
+        valueSeconds: HOUR,
         usualSeconds: 2 * HOUR,
       }),
     ).toBe('usual');
@@ -428,22 +429,113 @@ describe('lyingDownVerdict', () => {
   it('says unusual rather than guessing when the two sources disagree', () => {
     // Their query calls it unusual; our figures are identical. Assert less.
     expect(
-      lyingDownVerdict({ deviationPercent: 60, todaySeconds: 2 * HOUR, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: 60, valueSeconds: 2 * HOUR, usualSeconds: 2 * HOUR }),
     ).toBe('unusual');
   });
 
   it('never reads missing data as a verdict', () => {
     // No observations at all is an absence, not a normal day.
     expect(
-      lyingDownVerdict({ deviationPercent: 5, todaySeconds: null, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: 5, valueSeconds: null, usualSeconds: 2 * HOUR }),
     ).toBe('no-data');
     // The query returned nothing — which must not be treated as zero deviation.
     expect(
-      lyingDownVerdict({ deviationPercent: null, todaySeconds: HOUR, usualSeconds: 2 * HOUR }),
+      lyingDownVerdict({ deviationPercent: null, valueSeconds: HOUR, usualSeconds: 2 * HOUR }),
     ).toBe('unknown');
     // No history for this horse yet, so there is no "normal" to compare against.
     expect(
-      lyingDownVerdict({ deviationPercent: 90, todaySeconds: HOUR, usualSeconds: null }),
+      lyingDownVerdict({ deviationPercent: 90, valueSeconds: HOUR, usualSeconds: null }),
     ).toBe('unknown');
+  });
+});
+
+/**
+ * The weekly view. Its two rules, both decided 2026-08-19:
+ * the badge reports the WEEK (so badge and chart describe the same span), and
+ * today is never judged, because its bar is incomplete by definition.
+ */
+describe('buildLyingDownWeekly', () => {
+  const HOUR = 3600;
+  const flatUsual = (seconds: number) =>
+    Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((d) => [d, seconds]));
+
+  /** A week with one rest a day, so every completed day is observed and equal. */
+  const steadyWeek = () =>
+    series(
+      Array.from({ length: 7 }, (_, i) => {
+        const day = DateTime.fromISO('2026-08-13T01:00:00', { zone: ZONE }).plus({ days: i });
+        return [day.toISO()!, day.plus({ minutes: 60 }).toISO()!] as [string, string];
+      }),
+    );
+
+  const build = (result: PrometheusRangeSeries[]) =>
+    buildLyingDownWeek({ result, selectedDate: SELECTED, zone: ZONE, now: NOW });
+
+  function weekly(result: PrometheusRangeSeries[], usualSeconds: number) {
+    return buildLyingDownWeekly(build(result), {
+      usualSecondsByWeekday: flatUsual(usualSeconds),
+    });
+  }
+
+  it('gives one bar per day, today last', () => {
+    const summary = weekly(steadyWeek(), 1.5 * HOUR);
+    expect(summary.days).toHaveLength(7);
+    expect(summary.days.at(-1)?.isToday).toBe(true);
+    expect(summary.days.filter((day) => day.isToday)).toHaveLength(1);
+  });
+
+  it('never judges today, however its part-day total looks', () => {
+    // Today is hours old and will always look low against a full day. Calling
+    // it "Low" would fire every morning and mean nothing.
+    const summary = weekly(steadyWeek(), 10 * HOUR);
+    expect(summary.days.at(-1)?.verdict).toBe('unknown');
+    // ...while the completed days ARE judged against the same normal.
+    expect(summary.days.at(0)?.verdict).toBe('low');
+  });
+
+  it('excludes today from the week average, so mornings do not drag it down', () => {
+    const summary = weekly(steadyWeek(), 1.5 * HOUR);
+    const complete = summary.days.filter((day) => !day.isToday && day.totalSeconds !== null);
+    const expected =
+      complete.reduce((sum, day) => sum + (day.totalSeconds as number), 0) / complete.length;
+    expect(summary.dailyAverageSeconds).toBeCloseTo(expected, 5);
+    expect(summary.observedDays).toBe(complete.length);
+  });
+
+  it('badges the week, not today', () => {
+    // A horse resting far less than its normal all week reads Low...
+    expect(weekly(steadyWeek(), 10 * HOUR).verdict).toBe('low');
+    // ...and one at its normal reads Usual, whatever today happens to be doing.
+    const summary = weekly(steadyWeek(), 1 * HOUR);
+    expect(['usual', 'high']).toContain(summary.verdict);
+  });
+
+  it('keeps an unobserved day null, so it can be drawn as absent not zero', () => {
+    // The monitor was installed mid-window, so the earlier days carry no
+    // samples at all — a true absence, not a run of zeros.
+    const values: [number, string][] = [];
+    const from = DateTime.fromISO('2026-08-17T00:00:00', { zone: ZONE });
+    for (let t = from.toSeconds(); t <= NOW.toSeconds(); t += STEP) values.push([t, '0']);
+    const summary = buildLyingDownWeekly(
+      buildLyingDownWeek({
+        result: [{ metric: { animal_type: 'horse', id: '0' }, values }],
+        selectedDate: SELECTED,
+        zone: ZONE,
+        now: NOW,
+      }),
+      { usualSecondsByWeekday: flatUsual(1.5 * HOUR) },
+    );
+    const missing = summary.days.filter((day) => day.totalSeconds === null);
+    expect(missing.length).toBeGreaterThan(0);
+    // An absence is not a deviation, and must never be coloured as one.
+    for (const day of missing) expect(day.verdict).toBe('no-data');
+    expect(summary.observedDays).toBeLessThan(6);
+  });
+
+  it('says it has no verdict rather than inventing one without history', () => {
+    const summary = buildLyingDownWeekly(build(steadyWeek()));
+    expect(summary.usualDailyAverageSeconds).toBeNull();
+    expect(summary.verdict).toBe('unknown');
+    for (const day of summary.days) expect(day.usualSeconds).toBeNull();
   });
 });

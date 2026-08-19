@@ -6,9 +6,12 @@ import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { SplitRow } from '@/components/ui/split-row';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LyingDownRow } from '@/components/charts/lying-down-row';
+import { LyingDownWeekRow } from '@/components/charts/lying-down-week-row';
 import {
   buildLyingDownWeek,
+  buildLyingDownWeekly,
   dayStartHourFrom,
+  deviationPercentOf,
   lyingDownVerdict,
 } from '@/charts/lying-down';
 import {
@@ -16,6 +19,7 @@ import {
   inStallWithTurnout,
   monitorWentOffline,
   lowToday,
+  outMostOfDay,
   settledSleeper,
   typicalWeek,
 } from '@/charts/fixtures/lying-down';
@@ -133,7 +137,11 @@ export function BehaviorTrackerCard({
       buildLyingDownWeek({
         result,
         inStallResult: inStall,
-        selectedDate: now.toFormat('yyyy-MM-dd'),
+        // The BARN day containing `now`, not the calendar date. Before the day
+        // start we are still in yesterday's barn day, so the calendar date named
+        // a day that has not begun — the daily view hid this (it looks `today`
+        // up by key) but the weekly view put an empty future column last.
+        selectedDate: now.minus({ hours: dayStartHour }).toFormat('yyyy-MM-dd'),
         zone,
         dayStartHour,
         now,
@@ -160,42 +168,33 @@ export function BehaviorTrackerCard({
         highSeconds: avg * share! * 1.28,
       }));
     /**
-     * The sample average is measured from the sample week, never invented.
+     * Each horse's normal is stated, not measured from the week on screen.
      *
-     * Hardcoding it put both "Usual" horses well below their own usual line, so
-     * the badge said one thing and the picture said the opposite — on screen it
-     * read as a bug in the chart. Sample data that contradicts itself hides real
-     * contradictions, which is the same trap that produced the impossible
-     * in-stall denominator. Completed days only: today is still in progress and
-     * would drag the mean down.
+     * Measuring it from the same seven days was circular: the week was compared
+     * against its own average, so the weekly badge read "Usual" for every horse
+     * by construction. In production the reference is `weeklyLyingDownAvg` — a
+     * FOUR-week average, independent of the week being judged — so the preview
+     * has to supply something independent too.
+     *
+     * These are chosen to match what each fixture actually produces (the guard
+     * against them drifting apart lives in the card's test), except Willow,
+     * whose normal is deliberately well above its week so a genuinely low WEEK
+     * is visible and not only a low day.
      */
-    const measuredAverage = (week: ReturnType<typeof build>) => {
-      const completed = week.days
-        .filter((d) => d !== week.today && d.totalSeconds !== null)
-        .map((d) => d.totalSeconds as number);
-      if (completed.length === 0) return null;
-      return completed.reduce((a, b) => a + b, 0) / completed.length;
-    };
-
-    /**
-     * Stand-in for Data Science's `lyingDownDeviationPercentage`, which returns
-     * how far today is from this horse's own normal as a percentage. Their
-     * query wraps it in `abs()`, so this mirrors that: a magnitude, no sign.
-     */
-    const deviationPercent = (todaySeconds: number | null, usualSeconds: number | null) => {
-      if (todaySeconds === null || usualSeconds === null || usualSeconds === 0) return null;
-      return (Math.abs(todaySeconds - usualSeconds) / usualSeconds) * 100;
-    };
-
-    const horse = (name: string, week: ReturnType<typeof build>, withRange: boolean) => {
-      const avg = measuredAverage(week);
+    const horse = (
+      name: string,
+      week: ReturnType<typeof build>,
+      usualDailySeconds: number | null,
+      withRange: boolean,
+    ) => {
+      const avg = usualDailySeconds;
       const todaySeconds = week.today?.totalSeconds ?? null;
       // The verdict is derived, never hardcoded — so the badge cannot drift out
       // of step with the numbers printed beside it, which it twice did while
       // these were literals.
       const verdict = lyingDownVerdict({
-        deviationPercent: deviationPercent(todaySeconds, avg),
-        todaySeconds,
+        deviationPercent: deviationPercentOf(todaySeconds, avg),
+        valueSeconds: todaySeconds,
         usualSeconds: avg,
       });
       return {
@@ -204,14 +203,34 @@ export function BehaviorTrackerCard({
         avg,
         week,
         range: withRange && avg !== null ? curve(avg) : undefined,
+        /**
+         * Weekly normals per weekday come from `weeklyLyingDownAvg` in
+         * production. The preview has no such history, so every weekday gets
+         * this horse's own measured average rather than an invented
+         * weekend/weekday pattern — a flat reference is honest, a made-up
+         * rhythm would be the phone asserting something nobody measured.
+         */
+        weekly: buildLyingDownWeekly(week, {
+          usualSecondsByWeekday:
+            avg === null
+              ? undefined
+              : Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((d) => [d, avg])),
+        }),
       };
     };
 
+    const MIN = 60;
     return [
-      horse('Apollo', build(typicalWeek(now), inStallWithTurnout(now)), true),
-      horse('Bubbles', build(settledSleeper(now), inStallOvernight(now)), true),
-      horse('Juniper', build(lowToday(now), inStallWithTurnout(now)), true),
-      horse('Pepper', build(monitorWentOffline(now)), false),
+      // A steady horse: today matches its normal, and so does its week.
+      horse('Apollo', build(typicalWeek(now), inStallWithTurnout(now)), 100 * MIN, true),
+      horse('Bubbles', build(settledSleeper(now), inStallOvernight(now)), 118 * MIN, true),
+      // A normal WEEK with a bad DAY — so Daily says Low and Weekly says Usual.
+      // That difference between the two tabs is real, and worth showing.
+      horse('Juniper', build(lowToday(now), inStallWithTurnout(now)), 100 * MIN, true),
+      // A genuinely low WEEK: short every day against a much higher normal.
+      horse('Willow', build(outMostOfDay(now), inStallWithTurnout(now)), 100 * MIN, true),
+      // The monitor went offline: no reading at all, and never a zero.
+      horse('Pepper', build(monitorWentOffline(now)), 100 * MIN, false),
     ];
   }, [zone, dayStartHour]);
 
@@ -305,14 +324,22 @@ export function BehaviorTrackerCard({
                   ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider }
                   : undefined
               }>
-              <LyingDownRow
-                horseName={horse.name}
-                week={horse.week}
-                verdict={horse.verdict}
-                averageSeconds={horse.avg}
-                usualCurve={horse.range}
-                width={rowWidth}
-              />
+              {period === 'weekly' ? (
+                <LyingDownWeekRow
+                  horseName={horse.name}
+                  summary={horse.weekly}
+                  width={rowWidth}
+                />
+              ) : (
+                <LyingDownRow
+                  horseName={horse.name}
+                  week={horse.week}
+                  verdict={horse.verdict}
+                  averageSeconds={horse.avg}
+                  usualCurve={horse.range}
+                  width={rowWidth}
+                />
+              )}
             </View>
           ))}
           <Text style={[type.footnote, styles.sampleNotice, { color: colors.tertiary }]}>
