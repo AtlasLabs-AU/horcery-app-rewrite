@@ -189,6 +189,75 @@ export function inStallDisagrees(day: LyingDownDay): boolean {
 }
 
 /**
+ * What the badge says about today.
+ *
+ * `unusual` is the honest middle: today is far enough from this horse's normal
+ * to be worth a look, but we cannot say which way. See `lyingDownVerdict`.
+ */
+export type Verdict = 'usual' | 'low' | 'high' | 'unusual' | 'no-data' | 'unknown';
+
+/**
+ * Percent away from this horse's own normal before today counts as unusual.
+ *
+ * Mirrors the shipping app's `DEFAULT_DEVIATION_THRESHOLD`, which is overridable
+ * per behaviour through Firebase Remote Config (`DEVIATION_THRESHOLD_<SUFFIX>`).
+ * Ours is a fallback for the same reason: the number belongs to Data Science.
+ */
+export const DEFAULT_DEVIATION_THRESHOLD_PERCENT = 25;
+
+export interface LyingDownVerdictInput {
+  /**
+   * Data Science's deviation, as a percentage of this horse's own normal.
+   *
+   * Their query wraps it in `abs()`, so it is a MAGNITUDE with no direction —
+   * "45% away from normal", not "45% below". `null` when the query returned
+   * nothing, which must not be read as zero.
+   */
+  deviationPercent: number | null;
+  /** Fallback `DEFAULT_DEVIATION_THRESHOLD_PERCENT` when unset. */
+  thresholdPercent?: number;
+  /** Today's total so far. `null` means unobserved, never zero. */
+  todaySeconds: number | null;
+  /** This horse's own normal for the same point in the day. */
+  usualSeconds: number | null;
+}
+
+/**
+ * Today's verdict: Data Science decides WHETHER, we work out WHICH WAY.
+ *
+ * Their deviation query answers the hard question — is today far enough from
+ * this horse's own normal to matter — and carries the threshold that has been
+ * tuned in production. But `abs()` throws the sign away, so it can only ever
+ * say "unusual". Low and High are clinically opposite (resting far less than
+ * usual suggests pain; far more suggests illness), so losing the direction
+ * loses the part a vet acts on.
+ *
+ * Direction is therefore taken from the two figures the row already shows and
+ * the customer can already see: today against this horse's normal. That is
+ * arithmetic on data we display, not a second opinion about whether something
+ * is wrong — the threshold call stays entirely theirs.
+ *
+ * When the two disagree — their query says unusual, our figures say today and
+ * normal are identical — the answer is `unusual`, not a guessed direction. It
+ * is the same rule as `comparisonDisagrees`: say less rather than assert
+ * something the numbers do not support.
+ */
+export function lyingDownVerdict({
+  deviationPercent,
+  thresholdPercent = DEFAULT_DEVIATION_THRESHOLD_PERCENT,
+  todaySeconds,
+  usualSeconds,
+}: LyingDownVerdictInput): Verdict {
+  if (todaySeconds === null) return 'no-data';
+  if (deviationPercent === null || !Number.isFinite(deviationPercent)) return 'unknown';
+  if (usualSeconds === null) return 'unknown';
+  if (Math.abs(deviationPercent) <= thresholdPercent) return 'usual';
+  if (todaySeconds < usualSeconds) return 'low';
+  if (todaySeconds > usualSeconds) return 'high';
+  return 'unusual';
+}
+
+/**
  * Barn day fallback: horses rest overnight, so 6 AM keeps a night whole.
  *
  * Not our invention — the shipping app falls back to the same `'06:00:00'` when

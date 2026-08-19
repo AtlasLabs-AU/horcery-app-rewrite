@@ -11,6 +11,8 @@ import {
   type LyingDownComparison,
   dayStartHourFrom,
   DEFAULT_DAY_START_HOUR,
+  lyingDownVerdict,
+  DEFAULT_DEVIATION_THRESHOLD_PERCENT,
 } from '@/charts/lying-down';
 import type { PrometheusRangeSeries } from '@/charts/occupancy-timeline';
 
@@ -377,5 +379,71 @@ describe('dayStartHourFrom', () => {
     expect(dayStartHourFrom('not a time')).toBe(DEFAULT_DAY_START_HOUR);
     expect(dayStartHourFrom('25:00:00')).toBe(DEFAULT_DAY_START_HOUR);
     expect(dayStartHourFrom('06:75:00')).toBe(DEFAULT_DAY_START_HOUR);
+  });
+});
+
+/**
+ * Data Science decides WHETHER today is unusual; we decide WHICH WAY.
+ *
+ * Their `lyingDownDeviationPercentage` query carries the tuned 25% threshold but
+ * wraps the result in `abs()`, so it cannot separate a horse resting far less
+ * than usual from one resting far more. Those are clinically opposite — less
+ * suggests pain, more suggests illness — so the direction is taken from the two
+ * figures the row already displays.
+ */
+describe('lyingDownVerdict', () => {
+  const HOUR = 3600;
+
+  it('is usual while inside the threshold, however the day sits', () => {
+    expect(
+      lyingDownVerdict({ deviationPercent: 12, todaySeconds: HOUR, usualSeconds: 2 * HOUR }),
+    ).toBe('usual');
+    // Exactly on the threshold is still usual — the query says "more than".
+    expect(
+      lyingDownVerdict({ deviationPercent: 25, todaySeconds: HOUR, usualSeconds: 2 * HOUR }),
+    ).toBe('usual');
+  });
+
+  it('reads direction from today against this horse own normal', () => {
+    expect(
+      lyingDownVerdict({ deviationPercent: 80, todaySeconds: 0.3 * HOUR, usualSeconds: 2 * HOUR }),
+    ).toBe('low');
+    expect(
+      lyingDownVerdict({ deviationPercent: 80, todaySeconds: 4 * HOUR, usualSeconds: 2 * HOUR }),
+    ).toBe('high');
+  });
+
+  it('respects a threshold supplied by Data Science over our fallback', () => {
+    expect(
+      lyingDownVerdict({
+        deviationPercent: 40,
+        thresholdPercent: 50,
+        todaySeconds: HOUR,
+        usualSeconds: 2 * HOUR,
+      }),
+    ).toBe('usual');
+    expect(DEFAULT_DEVIATION_THRESHOLD_PERCENT).toBe(25);
+  });
+
+  it('says unusual rather than guessing when the two sources disagree', () => {
+    // Their query calls it unusual; our figures are identical. Assert less.
+    expect(
+      lyingDownVerdict({ deviationPercent: 60, todaySeconds: 2 * HOUR, usualSeconds: 2 * HOUR }),
+    ).toBe('unusual');
+  });
+
+  it('never reads missing data as a verdict', () => {
+    // No observations at all is an absence, not a normal day.
+    expect(
+      lyingDownVerdict({ deviationPercent: 5, todaySeconds: null, usualSeconds: 2 * HOUR }),
+    ).toBe('no-data');
+    // The query returned nothing — which must not be treated as zero deviation.
+    expect(
+      lyingDownVerdict({ deviationPercent: null, todaySeconds: HOUR, usualSeconds: 2 * HOUR }),
+    ).toBe('unknown');
+    // No history for this horse yet, so there is no "normal" to compare against.
+    expect(
+      lyingDownVerdict({ deviationPercent: 90, todaySeconds: HOUR, usualSeconds: null }),
+    ).toBe('unknown');
   });
 });

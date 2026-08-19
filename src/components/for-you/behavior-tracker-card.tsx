@@ -6,7 +6,11 @@ import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { SplitRow } from '@/components/ui/split-row';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LyingDownRow } from '@/components/charts/lying-down-row';
-import { buildLyingDownWeek, dayStartHourFrom } from '@/charts/lying-down';
+import {
+  buildLyingDownWeek,
+  dayStartHourFrom,
+  lyingDownVerdict,
+} from '@/charts/lying-down';
 import {
   inStallOvernight,
   inStallWithTurnout,
@@ -173,13 +177,27 @@ export function BehaviorTrackerCard({
       return completed.reduce((a, b) => a + b, 0) / completed.length;
     };
 
-    const horse = (
-      name: string,
-      verdict: 'usual' | 'low' | 'no-data',
-      week: ReturnType<typeof build>,
-      withRange: boolean,
-    ) => {
+    /**
+     * Stand-in for Data Science's `lyingDownDeviationPercentage`, which returns
+     * how far today is from this horse's own normal as a percentage. Their
+     * query wraps it in `abs()`, so this mirrors that: a magnitude, no sign.
+     */
+    const deviationPercent = (todaySeconds: number | null, usualSeconds: number | null) => {
+      if (todaySeconds === null || usualSeconds === null || usualSeconds === 0) return null;
+      return (Math.abs(todaySeconds - usualSeconds) / usualSeconds) * 100;
+    };
+
+    const horse = (name: string, week: ReturnType<typeof build>, withRange: boolean) => {
       const avg = measuredAverage(week);
+      const todaySeconds = week.today?.totalSeconds ?? null;
+      // The verdict is derived, never hardcoded — so the badge cannot drift out
+      // of step with the numbers printed beside it, which it twice did while
+      // these were literals.
+      const verdict = lyingDownVerdict({
+        deviationPercent: deviationPercent(todaySeconds, avg),
+        todaySeconds,
+        usualSeconds: avg,
+      });
       return {
         name,
         verdict,
@@ -190,10 +208,10 @@ export function BehaviorTrackerCard({
     };
 
     return [
-      horse('Apollo', 'usual', build(typicalWeek(now), inStallWithTurnout(now)), true),
-      horse('Bubbles', 'usual', build(settledSleeper(now), inStallOvernight(now)), true),
-      horse('Juniper', 'low', build(lowToday(now), inStallWithTurnout(now)), true),
-      horse('Pepper', 'no-data', build(monitorWentOffline(now)), false),
+      horse('Apollo', build(typicalWeek(now), inStallWithTurnout(now)), true),
+      horse('Bubbles', build(settledSleeper(now), inStallOvernight(now)), true),
+      horse('Juniper', build(lowToday(now), inStallWithTurnout(now)), true),
+      horse('Pepper', build(monitorWentOffline(now)), false),
     ];
   }, [zone, dayStartHour]);
 

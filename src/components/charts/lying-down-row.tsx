@@ -9,6 +9,7 @@ import {
   inStallDisagrees,
   type LyingDownDay,
   type LyingDownWeek,
+  type Verdict,
 } from '@/charts/lying-down';
 
 /**
@@ -33,7 +34,9 @@ import {
  *    ranged 7.6 h to 22.6 h in one day — the denominator moves further than the
  *    numerator. Without it, a horse turned out all afternoon reads as a horse
  *    that refused to lie down, which is a welfare alarm rather than a fact.
- * 3. **The badge.** Data Science's verdict, rendered not computed.
+ * 3. **The badge.** `lyingDownVerdict`'s answer, rendered not computed: Data
+ *    Science's query and threshold decide whether today is unusual, and the
+ *    direction comes from today against this horse's own normal.
  *
  * COLOUR (Inakshi, 2026-08-19). The reading is a LINE in `chartData` (denim),
  * turning `chartDeviation` (ochre) when the verdict says this horse is outside
@@ -56,7 +59,8 @@ import {
  * §5 asks for the simplest truthful presentation.
  */
 
-export type Verdict = 'usual' | 'low' | 'high' | 'no-data' | 'unknown';
+/** Re-exported for convenience; the type itself is domain, not presentation. */
+export type { Verdict };
 
 /**
  * Deviation — and only deviation — is coloured. "Usual" is the default state
@@ -70,6 +74,8 @@ const BADGE: Record<Verdict, { label: string; tone: BadgeTone }> = {
   usual: { label: 'Usual', tone: 'quiet' },
   low: { label: 'Low', tone: 'deviation' },
   high: { label: 'High', tone: 'deviation' },
+  // Far from normal, direction unavailable — see `lyingDownVerdict`.
+  unusual: { label: 'Unusual', tone: 'deviation' },
   'no-data': { label: 'No data', tone: 'absent' },
   unknown: { label: 'No history', tone: 'absent' },
 };
@@ -77,7 +83,7 @@ const BADGE: Record<Verdict, { label: string; tone: BadgeTone }> = {
 export interface LyingDownRowProps {
   horseName: string;
   week: LyingDownWeek;
-  /** Data Science's verdict. The row renders it; it never derives it. */
+  /** From `lyingDownVerdict`. The row renders it; it never derives it. */
   verdict: Verdict;
   /** Typical total for this horse, in seconds. Shown beside today's figure. */
   averageSeconds: number | null;
