@@ -27,8 +27,14 @@ export type TrackerPeriod = 'daily' | 'weekly';
 
 /** Organization zone. Comes from the org profile once the API is wired. */
 const ZONE = 'America/Chicago';
-/** Card content width inside the section's padding. */
-const CARD_WIDTH = 320;
+/**
+ * Fallback only, used for the single frame before the container reports its
+ * real width. It used to be the actual value passed to every row, which pinned
+ * each row ~48 pt short of the card on a large phone: the hairline between
+ * horses is drawn on the full-width wrapper, so the chart beside it looked cut
+ * off on the right. Measure, never assume.
+ */
+const CARD_WIDTH_FALLBACK = 320;
 
 const PERIOD_OPTIONS: { label: string; value: TrackerPeriod }[] = [
   { label: 'Daily', value: 'daily' },
@@ -81,6 +87,7 @@ export function BehaviorTrackerCard({
   const { colors } = useTokens();
   const [period, setPeriod] = useState<TrackerPeriod>('daily');
   const [selectedId, setSelectedId] = useState(behaviors[0]?.id);
+  const [rowWidth, setRowWidth] = useState(CARD_WIDTH_FALLBACK);
   const selected = behaviors.find((b) => b.id === selectedId) ?? behaviors[0];
 
   // Fixture-backed until the observation API exists. Gated so it can never
@@ -242,7 +249,9 @@ export function BehaviorTrackerCard({
       />
 
       {selected?.id === 'lying-down' && sampleHorses ? (
-        <View testID="for-you-tracker-chart">
+        <View
+          testID="for-you-tracker-chart"
+          onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}>
           {sampleHorses.map((horse, index) => (
             <View
               key={horse.name}
@@ -257,7 +266,7 @@ export function BehaviorTrackerCard({
                 verdict={horse.verdict}
                 averageSeconds={horse.avg}
                 usualCurve={horse.range}
-                width={CARD_WIDTH}
+                width={rowWidth}
               />
             </View>
           ))}

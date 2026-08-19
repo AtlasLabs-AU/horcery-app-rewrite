@@ -347,7 +347,11 @@ export function LyingDownRow({
   const { colors, type, space } = useTokens();
   const day = week.today;
   const badge = BADGE[verdict];
-  const chartWidth = width - space.lg;
+  // `width` is the space the row has been given, and the chart uses all of it.
+  // The row adds no horizontal padding of its own: its container already pads,
+  // and insetting again left the plot short of the hairline drawn between
+  // horses — which read as the chart being cut off on the right.
+  const chartWidth = width;
 
   // Ochre replaces denim only when the verdict says this horse is outside its
   // own usual range — never for "no data", which is an absence, not a deviation.
@@ -402,7 +406,7 @@ export function LyingDownRow({
         : colors.tertiary;
 
   return (
-    <View style={[styles.row, { width, paddingVertical: space.edge, paddingHorizontal: space.md }]}>
+    <View style={[styles.row, { width, paddingVertical: space.edge }]}>
       <View style={styles.header}>
         <Text
           style={[type.subhead, styles.name, { color: colors.secondary }]}
