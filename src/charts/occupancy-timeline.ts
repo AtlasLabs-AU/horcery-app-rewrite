@@ -91,6 +91,17 @@ export interface BuildOccupancyTimelineInput {
   now: DateTime;
   /** Which metric label distinguishes series. Defaults to `Event_Type`. */
   seriesKey?: (metric: Record<string, string>) => string;
+  /**
+   * Hour the BARN day begins, 0–23. Default 0 (calendar midnight), which is
+   * what People In Stall has always used and what its characterised behaviours
+   * are pinned to.
+   *
+   * Lying Down needs 6: horses rest overnight, so a midnight cut splits one
+   * night's sleep across two rows and halves it into both. The approved
+   * Prometheus queries already carry a barn-day offset, so the phone must cut
+   * days the same way or its totals will not match the backend's averages.
+   */
+  dayStartHour?: number;
 }
 
 export const DEFAULT_DAYS = 7;
@@ -207,15 +218,21 @@ export function buildOccupancyTimeline(
 
   const now = input.now.setZone(zone);
   const nowSeconds = now.toSeconds();
-  const nowKey = now.toFormat(DAY_KEY);
-  const selected = calendarDate(input.selectedDate, zone);
+  // Which barn day "now" falls in: before the start hour, we are still in
+  // yesterday's barn day.
+  const nowKey = now.minus({ hours: input.dayStartHour ?? 0 }).toFormat(DAY_KEY);
+  const dayStartHour = input.dayStartHour ?? 0;
+  if (!Number.isInteger(dayStartHour) || dayStartHour < 0 || dayStartHour > 23) {
+    throw new RangeError(`dayStartHour must be an integer 0-23, got ${dayStartHour}`);
+  }
+  const selected = calendarDate(input.selectedDate, zone).plus({ hours: dayStartHour });
 
   // Rows: `dayCount` calendar days ending on the selected date, oldest first.
   const days: OccupancyDay[] = [];
   for (let offset = dayCount - 1; offset >= 0; offset--) {
     const start = selected.minus({ days: offset });
     const followingMidnight = start.plus({ days: 1 });
-    const key = start.toFormat(DAY_KEY);
+    const key = start.minus({ hours: dayStartHour }).toFormat(DAY_KEY);
     const startSeconds = start.toSeconds();
     const nextMidnight = followingMidnight.toSeconds();
     const utcOffset = start.offset * 60;
