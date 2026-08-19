@@ -262,3 +262,48 @@ customer with fifty is unspecified.
 **R5 — Per-horse usual curve is a stand-in.** The preview synthesises the curve
 from the sample week. Production must use `dailyLyingDownAvg`, which is not yet
 ported.
+
+---
+
+## 12. The weekly view (`horse-lying-down-weekly`)
+
+The same measurement at a different grain, so it shares this specification rather
+than duplicating it. Only the differences are recorded here.
+
+**Customer question:** has this horse's week been normal for it?
+
+**Presentation:** one bar per day, seven days ending today. Each bar carries a
+marker at that weekday's four-week average (`weeklyLyingDownAvg`), so a horse
+whose routine differs at weekends is compared against its own Saturday rather
+than a flat weekly mean. Headline figure is the week's **daily average**,
+excluding today (Inakshi, 2026-08-19: the chart shows seven days, so the number
+should too). The badge judges the **week**, so badge and chart describe the same
+span.
+
+**Deliberate differences from the shipping app, both about honesty:**
+
+- **Today is drawn hollow and never judged.** The app paints today in the
+  strongest colour and fades the completed days. Today is the unfinished one; a
+  solid bar beside six full days reads as a collapse at 7 am. Today is also
+  excluded from the week's average for the same reason.
+- **A day with no observations is an empty slot, not a zero-height bar.** The
+  app defaults missing days to `0`, which is indistinguishable from a horse that
+  never lay down.
+
+**Withdrawn, with evidence — per-day colouring.** Colouring each bar by its own
+verdict was the plan. On the device it turned three of six bars ochre for an
+ordinary horse. A horse's lying-down time varies far more than 25 % from one day
+to the next (14–189 minutes within one real week), so a 25 % per-day threshold
+marks most days unusual, and `PRINCIPLES.md` is explicit that routine ochre means
+the threshold is wrong rather than the palette. The per-day verdict is computed
+and tested, and is not drawn.
+
+**Open risk R6 — the per-day threshold does not exist.** The 25 % figure is
+Data Science's, tuned for "today so far versus the same point in recent days",
+not for whole-day totals against a weekday average. A per-day threshold is
+needed before any per-day judgement is shown. This may also explain why the
+shipping app's own Usual/Unusual pill is dead-coded off — worth asking.
+
+**Open risk R7 — the four-week weekday average is not ported.** The preview
+supplies each horse a single stated normal for every weekday. Production needs
+`weeklyLyingDownAvg`, which has not been brought across.
