@@ -18,6 +18,18 @@ Filenames are unchanged so existing references and greps keep working.
 - [`../PRINCIPLES.md`](../PRINCIPLES.md) — first principles; tie-break "smooth
   over showy". Already lived in the repo.
 
+## architecture/ — mandatory implementation standards
+
+| File | Purpose |
+|---|---|
+| `CHART_ENGINEERING_STANDARD.md` | Canonical rules for whether and how every chart is designed, supplied with data, implemented, tested and approved |
+| `CHART_SPECIFICATION_TEMPLATE.md` | Required per-chart specification completed before implementation |
+| `CHART_AND_QUERY_REGISTER.md` | Controlled fleet-wide inventory of chart meaning, query/API status, units, evidence, approvals and linked specifications |
+
+The renderer choice and its evidence remain in
+`decisions/CHART_RENDERER_DECISION.md`; these architecture documents govern the
+work that follows that decision.
+
 ## scope/ — what a page is, decided against the shipping app
 
 | File | Page |

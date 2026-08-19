@@ -520,9 +520,12 @@ types removed in §2.
 
 ## 6a. Charts — agreed approach (2026-08-15, after adversarial review)
 
-**Decision: build a clean chart architecture now; defer the renderer choice to two
-measured spikes.** Neither "port the old chart package" nor "delete it and rebuild
-in Victory" was approved.
+**Historical approach that produced the 2026-08-19 decision:** build a clean chart
+architecture first and choose the renderer through two measured spikes. Neither
+"port the old chart package" nor "delete it and rebuild in Victory" was approved
+without evidence. That process is now complete: Victory Native on Skia was selected
+in `docs/decisions/CHART_RENDERER_DECISION.md`; the architecture and gates below
+remain binding.
 
 **Agreed:**
 
@@ -623,12 +626,18 @@ one chart engine ever ships.
 **Inakshi's review is limited to** whether the winning chart feels smooth, clear and
 premium. The objective gates decide everything else.
 
-## 6a-i. OPEN DECISION — where chart configuration lives (raised 2026-08-17)
+## 6a-i. Chart meaning and configuration ownership — RESOLVED 2026-08-19
 
-**Status: not decided. To be settled with Inakshi when charts work starts, before
-the first chart is wired to real data.** §6a settled the *renderer* and said query
-ownership should eventually move server-side; it did not address the layer that
-actually controls the charts today.
+**Decision:** the target is a versioned backend observation API. Data Science owns
+calculation and scientific meaning; the backend owns authenticated, bounded and
+versioned delivery; the mobile app owns presentation only. A documented,
+version-controlled service adapter may temporarily execute an approved query to
+unblock rebuild development and internal testing, but it must return the future API
+contract and requires an explicit, dated product exception before customer release.
+
+The canonical operational rules are
+`docs/architecture/CHART_ENGINEERING_STANDARD.md`; every chart must complete
+`docs/architecture/CHART_SPECIFICATION_TEMPLATE.md` before implementation.
 
 ### What is true in the shipping app
 
@@ -676,7 +685,7 @@ Every value ships with a baked-in default; if Firebase fails or the device is
 offline at launch the app falls back silently. Values refresh at most every five
 minutes.
 
-### The decision, in plain terms
+### The problem this decision resolves
 
 **Who is allowed to change what a chart means, and what has to happen first?**
 
@@ -690,7 +699,7 @@ That is the same power as a code deploy, without any of the controls we put on a
 code deploy. It is also genuinely valuable: it is how the team fixes a bad query or
 dark-launches a chart to one customer without waiting on an App Store release.
 
-### The three options
+### Options considered
 
 | | Where queries live | What you gain | What you give up |
 |---|---|---|---|
@@ -698,36 +707,38 @@ dark-launches a chart to one customer without waiting on an App Store release.
 | **B. Move queries into the app** | Version-controlled code | Reviewed, tested, traceable; the chart's meaning is readable | A wrong query needs an app release (or an over-the-air update) to fix |
 | **C. Move queries behind the backend** | An observation API our server owns | Reviewed *and* changeable without a release; the phone stops authoring queries entirely | Backend work, and backend is the chronically under-resourced team |
 
-**C is the direction §6a already points at** ("query ownership moves server-side to
-an observation API"). The open question is whether we can afford it at the time, and
-what we do in the meantime.
+**Option C is selected.** The temporary rebuild adapter is a controlled bridge, not
+an alternative destination: it lives in the service layer, uses a reviewed query in
+version-controlled code, returns the same renderer-independent contract, carries
+tests and real-data fixtures, and records an owner and removal condition. Feature
+screens never know whether the contract came from the adapter or the API.
 
-**Note the two halves can be split.** The *queries* (what the chart means) and the
-*switches* (who sees it, when) do not have to go the same way. A reasonable landing
-place is: queries move to code or the backend, because getting them wrong changes
-what a customer is told; the org-ID lists and `HIDE_*` flags stay in Remote Config,
-because they are rollout controls and changing them fast is the point.
+The two halves are split deliberately. Query text, thresholds, units,
+classifications and missing-data meaning are versioned semantic configuration and
+may not be overridden by Firebase. Visibility switches and organization rollout
+lists may stay in Remote Config because they control *who sees the same approved
+chart*, not what the chart means.
 
-### What to decide, concretely
+### Ownership and change control
 
-1. Do the chart queries stay in Firebase, move into the repo, or move behind the
-   backend? (A / B / C)
-2. If they stay in Firebase for now: do we require a written change record, and who
-   is allowed to edit them?
-3. Do the visibility flags and org-ID lists follow the queries, or stay where they
-   are?
-4. Does the rewrite keep the silent-fallback-to-defaults behaviour, or say out loud
-   when it is running on defaults? (Under our honest-states rule, a chart quietly
-   answering a stale question is exactly the failure we said we would not ship.)
-5. Who owns the Firebase console values day to day — today this is undocumented.
+- Data Science approves calculations, queries, thresholds, classifications and
+  scientific interpretation.
+- Product (Inakshi unless delegated) approves the customer question, wording,
+  visual form and whether the chart should exist.
+- Engineering owns the contract, implementation, performance and evidence.
+- Backend owns the observation API's access, versioning and reliability.
+- The chart-and-query register records the current owners, approvals and versions.
 
-### Why it cannot be left until after the charts are built
+A semantic change requires a new version, review, fixtures and acceptance evidence.
+It is never a silent console edit. An unavailable or invalid contract produces an
+honest customer state; the app does not silently fall back to a different meaning.
 
-The answer changes the architecture. If queries move server-side, the app's chart
-layer takes a series of numbers from an endpoint and never knows PromQL exists. If
-they stay client-side, the app needs the Remote Config plumbing, the defaults, the
-staleness handling and the fallback behaviour — none of which has been carried into
-the rewrite yet.
+### Architectural consequence
+
+The app's chart layer takes a checked Horcery observation model and never knows
+PromQL exists. During the temporary-adapter period, only the service adapter knows
+Prometheus; swapping it for the backend API must not change the screen, chart domain
+model or renderer.
 
 ## 6b. Foundation hardening — HOLD SCOPE (adversarial review, 2026-08-15)
 

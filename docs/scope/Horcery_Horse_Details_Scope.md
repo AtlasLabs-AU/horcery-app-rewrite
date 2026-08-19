@@ -25,9 +25,9 @@ behind a cog. Roughly **5,600 lines of source** and, on a cold open of Summary,
 **~30 network requests**. What Codex has built is a header (photo, name, stall)
 and three labelled placeholders — honest and correct as a seed, ~3% of the
 surface. This scope proposes building it in **four slices**, in a deliberate
-order, with **charts explicitly gated on the §6a renderer decision and the
-§6a-i configuration decision** so that neither the horse page nor For You is
-the first place a chart engine gets committed by accident.
+order. The former §6a renderer and §6a-i configuration gates were resolved on
+2026-08-19; chart work now follows the mandatory chart engineering standard and
+per-chart specification rather than choosing architecture inside this page.
 
 ---
 
@@ -164,8 +164,8 @@ These are settled. The scope must respect them, not re-open them.
 | **Record / manual logs removed** | Req §2 | Events tab shows no manual event types; no "Record" affordance anywhere on the page |
 | **Editorial palette; purple only on control fills** | Req §4d, PRINCIPLES "Colour" | Chart palettes must be derived from tokens; the old indigo/pink/cyan chart colours do not carry over. **The Water Intake cyan is already flagged as out-of-palette on For You** |
 | **One camera frame — MediaTile, 4:3, overlay caption** | Req §4e | The video hero must be a MediaTile with `videoUri` + `live`, not a fourth player treatment |
-| **Charts: renderer decided by the §6a spike; never two engines; feature screens never author PromQL or import a chart lib** | Req §6a | **Every chart on this page waits for the renderer decision.** The domain layer (`IntervalEvent`, `ObservationSeries`, `Threshold`) is what this page consumes |
-| **§6a-i open: where chart config (queries, HIDE_* flags, org lists, thresholds) lives** | Req §6a-i, task #13, GH issue #1 | The 14 chart surfaces here are all flag-gated and all read Remote Config query strings. **Cannot wire them until decided** |
+| **Victory Native/Skia behind one renderer-independent layer; never two engines; feature screens never author PromQL or import a chart lib** | Req §6a; chart standard | The domain layer (`IntervalEvent`, `ObservationSeries`, `Threshold`) is what this page consumes. Each chart completes the mandatory specification before implementation |
+| **Chart meaning comes from a versioned backend observation API; a documented service adapter is the temporary rebuild bridge** | Req §6a-i; chart standard | Query text, thresholds, units and missing-data meaning cannot be Remote Config overrides. Visibility/org rollout flags may remain remote because they do not change meaning |
 | **Read-only against production** | standing | Re-assign stall, Passport edit, Delete Horse, Manage Alerts, Create Clip, feedback dismiss — all disabled-with-reason until the write side |
 | **Every visible control navigates, acts, or is visibly disabled with a reason** | Req §6b item 3 | No dead pencils, no dead cogs |
 | **No frozen clock** | Req §6b, Horses parity C7 | The old In/Out pill and `hideMetricsTill` used a `useState(DateTime.now())` frozen at mount. The rewrite has `useOrganizationNow` — the store's `now` must be live |
@@ -186,7 +186,7 @@ Legend: **BUILD** = new in the rewrite · **REUSE** = exists in the rewrite alre
 |---|---|---|---|
 | F1 | Native header with horse name, back | **REUSE** | Already there. Keep `headerBackButtonDisplayMode: 'minimal'` |
 | F2 | Back-target memory (return to Show Me vs Horses) | **REMOVE** | Show Me is undecided (Horses parity B3); native stack back is correct by default. Revisit only if Show Me returns |
-| F3 | Statistics strip (Activeness / Temperature / Noise) | **BUILD** — slice 2 | Two Prometheus point queries at cursor. Small, high value, no chart engine needed (they are numbers). Needs §6a-i for the query text |
+| F3 | Statistics strip (Activeness / Temperature / Noise) | **BUILT** — slice 2 | Small, high value and no chart engine needed because these are numbers. Uses the temporary service-adapter path; the observation API remains the target |
 | F4 | Settings cog → settings page | **BUILD** — slice 3 (read-only version) | See §4.6 |
 | F5 | Date toolbar (day picker, min = created_at) | **BUILD** — slice 2 | Native date picker via `@expo/ui` DateTimePicker (universal). Drives cursor for stats, charts, events |
 | F6 | Live/recorded video hero with timeline | **BUILD** — slice 4, **as a MediaTile in live mode first** | See §4.7 for the split |
@@ -355,20 +355,20 @@ status** (live clock, five states) · Statistics strip · the three overlays
 (no-stall, metrics-hidden, unsupported) · Events "open at time" → cursor ·
 sticky tab bar.
 
-**Depends on:** §6a-i for the *query text* of the status and stats queries. If
-undecided, use the baked-in defaults from `default-frc-values` and **label the
-page as running on defaults** — this is the honest-states rule applied to
-Remote Config, and it forces the decision to be made rather than dodged.
+**Configuration decision resolved:** the status and stats queries use the
+version-controlled service adapter during the rebuild and must move behind the
+observation API. They are not remotely replaceable query strings. Honest loading,
+stale, out-of-stall and unavailable states remain required.
 
 ### Slice 3 — "The charted horse page"
 
 Last 24 Hours · Trends (2) · Stall charts (5) · Environment (2) · Alert
 Frequency · Devices list.
 
-**Depends on:** §6a renderer decision **and** §6a-i. **People In Stall (S2g)
-and Climate (S3a) are the two charts to build first** — they are the §6a first
-slice and the "continuous series" proof respectively, and both live on this
-page.
+**People In Stall (S2g) and Climate (S3a) are the two charts to build first.**
+Each needs an approved chart specification and register entry under the chart
+engineering standard. The renderer and configuration architecture are decided;
+query meaning, units and real-data support remain per-chart gates.
 
 ### Slice 4 — "The watched horse page" (video)
 
@@ -403,7 +403,7 @@ Ordered by how much the answer changes the build.
 | D4 | Remove the Feedback card from this page | **DECIDED 2026-08-17: remove** (consider More) | Marketing chrome inside a data page |
 | D5 | Text-only tabs (no icons), consistent with Review History | **DECIDED 2026-08-17: text only** | Already the editorial rule |
 | D6 | Slice order | **DECIDED 2026-08-17: Honest → Living → Charts → Video, as proposed** | Charts before video keeps the renderer gate honest; the live tile proves itself on For You Snapshots first |
-| D7 | Ship slice 2 on default queries if §6a-i isn't decided, with a visible label | **DECIDED 2026-08-17: yes** | Honest, and it makes the decision unavoidable |
+| D7 | Ship slice 2 on default queries if §6a-i isn't decided, with a visible label | **SUPERSEDED 2026-08-19** | §6a-i is resolved: version-controlled adapter during rebuild, backend observation API as target, and no Remote Config semantic override |
 | D8 | ~~Special Instructions~~ | **Decided 2026-08-17: OUT** | Record-family (customer-entered text). See S1d and requirements §2 |
 | D9 | The timeline's pinch-to-zoom works here and does not work in the shipping app (§4.7a). Keep it, or remove it for behavioural parity? | **DECIDED 2026-08-19: KEEP IT** (Inakshi) | A deliberate departure, not an oversight. The rewrite does something customers cannot do today: five-minute tick spacing is how you find a specific incident instead of scrubbing past it. **Do not "restore parity" by removing the pinch** — that would be undoing a decision, not fixing a drift. The structural reason the original was likely abandoned (≈9,400 tick views at full zoom) does not apply to windowed rendering |
 
@@ -414,7 +414,7 @@ Show Me (B3, parked), Record (removed).
 
 ## 7. What is deliberately NOT in scope
 
-- Any chart before the §6a decision.
+- Any chart without its completed chart specification, approved meaning and real-data evidence.
 - Any write action becoming live.
 - The Stall detail page (a sibling of the same size — this document is the
   template for scoping it, and V1–V5, F3, F5, F13, S3, S4, S5 are all shared).
@@ -431,8 +431,8 @@ Show Me (B3, parked), Record (removed).
 | Slice | Rough size | Blocked by |
 |---|---|---|
 | 1 | Small–medium. Mostly reuse and composition. | — |
-| 2 | Medium. The play-head hook and status derivation want careful tests. | §6a-i (or the "defaults + label" path) |
-| 3 | Large. 11 chart surfaces, but each is thin once the domain layer exists. | §6a + §6a-i |
+| 2 | Medium. The play-head hook and status derivation want careful tests. | Observation API migration remains; temporary adapter is approved for rebuild work |
+| 3 | Large. 11 chart surfaces, but each is thin once the domain layer exists. | Per-chart specification, approved query/units and real-data evidence |
 | 4 | Medium (4a) → Large (4c). | H5 (MediaTile live proven on For You) |
 
 For comparison: the Horses list page was one slice and took Codex a day with
