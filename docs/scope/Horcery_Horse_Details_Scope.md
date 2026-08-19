@@ -405,6 +405,7 @@ Ordered by how much the answer changes the build.
 | D6 | Slice order | **DECIDED 2026-08-17: Honest → Living → Charts → Video, as proposed** | Charts before video keeps the renderer gate honest; the live tile proves itself on For You Snapshots first |
 | D7 | Ship slice 2 on default queries if §6a-i isn't decided, with a visible label | **DECIDED 2026-08-17: yes** | Honest, and it makes the decision unavoidable |
 | D8 | ~~Special Instructions~~ | **Decided 2026-08-17: OUT** | Record-family (customer-entered text). See S1d and requirements §2 |
+| D9 | The timeline's pinch-to-zoom works here and does not work in the shipping app (§4.7a). Keep it, or remove it for behavioural parity? | **DECIDED 2026-08-19: KEEP IT** (Inakshi) | A deliberate departure, not an oversight. The rewrite does something customers cannot do today: five-minute tick spacing is how you find a specific incident instead of scrubbing past it. **Do not "restore parity" by removing the pinch** — that would be undoing a decision, not fixing a drift. The structural reason the original was likely abandoned (≈9,400 tick views at full zoom) does not apply to windowed rendering |
 
 Not asking you about: chart renderer (§6a owns it), permissions (B1, parked),
 Show Me (B3, parked), Record (removed).
