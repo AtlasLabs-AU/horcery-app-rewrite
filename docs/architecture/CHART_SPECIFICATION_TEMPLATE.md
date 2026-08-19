@@ -4,6 +4,12 @@ Copy this file for every proposed chart before implementation. Replace all
 bracketed text. Unknown meaning, units, thresholds or ownership blocks the chart;
 do not guess.
 
+**Before writing PENDING or unknown anywhere in this document, search the sources
+named in `AGENTS.md` under "Check before you record ignorance", and record which
+ones you searched in §1.** An unknown that was written down without looking is
+worse than no entry: it reads as an established fact, and it sends someone to ask
+another team a question they have already answered.
+
 The completed specification must comply with
 `docs/architecture/CHART_ENGINEERING_STANDARD.md`.
 
@@ -22,6 +28,7 @@ The completed specification must comply with
 | Product approval | `[date or pending]` |
 | Engineering owner | `[name/agent]` |
 | Backend owner | `[name/team]` |
+| Sources searched | `[which of the shipping app, the transcript digest, Drive sheets and repo docs were actually searched, and when]` |
 
 ## 2. Should this be a chart?
 
