@@ -22,11 +22,12 @@ import {
  * Three things earn their place here:
  *
  * 1. **The usual reference.** A cumulative line alone says how long; it does not
- *    say whether that is normal for THIS horse. When Data Science supplies a
- *    range it is drawn as a band that widens through the day, because on a
- *    running total "usual" grows as the day goes on — a flat band would be a
- *    different, wrong claim. Until then the fallback is a single dashed line at
- *    the daily average, which claims only what we actually know.
+ *    say whether that is normal for THIS horse. It is drawn as a dashed curve
+ *    that rises through the day, because on a running total "usual" grows as the
+ *    day goes on — a flat line would be a different, wrong claim. This mirrors
+ *    the shipping app's grey average line, which plots `dailyLyingDownAvg` at
+ *    the 6/12/18/24-hour marks. The fallback, when no curve exists, is one
+ *    dashed rule at the daily average.
  * 2. **The in-stall strip.** The monitor only sees the horse while it is in the
  *    stall. Measured across three real monitors on 2026-08-19, in-stall time
  *    ranged 7.6 h to 22.6 h in one day — the denominator moves further than the
@@ -34,24 +35,25 @@ import {
  *    that refused to lie down, which is a welfare alarm rather than a fact.
  * 3. **The badge.** Data Science's verdict, rendered not computed.
  *
- * COLOUR (Inakshi, 2026-08-19). The reading is a filled area in `chartData`
- * (denim), and in `chartDeviation` (ochre) when the verdict says this horse is
- * outside its own usual range. Filled rather than stroked because the earlier
- * treatment — thin coloured line on a pale band — put the emphasis on the
- * reference and left the reading as the faintest thing on the row, and because
- * a band tint can never reach WCAG 1.4.11's 3:1 while a filled area easily does.
- * Ochre is not red: see PRINCIPLES.md, deviation may be coloured, severity may
- * not.
+ * COLOUR (Inakshi, 2026-08-19). The reading is a LINE in `chartData` (denim),
+ * turning `chartDeviation` (ochre) when the verdict says this horse is outside
+ * its own usual range. Ochre is not red: see PRINCIPLES.md, deviation may be
+ * coloured, severity may not.
+ *
+ * A line, not a filled area. Filling it was a detour: the fill was added to give
+ * the colour visual weight, but the shipping app draws this as a plain 2.5 pt
+ * line and the brief was "a line chart like the app already has, improved for
+ * clarity". The fill turned a cumulative curve into a blocky staircase that had
+ * to be explained before it could be read, which is the opposite of clarity. A
+ * stroked line carries denim and ochre perfectly well.
  *
  * TYPE AND SPACE. Every size comes from the ramp and every gap from the 4 pt
  * scale. This row previously invented 9 px, 10.5 px and 3 px values, which is
  * why `micro` now exists in `tokens.ts`.
  *
- * Drawn with plain views rather than a charting engine: a monotonic area, a
- * reference line and a strip are simpler and cheaper as geometry, and the chart
- * engineering standard §5 asks for the simplest truthful presentation. Skia
- * would render the area as one path instead of ~28 views and is the better
- * long-term home for this, but it needs a native rebuild of the dev client.
+ * Drawn with plain views rather than a charting engine: two polylines and a
+ * strip are simpler and cheaper as geometry, and the chart engineering standard
+ * §5 asks for the simplest truthful presentation.
  */
 
 export type Verdict = 'usual' | 'low' | 'high' | 'no-data' | 'unknown';
@@ -80,17 +82,18 @@ export interface LyingDownRowProps {
   /** Typical total for this horse, in seconds. Shown beside today's figure. */
   averageSeconds: number | null;
   /**
-   * This horse's USUAL cumulative progress through the barn day — the band
-   * behind the area. Supplied by Data Science, never derived here.
+   * This horse's USUAL cumulative progress through the barn day — the dashed
+   * reference behind the reading. Supplied by Data Science, never derived here.
    *
    * A curve, not a single number, because a running total's "usual" grows as
    * the day goes on: a flat band would claim the horse should have its whole
    * day's rest by breakfast. `dailyLyingDownAvg` already returns cumulative
    * averages at six-hour checkpoints, which is exactly this shape.
    *
-   * Absent → no band, just one dashed line at the daily average. A band implies
-   * a spread, and inventing that spread would be the phone asserting a
-   * distribution nobody gave it.
+   * Absent → one dashed rule at the daily average instead, which claims only
+   * what we actually know. The range's spread is deliberately not drawn: the
+   * dashed curve runs through its middle, and the spread belongs on the horse's
+   * own screen where one horse has the whole display.
    */
   usualCurve?: { fractionOfDay: number; lowSeconds: number; highSeconds: number }[];
   width: number;
@@ -99,8 +102,6 @@ export interface LyingDownRowProps {
 const CHART_HEIGHT = 60;
 /** Vertical slices for the usual band. Enough to look continuous. */
 const BAND_SLICES = 24;
-/** Vertical slices for the filled reading. */
-const AREA_SLICES = 28;
 const STRIP_HEIGHT = 6;
 /** Fixed columns, so five badges and five figures each share one axis. */
 const BADGE_COLUMN = 88;
@@ -135,68 +136,7 @@ function fraction(at: number, day: LyingDownDay): number {
   return Math.min(1, Math.max(0, (at - day.start) / span));
 }
 
-/** Cumulative seconds at a fraction of the barn day, interpolated. */
-function cumulativeAt(points: { f: number; seconds: number }[], f: number): number {
-  const first = points[0]!;
-  if (f <= first.f) return first.seconds;
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1]!;
-    const b = points[i]!;
-    if (f <= b.f) {
-      const span = b.f - a.f || 1;
-      return a.seconds + (b.seconds - a.seconds) * ((f - a.f) / span);
-    }
-  }
-  return points.at(-1)!.seconds;
-}
-
-/**
- * The reading, as a filled area under the cumulative curve.
- *
- * Each slice takes the LOWER of its two edge values, so the fill never pokes
- * above the line drawn on top of it — the stepping stays hidden under the edge
- * rather than showing as a sawtooth.
- */
-function AreaFill({
-  points,
-  width,
-  toY,
-  colour,
-}: {
-  points: { f: number; seconds: number }[];
-  width: number;
-  toY: (seconds: number) => number;
-  colour: string;
-}) {
-  const lastF = points.at(-1)!.f;
-  const slices = [];
-  for (let i = 0; i < AREA_SLICES; i++) {
-    const f0 = i / AREA_SLICES;
-    if (f0 >= lastF) break;
-    const f1 = Math.min((i + 1) / AREA_SLICES, lastF);
-    const seconds = Math.min(cumulativeAt(points, f0), cumulativeAt(points, f1));
-    const top = toY(seconds);
-    const height = CHART_HEIGHT - top;
-    if (height <= 0) continue;
-    slices.push(
-      <View
-        key={i}
-        style={{
-          position: 'absolute',
-          left: f0 * width,
-          // Overlap by a hair so adjacent slices leave no seam.
-          width: (f1 - f0) * width + 0.5,
-          top,
-          height,
-          backgroundColor: colour,
-        }}
-      />,
-    );
-  }
-  return <>{slices}</>;
-}
-
-/** The crisp top edge of the area, as a stack of thin rotated segments. */
+/** The cumulative line, as a stack of thin rotated segments. */
 function CumulativeEdge({
   points,
   width,
@@ -460,20 +400,12 @@ export function LyingDownRow({
             ) : null}
 
             {points.length > 1 ? (
-              <>
-                <AreaFill
-                  points={points}
-                  width={chartWidth}
-                  toY={toY}
-                  colour={seriesColour}
-                />
-                <CumulativeEdge
-                  points={points}
-                  width={chartWidth}
-                  toY={toY}
-                  colour={seriesColour}
-                />
-              </>
+              <CumulativeEdge
+                points={points}
+                width={chartWidth}
+                toY={toY}
+                colour={seriesColour}
+              />
             ) : null}
           </View>
 
