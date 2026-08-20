@@ -25,6 +25,22 @@ const BAR_WIDTH_RATIO = 0.46;
 const MARKER_OVERHANG = 4;
 
 /**
+ * Suppresses Victory's default chart chrome.
+ *
+ * `CartesianChart` renders a y-axis whether or not one is asked for, and that
+ * axis draws a hairline rule across the plot at every tick — the faint
+ * horizontals seen inside both plots. The x-axis and frame are only drawn when
+ * their props are supplied, so they stay off simply by not being passed.
+ *
+ * They are unwanted: the row prints its own time axis as text beneath the plot,
+ * and PRINCIPLES.md's editorial direction keeps chrome from competing with the
+ * reading. `lineWidth: 0` drops the rules and `tickCount: 0` drops the ticks
+ * that generate them. Both plots pass an explicit `domain`, so removing the
+ * ticks changes no scaling — only the decoration goes.
+ */
+const NO_GRID_Y_AXIS = [{ lineWidth: 0, tickCount: 0 }];
+
+/**
  * The only renderer-specific boundary for both lying-down views.
  *
  * Victory owns chart scaling and the standard line/bar primitives. Skia is
@@ -66,6 +82,7 @@ export function VictoryLyingDownDailyPlot({
         xKey="f"
         yKeys={['reading']}
         domain={{ x: [0, 1], y: [0, ceiling] }}
+        yAxis={NO_GRID_Y_AXIS}
         explicitSize={{ width, height: DAILY_HEIGHT }}>
         {({ points: chartPoints, xScale, yScale, chartBounds }) => {
           const referenceBuilder = Skia.PathBuilder.Make();
@@ -154,6 +171,7 @@ export function VictoryLyingDownWeeklyPlot({
         xKey="index"
         yKeys={['completed']}
         domain={{ x: [-0.5, summary.days.length - 0.5], y: [0, peak] }}
+        yAxis={NO_GRID_Y_AXIS}
         explicitSize={{ width, height: WEEKLY_HEIGHT }}>
         {({ points, xScale, yScale, chartBounds }) => (
           <>
