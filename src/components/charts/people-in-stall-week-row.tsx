@@ -54,8 +54,8 @@ export function PeopleInStallWeekRow({
       : summary.observedDays < summary.days.length - 1
         ? `a day, over the ${summary.observedDays} days we could see`
         : summary.usualDailyAverageSeconds === null
-          ? 'a day, no usual yet'
-          : `a day, against ${formatDuration(summary.usualDailyAverageSeconds)} usual`;
+          ? 'a day, no average yet'
+          : `a day, ${formatDuration(summary.usualDailyAverageSeconds)} avg`;
 
   return (
     <LyingDownRowShell

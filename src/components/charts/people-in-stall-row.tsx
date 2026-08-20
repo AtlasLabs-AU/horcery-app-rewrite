@@ -87,13 +87,16 @@ export function PeopleInStallRow({
       ? '—'
       : formatDurationCompact(today.totalSeconds);
 
-  // Short by design. The figure above already says what the number is, so the
-  // subline only carries what it is being compared against.
+  // Same language as Lying Down (Inakshi, 2026-08-20): the customer learns one
+  // word for the concept, so it is "avg" everywhere — and the same VALUE too,
+  // the whole-day average. The by-now comparison is already on the chart as the
+  // dashed curve; printing a different number here than Lying Down prints would
+  // make identical-looking rows mean different things.
   const subline = state.blocksContent
     ? undefined
-    : data.usualByNowSeconds === null
-      ? 'no usual yet'
-      : `usual ${formatDuration(data.usualByNowSeconds)}`;
+    : averageSeconds === null
+      ? 'no average yet'
+      : `${formatDuration(averageSeconds)} avg`;
 
   // An outage replaces the visit list rather than sitting beside it: a count
   // over a day we only half watched is not comparable with a whole one, and
