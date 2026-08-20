@@ -17,9 +17,9 @@ import { useHorseGroups } from '@/hooks/use-horse-groups';
 /** Same 5-minute slice as `useHorses`/`useSnapshots`: one frame URL app-wide. */
 const FRAME_SLICE_SECONDS = 300;
 
-function quantisedEpoch(refreshToken: number) {
+function quantisedEpoch() {
   const seconds = DateTime.now().toSeconds();
-  return Math.floor(seconds / FRAME_SLICE_SECONDS) * FRAME_SLICE_SECONDS + refreshToken;
+  return Math.floor(seconds / FRAME_SLICE_SECONDS) * FRAME_SLICE_SECONDS;
 }
 
 export interface HorseDetail {
@@ -137,7 +137,12 @@ export function useHorseDetail(id: string): HorseDetail {
     // prove a value pulled out of the query cache stays unmutated, and
     // hoisting it costs the component its memoization.
     if (animal) {
-      return joinHorseRow(animal, stall, quantisedEpoch(refreshToken));
+      // Keep the shared five-minute frame URL for normal renders, then append
+      // the explicit refresh token separately. Passing the token as part of
+      // the epoch is ineffective because `stallFrameUrl` quantises its epoch;
+      // `joinHorseRow`'s fourth argument is the cache-buster contract used by
+      // the Horses list too.
+      return joinHorseRow(animal, stall, quantisedEpoch(), refreshToken);
     }
     return queryClient.getQueryData<HorseRow>(horseSelectionKey(id)) ?? null;
   }, [animal, stall, queryClient, id, refreshToken]);
