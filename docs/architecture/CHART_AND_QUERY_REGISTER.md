@@ -89,10 +89,47 @@ verbatim in intent because it reverses an assumption two charts were built on:
    toggle.** Customers are not expected to flip it routinely; it behaves like a
    main system preference. (The shipping app's prominent "Switch to Stalls"
    button on the card is therefore not the pattern to copy.)
+   **Placement decided (Inakshi, 2026-08-20): inside the Behavior Tracker's
+   overflow ("three dots") sheet**, alongside Customize and See History — not on
+   the card face.
 4. **Consequence for the rewrite:** the Lying Down sample rows are currently
    horse-named and People in Stall stall-named; when real data lands, both
    default to the stall view, with horse names shown on the row when an
    assignment exists.
+
+## Product decisions — Horse in Stall (Inakshi, 2026-08-20)
+
+1. **Daily is the cumulative total PLUS a when-strip.** The line says how long
+   the horse was in the stall; the strip beneath says when, so a low total
+   explains itself ("out from 9 to 1") instead of reading as a worry. Same
+   shape as People in Stall's visits strip — one interaction learned once.
+2. **Entity model is the stall-first rule above**, which is where the two
+   readings of this chart ("this horse was indoors" vs "this stall was
+   occupied") are reconciled.
+
+## Legacy defects: decision not to raise dev-team tickets (Inakshi, 2026-08-20)
+
+Reviewing the shipping app's Behavior Tracker surfaced defects that are live in
+production today — most seriously, an absent deviation reading presenting as
+**"Usual"**, so an offline camera reassures the customer.
+
+**Decision: no tickets to the dev team, on the explicit condition that the
+rewrite does not reproduce them.** That condition is the whole basis of the
+decision, so it is a standing obligation on this repo, not a one-off check:
+every defect below must stay guarded, and must stay pinned by a test.
+
+1. Absent reading must never render as a reassuring verdict.
+2. "Not observed" must stay distinct from an observed zero.
+3. A "usual" computed over a window with missing days must not be presented as
+   a normal — coverage has to reach the divisor.
+4. No silent truncation of the first bucket of the day.
+5. Multiple matching series must not be blindly summed (a day cannot exceed 24
+   hours); the combination rule needs Data Science sign-off.
+6. The history gate must key on the entity actually being judged.
+7. Day boundaries come from the organization's timezone and `chart_start_time`,
+   never the phone's.
+8. No runtime override may change what a chart MEANS without a release and a
+   test — Remote Config may show or hide a chart, not redefine it.
 
 ## Query corrections not yet accepted upstream
 
