@@ -14,6 +14,21 @@ import {
   buildPeopleInStallWeek,
   buildPeopleInStallWeekly,
 } from "@/charts/people-in-stall-behavior";
+import { HorseInStallRow } from "@/components/charts/horse-in-stall-row";
+import { HorseInStallWeekRow } from "@/components/charts/horse-in-stall-week-row";
+import {
+  buildHorseInStallWeek,
+  buildHorseInStallWeekly,
+} from "@/charts/horse-in-stall-behavior";
+import { sortRowsByAttention } from "@/charts/row-order";
+import {
+  fragmentedDay,
+  inAllDay,
+  longTurnout,
+  monitorGapMidday as inStallMonitorGap,
+  noData as inStallNoData,
+  routineTurnout,
+} from "@/charts/fixtures/horse-in-stall-behavior";
 import {
   barelyVisited,
   busyDay,
@@ -392,6 +407,135 @@ export function BehaviorTrackerCard({
     ];
   }, [zone, dayStartHour]);
 
+  /**
+   * Horse in Stall sample rows.
+   *
+   * Named stall-first, because the stall is the primary entity (Inakshi,
+   * 2026-08-20): a camera with no horse assigned must still appear, or a
+   * customer who forgot to assign one silently loses that stall's data.
+   *
+   * One fixture per state worth seeing: routine turnout, a horse out most of the
+   * day, one that never left, a fragmented in-and-out day, and the case that
+   * matters most — a mid-day monitor outage, which looks exactly like turnout
+   * unless the chart refuses to name it.
+   */
+  const sampleInStall = useMemo(() => {
+    if (!PREVIEWS.horseInStallSampleData) return null;
+    const now = DateTime.now()
+      .setZone(zone)
+      .startOf("day")
+      .plus({ hours: dayStartHour === 0 ? 23 : dayStartHour - 1 });
+    const entityCreatedAt = now.minus({ months: 6 }).toISO();
+    const selectedDate = now
+      .minus({ hours: dayStartHour })
+      .toFormat("yyyy-MM-dd");
+
+    // In-stall time accrues almost evenly: the horse is in overnight, out for a
+    // block in the middle of the day, in again by evening. So the usual curve
+    // rises steadily and flattens across the turnout window rather than
+    // clustering at feed times the way human presence does.
+    const curve = (avg: number) =>
+      [
+        [0, 0],
+        [0.1, 0.13],
+        [0.35, 0.36],
+        [0.5, 0.4],
+        [0.65, 0.55],
+        [1, 1],
+      ].map(([fractionOfDay, share]) => ({
+        fractionOfDay: fractionOfDay!,
+        lowSeconds: avg * share! * 0.85,
+        highSeconds: avg * share! * 1.15,
+      }));
+
+    const HOUR = 3600;
+    const entity = (
+      name: string,
+      result: ReturnType<typeof routineTurnout>,
+      usualDailySeconds: number,
+    ) => {
+      const range = curve(usualDailySeconds);
+      const data = buildHorseInStallWeek({
+        result,
+        selectedDate,
+        zone,
+        dayStartHour,
+        now,
+        usualCurve: range,
+        entityCreatedAt,
+      });
+      return {
+        name,
+        data,
+        avg: usualDailySeconds,
+        range,
+        weekly: buildHorseInStallWeekly(data.week, {
+          usualSecondsByWeekday: Object.fromEntries(
+            [1, 2, 3, 4, 5, 6, 7].map((d) => [d, usualDailySeconds]),
+          ),
+          entityCreatedAt,
+          now,
+        }),
+      };
+    };
+
+    // ~19 h is the measured routine, so it is the normal every row is judged on.
+    const USUAL = 19 * HOUR;
+    return [
+      // Out after morning feed, back before evening feed.
+      entity("Stall 4 · Apollo", routineTurnout(now), USUAL),
+      // Out twelve hours a day — at grass, and well below the normal.
+      entity("Stall 2 · Storm", longTurnout(now), USUAL),
+      // Never left: box rest, or a week of weather.
+      entity("Stall 7 · Juniper", inAllDay(now), USUAL),
+      // Four separate absences — past the point where the caption lists them.
+      entity("Stall 5 · Bubbles", fragmentedDay(now), USUAL),
+      // The monitor went down over lunch: must NOT be read as turnout.
+      entity("Stall 8 · Willow", inStallMonitorGap(now), USUAL),
+      // Nothing at all — never drawn as a horse that stayed out.
+      entity("Stall 9 · Pepper", inStallNoData(), USUAL),
+    ];
+  }, [zone, dayStartHour]);
+
+  /**
+   * Rows ordered so the ones needing attention are the ones you see first
+   * (Inakshi, 2026-08-20). Sorted per PERIOD, because the two tabs can disagree
+   * — a horse with one bad day inside a normal week is Low on Daily and Usual on
+   * Weekly, and each tab should float the row its own badge justifies.
+   */
+  const orderedHorses = useMemo(
+    () =>
+      sampleHorses &&
+      sortRowsByAttention(
+        sampleHorses,
+        (horse) => (period === "weekly" ? horse.weekly.verdict : horse.verdict),
+        (horse) => horse.name,
+      ),
+    [sampleHorses, period],
+  );
+
+  const orderedStalls = useMemo(
+    () =>
+      sampleStalls &&
+      sortRowsByAttention(
+        sampleStalls,
+        (entry) => (period === "weekly" ? entry.weekly.verdict : entry.data.verdict),
+        (entry) => entry.name,
+      ),
+    [sampleStalls, period],
+  );
+
+  const orderedInStall = useMemo(
+    () =>
+      sampleInStall &&
+      sortRowsByAttention(
+        sampleInStall,
+        (entry) => (period === "weekly" ? entry.weekly.verdict : entry.data.verdict),
+        (entry) => entry.name,
+      ),
+    [sampleInStall, period],
+  );
+
   return (
     <SectionCard testID="for-you-behavior-tracker">
       <SectionHeader
@@ -478,13 +622,59 @@ export function BehaviorTrackerCard({
         }
       />
 
-      {selected?.id === "people-in-stall" && sampleStalls ? (
+      {selected?.id === "in-stall" && orderedInStall ? (
         <WeeklyDetailProvider>
           <View
             testID="for-you-tracker-chart"
             onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
           >
-            {sampleStalls.map((entry, index) => (
+            {orderedInStall.map((entry, index) => (
+              <View
+                key={entry.name}
+                style={
+                  index > 0
+                    ? {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: colors.divider,
+                      }
+                    : undefined
+                }
+              >
+                {period === "weekly" ? (
+                  <HorseInStallWeekRow
+                    entityName={entry.name}
+                    summary={entry.weekly}
+                    width={rowWidth}
+                  />
+                ) : (
+                  <HorseInStallRow
+                    entityName={entry.name}
+                    data={entry.data}
+                    averageSeconds={entry.avg}
+                    usualCurve={entry.range}
+                    width={rowWidth}
+                  />
+                )}
+              </View>
+            ))}
+            <Text
+              style={[
+                type.footnote,
+                styles.sampleNotice,
+                { color: colors.tertiary },
+              ]}
+            >
+              Sample data — not this stall
+            </Text>
+          </View>
+        </WeeklyDetailProvider>
+      ) : selected?.id === "people-in-stall" && orderedStalls ? (
+        <WeeklyDetailProvider>
+          <View
+            testID="for-you-tracker-chart"
+            onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
+          >
+            {orderedStalls.map((entry, index) => (
               <View
                 key={entry.name}
                 style={
@@ -524,13 +714,13 @@ export function BehaviorTrackerCard({
             </Text>
           </View>
         </WeeklyDetailProvider>
-      ) : selected?.id === "lying-down" && sampleHorses ? (
+      ) : selected?.id === "lying-down" && orderedHorses ? (
         <WeeklyDetailProvider>
           <View
             testID="for-you-tracker-chart"
             onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
           >
-            {sampleHorses.map((horse, index) => (
+            {orderedHorses.map((horse, index) => (
               <View
                 key={horse.name}
                 style={

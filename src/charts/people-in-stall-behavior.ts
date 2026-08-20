@@ -125,16 +125,24 @@ export function buildPeopleInStallWeek({
     zone,
     // Same rule as Lying Down: no verdict without the history to back one, and
     // an absence of observations is never "usual".
-    verdict: !enoughHistory
-      ? today?.totalSeconds == null
+    //
+    // A partly observed day is included in that, for the same reason: its total
+    // is an undercount, so judging it against a whole day's normal compares two
+    // different things. The row would otherwise say "the monitor was offline"
+    // and badge the day "Usual" in the same breath.
+    verdict:
+      today?.totalSeconds == null
         ? 'no-data'
-        : 'unknown'
-      : lyingDownVerdict({
-          deviationPercent: deviationPercentOf(today?.totalSeconds ?? null, usualByNowSeconds),
-          thresholdPercent,
-          valueSeconds: today?.totalSeconds ?? null,
-          usualSeconds: usualByNowSeconds,
-        }),
+        : today.unobserved.length > 0
+          ? 'incomplete'
+          : !enoughHistory
+            ? 'unknown'
+            : lyingDownVerdict({
+                deviationPercent: deviationPercentOf(today.totalSeconds, usualByNowSeconds),
+                thresholdPercent,
+                valueSeconds: today.totalSeconds,
+                usualSeconds: usualByNowSeconds,
+              }),
   };
 }
 

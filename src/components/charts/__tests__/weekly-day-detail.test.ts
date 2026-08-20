@@ -22,6 +22,8 @@ function day(overrides: Partial<LyingDownWeeklyDay> = {}): LyingDownWeeklyDay {
     isToday: false,
     verdict: 'usual',
     coverage: 'observed',
+    start: DateTime.fromISO(MONDAY, { zone: ZONE }).set({ hour: 6 }).toSeconds(),
+    end: DateTime.fromISO(MONDAY, { zone: ZONE }).plus({ days: 1 }).set({ hour: 6 }).toSeconds(),
     bouts: [
       stretch(at(7, 2), at(7, 40)),
       stretch(at(12, 0), at(12, 30)),

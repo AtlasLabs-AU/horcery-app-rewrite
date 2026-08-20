@@ -63,8 +63,12 @@ export interface Absence {
 export interface HorseInStallDay {
   /** Seconds in the stall. `null` when the day was not observed at all. */
   totalSeconds: number | null;
+  /** Stretches the horse was in the stall — the filled part of the strip. */
+  inStall: { enter: number; exit: number }[];
   /** Confirmed absences. Empty when the day is only partly recorded. */
   absences: Absence[];
+  /** Stretches the monitor did not report — drawn apart from being out. */
+  unobserved: { enter: number; exit: number }[];
   /** True when any stretch of the day went unreported. */
   partlyRecorded: boolean;
 }
@@ -121,22 +125,24 @@ export function buildHorseInStallWeek({
 
   const day = week.today;
   const upTo = day ? Math.min(day.nextMidnight, now.toSeconds()) : 0;
-  const partlyRecorded = day ? hasGaps(result, day.start, upTo) : false;
+  const unobserved = day ? gapsIn(result, day.start, upTo) : [];
 
   const today: HorseInStallDay | null = day
     ? {
         totalSeconds: day.totalSeconds,
+        inStall: day.bouts.map((bout) => ({ enter: bout.enter, exit: bout.exit })),
         // Suppressed on a partly recorded day: we cannot tell an absence from
         // an outage, and guessing is the failure this chart exists to avoid.
         absences:
-          day.totalSeconds === null || partlyRecorded
+          day.totalSeconds === null || unobserved.length > 0
             ? []
             : absencesFrom(
                 day.bouts.map((bout) => ({ enter: bout.enter, exit: bout.exit })),
                 day.start,
                 upTo,
               ),
-        partlyRecorded,
+        unobserved,
+        partlyRecorded: unobserved.length > 0,
       }
     : null;
 
@@ -148,16 +154,24 @@ export function buildHorseInStallWeek({
     today,
     usualByNowSeconds,
     zone,
-    verdict: !enoughHistory
-      ? today?.totalSeconds == null
+    // A partly recorded day is an UNDERCOUNT, so comparing it against a whole
+    // day's normal is comparing two different things. Left in, the row said
+    // "Some readings are missing" and badged the same day "Usual" — a reassuring
+    // verdict drawn from data we admitted was incomplete, which is the failure
+    // this chart is meant to close (seen on device, 2026-08-20).
+    verdict:
+      today?.totalSeconds == null
         ? 'no-data'
-        : 'unknown'
-      : lyingDownVerdict({
-          deviationPercent: deviationPercentOf(today?.totalSeconds ?? null, usualByNowSeconds),
-          thresholdPercent,
-          valueSeconds: today?.totalSeconds ?? null,
-          usualSeconds: usualByNowSeconds,
-        }),
+        : today.partlyRecorded
+          ? 'incomplete'
+          : !enoughHistory
+            ? 'unknown'
+            : lyingDownVerdict({
+                deviationPercent: deviationPercentOf(today.totalSeconds, usualByNowSeconds),
+                thresholdPercent,
+                valueSeconds: today.totalSeconds,
+                usualSeconds: usualByNowSeconds,
+              }),
   };
 }
 
@@ -252,8 +266,21 @@ export function absencesCaption(day: HorseInStallDay | null, zone: string): stri
   )}`;
 }
 
-/** Whether any stretch between `from` and `to` went unreported. */
-function hasGaps(result: PrometheusRangeSeries[], from: number, to: number): boolean {
+/**
+ * Stretches between `from` and `to` the monitor did not report.
+ *
+ * The cadence is measured from the data rather than assumed: these queries have
+ * shipped at 30 s, 60 s and 90 s steps, so a hardcoded step would silently stop
+ * detecting gaps the day someone tuned the query. A gap counts as an outage at
+ * four times the usual spacing — Prometheus drops the odd scrape under load, and
+ * a chart that cried "offline" at every missed sample would be ignored within a
+ * week.
+ */
+function gapsIn(
+  result: PrometheusRangeSeries[],
+  from: number,
+  to: number,
+): { enter: number; exit: number }[] {
   const stamps = [
     ...new Set(
       result.flatMap((series) =>
@@ -262,16 +289,20 @@ function hasGaps(result: PrometheusRangeSeries[], from: number, to: number): boo
     ),
   ].sort((a, b) => a - b);
 
-  if (stamps.length === 0) return to > from;
+  if (stamps.length === 0) return to > from ? [{ enter: from, exit: to }] : [];
 
-  // Cadence measured from the data, not assumed: these queries have shipped at
-  // 30 s, 60 s and 90 s steps, so a hardcoded step would stop detecting gaps the
-  // day someone tuned the query.
   const steps = stamps.slice(1).map((at, i) => at - stamps[i]!).sort((a, b) => a - b);
   const median = steps[Math.floor(steps.length / 2)] ?? 60;
   const limit = Math.max(median * 4, MIN_ABSENCE_SECONDS);
 
-  if (stamps[0]! - from > limit) return true;
-  if (to - stamps.at(-1)! > limit) return true;
-  return stamps.some((at, i) => i > 0 && at - stamps[i - 1]! > limit);
+  const gaps: { enter: number; exit: number }[] = [];
+  if (stamps[0]! - from > limit) gaps.push({ enter: from, exit: stamps[0]! });
+  for (let i = 1; i < stamps.length; i++) {
+    if (stamps[i]! - stamps[i - 1]! > limit) {
+      gaps.push({ enter: stamps[i - 1]!, exit: stamps[i]! });
+    }
+  }
+  const last = stamps.at(-1)!;
+  if (to - last > limit) gaps.push({ enter: last, exit: to });
+  return gaps;
 }

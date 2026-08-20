@@ -198,7 +198,22 @@ export function inStallDisagrees(day: LyingDownDay): boolean {
  * `unusual` is the honest middle: today is far enough from this horse's normal
  * to be worth a look, but we cannot say which way. See `lyingDownVerdict`.
  */
-export type Verdict = 'usual' | 'low' | 'high' | 'unusual' | 'no-data' | 'unknown';
+/**
+ * `unknown` and `incomplete` both mean "not judged", and they are kept apart
+ * because they give the customer different reasons. `unknown` is a stall too new
+ * to have a normal; `incomplete` is a day whose readings have holes in them, so
+ * the total is an undercount and comparing it to a whole day's normal would
+ * compare two different things. Badging the second "No history" was wrong on
+ * screen and had to be fixed (2026-08-20).
+ */
+export type Verdict =
+  | 'usual'
+  | 'low'
+  | 'high'
+  | 'unusual'
+  | 'no-data'
+  | 'unknown'
+  | 'incomplete';
 
 /**
  * Percent away from this horse's own normal before today counts as unusual.
@@ -556,6 +571,9 @@ export interface LyingDownWeeklyDay {
   coverage: DayCoverage;
   /** The day's individual stretches, for the tapped-bar detail. */
   bouts: LyingDownBout[];
+  /** Barn-day bounds, so a detail panel can reason about the gaps too. */
+  start: EpochSeconds;
+  end: EpochSeconds;
 }
 
 export interface LyingDownWeeklySummary {
@@ -618,6 +636,8 @@ export function buildLyingDownWeekly(
       isToday: day.isToday,
       coverage: day.coverage,
       bouts: day.bouts,
+      start: day.start,
+      end: day.end,
       verdict: day.isToday
         ? 'unknown'
         : lyingDownVerdict({

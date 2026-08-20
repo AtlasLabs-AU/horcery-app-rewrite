@@ -25,6 +25,9 @@ export const BADGE: Record<Verdict, { label: string; tone: BadgeTone }> = {
   unusual: { label: 'Unusual', tone: 'deviation' },
   'no-data': { label: 'No data', tone: 'absent' },
   unknown: { label: 'No history', tone: 'absent' },
+  // Readings have holes, so the total is an undercount. A different reason from
+  // "No history", and the customer is owed the right one.
+  incomplete: { label: 'Incomplete', tone: 'absent' },
 };
 
 export function badgeStyleFor(tone: BadgeTone, colors: TokenColors): ViewStyle {

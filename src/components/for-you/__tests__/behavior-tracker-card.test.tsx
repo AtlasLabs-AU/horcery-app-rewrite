@@ -133,6 +133,32 @@ describe('BehaviorTrackerCard', () => {
     expect(screen.getAllByTestId('weekly-day-detail')).toHaveLength(1);
   });
 
+  /**
+   * Inakshi, 2026-08-20: unusual tags to the top, everything below alphabetical.
+   * A card can carry twenty stalls; the ones needing attention must not be
+   * buried in the middle of an alphabetical list.
+   */
+  it('puts the rows needing attention first', async () => {
+    mockPreviews.lyingDownSampleData = true;
+    await render(<BehaviorTrackerCard />);
+
+    // Read the row names in the order they are actually rendered.
+    const texts: string[] = [];
+    const walk = (node: any) => {
+      if (typeof node?.props?.children === 'string') texts.push(node.props.children);
+      (node?.children ?? []).forEach(walk);
+    };
+    walk(screen.root);
+
+    // Juniper (one bad day) and Willow (short every day) are the Low rows.
+    const at = (name: string) => texts.indexOf(name);
+    expect(at('Juniper')).toBeLessThan(at('Apollo'));
+    expect(at('Willow')).toBeLessThan(at('Apollo'));
+    // ...and the untroubled rows stay alphabetical below them.
+    expect(at('Apollo')).toBeLessThan(at('Bubbles'));
+    expect(at('Bubbles')).toBeLessThan(at('Pepper'));
+  });
+
   it('closes the open panel when something other than a day is tapped', async () => {
     mockPreviews.peopleInStallSampleData = true;
     await render(<BehaviorTrackerCard />);

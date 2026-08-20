@@ -69,4 +69,11 @@ export const PREVIEWS = {
    * shown to Inakshi while the other is being reworked.
    */
   peopleInStallSampleData: __DEV__ && optedIn,
+
+  /**
+   * Horse in Stall drawn from FIXTURE data, same reason and same visible
+   * marker. Separate again so the three behaviour charts can be reviewed and
+   * reworked independently.
+   */
+  horseInStallSampleData: __DEV__ && optedIn,
 } as const;

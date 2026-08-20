@@ -33,7 +33,9 @@ function series(outRanges: [string, string][]): PrometheusRangeSeries[] {
 
 const day = (overrides: Partial<HorseInStallDay> = {}): HorseInStallDay => ({
   totalSeconds: 18 * 3600,
+  inStall: [],
   absences: [],
+  unobserved: [],
   partlyRecorded: false,
   ...overrides,
 });
@@ -176,5 +178,28 @@ describe('buildHorseInStallWeek', () => {
     expect(week.today?.partlyRecorded).toBe(true);
     expect(week.today?.absences).toEqual([]);
     expect(absencesCaption(week.today, ZONE)).toBe('Partly recorded — time out is unknown');
+  });
+
+  it('badges a partly recorded day Incomplete, not Usual and not No history', () => {
+    // Seen on device 2026-08-20: the row said "Some readings are missing" and
+    // badged the same day "Usual". A partly recorded total is an undercount, so
+    // judging it against a whole day's normal compares two different things.
+    const raw = series([])[0]!;
+    const holeFrom = ts('2026-08-19T11:40:00');
+    const holeTo = ts('2026-08-19T15:30:00');
+    const week = buildHorseInStallWeek({
+      result: [{ ...raw, values: raw.values.filter(([t]) => t < holeFrom || t > holeTo) }],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+      usualCurve: [
+        { fractionOfDay: 0, lowSeconds: 0, highSeconds: 0 },
+        { fractionOfDay: 1, lowSeconds: 16 * 3600, highSeconds: 22 * 3600 },
+      ],
+      entityCreatedAt: NOW.minus({ months: 6 }).toISO(),
+    });
+    // 'incomplete' rather than 'unknown': both mean "not judged", but they give
+    // the customer different REASONS, and "No history" would be the wrong one.
+    expect(week.verdict).toBe('incomplete');
   });
 });

@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 
+import { absencesFrom, MAX_LISTED_ABSENCES } from '@/charts/horse-in-stall-behavior';
 import { formatDuration, type LyingDownWeeklyDay } from '@/charts/lying-down';
 
 /**
@@ -48,10 +49,28 @@ export const MAX_LISTED_STRETCHES = 3;
 export interface StretchNoun {
   singular: string;
   plural: string;
+  /**
+   * Which side of the data the detail line describes.
+   *
+   * `presence` (the default) lists the stretches themselves — right when the
+   * stretch is the event, as a person entering a stall is.
+   *
+   * `absence` lists the GAPS between them, for a behaviour whose stretches are
+   * the resting state. A horse is in its stall nearly all day; saying so is not
+   * news, and the question a short day provokes is when it was out (Inakshi,
+   * 2026-08-20).
+   */
+  frame?: 'presence' | 'absence';
 }
 
 export const VISITS: StretchNoun = { singular: 'visit', plural: 'visits' };
 export const RESTS: StretchNoun = { singular: 'rest', plural: 'rests' };
+/** Horse in Stall: the stretches are in-stall time, so the detail names the gaps. */
+export const IN_STALL: StretchNoun = {
+  singular: 'time out',
+  plural: 'times out',
+  frame: 'absence',
+};
 
 export function weeklyDayDetail(
   day: LyingDownWeeklyDay,
@@ -79,7 +98,10 @@ export function weeklyDayDetail(
   // Watched all day and nobody came. The opposite claim to the one above, and
   // the reason both need words rather than a shared empty bar.
   if (day.bouts.length === 0) {
-    return { title: `${label} · ${total}`, detail: `No ${noun.plural}` };
+    return {
+      title: `${label} · ${total}`,
+      detail: noun.frame === 'absence' ? 'Out all day' : `No ${noun.plural}`,
+    };
   }
 
   // Part of the day is missing, so the figure is real but not comparable with a
@@ -88,6 +110,25 @@ export function weeklyDayDetail(
   if (day.coverage === 'partial') return { title: `${label} · ${total}` };
 
   const at = (seconds: number) => DateTime.fromSeconds(seconds, { zone }).toFormat('h:mm a');
+
+  // A behaviour whose stretches are the resting state describes the gaps.
+  if (noun.frame === 'absence') {
+    const absences = absencesFrom(day.bouts, day.start, day.end);
+    if (absences.length === 0) return { title: `${label} · ${total}`, detail: 'In all day' };
+
+    const detail =
+      absences.length <= MAX_LISTED_ABSENCES
+        ? `Out ${absences
+            .map((absence) =>
+              absence.back === null ? `from ${at(absence.out)}` : `${at(absence.out)} – ${at(absence.back)}`,
+            )
+            .join(' and ')}`
+        : `Out ${absences.length} times · first ${at(absences[0]!.out)}, last ${at(
+            absences.at(-1)!.out,
+          )}`;
+    return { title: `${label} · ${total}`, detail };
+  }
+
   const count = day.bouts.length;
   const word = count === 1 ? noun.singular : noun.plural;
 
