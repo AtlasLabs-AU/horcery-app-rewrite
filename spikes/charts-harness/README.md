@@ -5,7 +5,7 @@ and error states behind another, identical
 geometry, all drawing the app's own `src/charts` domain layer.
 
 ```
-npm ci                                  # own dependencies, incl. both renderers
+npm install                             # own dependencies, incl. both renderers
 npx expo prebuild --platform ios        # or android
 npx expo run:ios                        # debug — for correctness / parity
 npx expo run:ios --configuration Release   # what performance is measured on

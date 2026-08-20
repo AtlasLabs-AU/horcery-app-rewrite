@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Lockfile removed 2026-08-20: the renderer decision is made, this harness is
+# a finished spike, and its lockfile duplicated every Dependabot alert on the
+# repo. Re-create locally with `npm install` if the spike is ever revisited.
+package-lock.json
