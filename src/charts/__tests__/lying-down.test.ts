@@ -58,6 +58,20 @@ describe('buildLyingDownWeek', () => {
     expect(week.boutCount).toBe(2);
   });
 
+  it('records freshness from the newest real sample and ignores future timestamps', () => {
+    const result = series([]);
+    result[0]!.values.push([NOW.plus({ hours: 2 }).toSeconds(), '0']);
+    const week = buildLyingDownWeek({
+      result,
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+
+    expect(week.asOf).toBe(NOW.toSeconds());
+    expect(week.lastObservedAt).toBe(NOW.toSeconds());
+  });
+
   it('NEVER reports missing observations as zero lying down', () => {
     // Samples stop after the 16th — the monitor went offline, the horse did not
     // stop lying down. A zero here would read as a welfare alarm.
@@ -485,6 +499,14 @@ describe('buildLyingDownWeekly', () => {
     expect(summary.days).toHaveLength(7);
     expect(summary.days.at(-1)?.isToday).toBe(true);
     expect(summary.days.filter((day) => day.isToday)).toHaveLength(1);
+  });
+
+  it('preserves data health for the weekly renderer', () => {
+    const source = build(steadyWeek());
+    const summary = buildLyingDownWeekly({ ...source, state: 'stale' });
+    expect(summary.state).toBe('stale');
+    expect(summary.asOf).toBe(source.asOf);
+    expect(summary.lastObservedAt).toBe(source.lastObservedAt);
   });
 
   it('never judges today, however its part-day total looks', () => {

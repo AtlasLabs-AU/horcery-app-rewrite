@@ -126,6 +126,10 @@ export interface LyingDownWeek {
   /** Today's cumulative line, oldest first. Empty when today has no data. */
   cumulative: CumulativePoint[];
   state: LyingDownState;
+  /** Clock used to build this presentation, for deterministic freshness copy. */
+  asOf: EpochSeconds;
+  /** Newest source sample at or before `asOf`; null when none was observed. */
+  lastObservedAt: EpochSeconds | null;
   zone: string;
   /** Oldest first, matching the occupancy chart's row order. */
   days: LyingDownDay[];
@@ -352,8 +356,13 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   // was down. Without this, an offline monitor is indistinguishable from a
   // horse that never lay down.
   const observedDays = new Set<string>();
+  let lastObservedAt: EpochSeconds | null = null;
+  const asOf = now.toSeconds();
   for (const raw of result) {
     for (const [timestamp] of raw.values) {
+      if (timestamp <= asOf && (lastObservedAt === null || timestamp > lastObservedAt)) {
+        lastObservedAt = timestamp;
+      }
       const day = timeline.days.find((d) => timestamp >= d.start && timestamp < d.nextMidnight);
       if (day) observedDays.add(day.key);
     }
@@ -393,6 +402,8 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
 
   return {
     state,
+    asOf,
+    lastObservedAt,
     zone,
     dayStartHour,
     days,
@@ -531,6 +542,10 @@ export interface LyingDownWeeklyDay {
 }
 
 export interface LyingDownWeeklySummary {
+  /** Preserved from the source week so every renderer presents data health. */
+  state: LyingDownState;
+  asOf: EpochSeconds;
+  lastObservedAt: EpochSeconds | null;
   days: LyingDownWeeklyDay[];
   /**
    * This week's average across COMPLETE days. Today is excluded: a day three
@@ -608,6 +623,9 @@ export function buildLyingDownWeekly(
       : usualValues.reduce((sum, value) => sum + value, 0) / usualValues.length;
 
   return {
+    state: week.state,
+    asOf: week.asOf,
+    lastObservedAt: week.lastObservedAt,
     days,
     dailyAverageSeconds,
     usualDailyAverageSeconds,

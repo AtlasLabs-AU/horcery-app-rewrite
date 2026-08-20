@@ -26,6 +26,22 @@ jest.mock('expo-video', () => {
   };
 });
 
+// Victory Native and Skia render through a native canvas. Component tests own
+// composition, labels and state policy; the real adapter is typechecked and
+// bundled for both platforms, then visually verified on-device. Keeping this
+// mock at the adapter boundary prevents every parent-component test from
+// importing Skia's ESM/native runtime while preserving a queryable plot node.
+jest.mock('@/components/charts/victory-lying-down-adapter', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    VictoryLyingDownDailyPlot: () =>
+      React.createElement(View, { testID: 'lying-down-daily-plot' }),
+    VictoryLyingDownWeeklyPlot: () =>
+      React.createElement(View, { testID: 'lying-down-weekly-plot' }),
+  };
+});
+
 // Reanimated 4 boots react-native-worklets at import time, which needs a native
 // module jest does not have — the failure is "Cannot read properties of
 // undefined (reading 'loadUnpackers')" from the import line, before a single

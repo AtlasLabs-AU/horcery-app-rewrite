@@ -38,3 +38,10 @@ export function badgeInkFor(tone: BadgeTone, colors: TokenColors): TextStyle['co
   if (tone === 'quiet') return colors.secondary;
   return colors.tertiary;
 }
+
+/** One colour rule for every lying-down renderer. Severity never changes it. */
+export function lyingDownSeriesColor(verdict: Verdict, colors: TokenColors): string {
+  return verdict === 'low' || verdict === 'high' || verdict === 'unusual'
+    ? colors.chartDeviation
+    : colors.chartData;
+}

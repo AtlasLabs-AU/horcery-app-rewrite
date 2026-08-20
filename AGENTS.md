@@ -16,6 +16,11 @@ Before proposing, changing or implementing any chart or chart-like score, read
 Victory, author PromQL or interpret raw Prometheus responses. Unknown meaning,
 units, thresholds or ownership blocks implementation; do not guess.
 
+For every chart review, work through
+`docs/architecture/CHART_REVIEW_CHECKLIST.md`. It is the short reusable gate for
+the accuracy, state, architecture, layout and device failures already found in
+the rebuild.
+
 # Check before you record ignorance
 
 Before writing **"pending"**, **"unknown"**, **"no owner"**, **"not approved"**,
