@@ -15,11 +15,24 @@ interface Freshness {
   lastObservedAt: number | null;
 }
 
-/** One semantic state policy shared by the daily and weekly views. */
+/**
+ * One semantic state policy shared by the daily and weekly views, and now by
+ * People in Stall as well.
+ *
+ * `readings` names what is missing, because the message is read by someone who
+ * is looking at one specific chart: "No lying-down readings" and "No stall visit
+ * readings" are different facts, and a shared component that says the wrong one
+ * is worse than a vague one. It shipped saying "lying-down" on the People in
+ * Stall chart, which is how this parameter came to exist.
+ *
+ * (The function keeps its lying-down name for now; renaming it would touch every
+ * caller for no behavioural gain, and is worth doing when the third chart lands.)
+ */
 export function lyingDownStatePresentation(
   state: LyingDownState,
   verdict: Verdict,
   freshness?: Freshness,
+  readings: string = 'lying-down readings',
 ): LyingDownStatePresentation {
   const measured = BADGE[verdict];
   const current = (message: string | null, busy = false): LyingDownStatePresentation => ({
@@ -37,7 +50,7 @@ export function lyingDownStatePresentation(
         badgeTone: 'absent',
         blocksContent: true,
         busy: true,
-        message: 'Loading lying-down readings',
+        message: `Loading ${readings}`,
       };
     case 'no-data':
       return {
@@ -45,7 +58,7 @@ export function lyingDownStatePresentation(
         badgeTone: 'absent',
         blocksContent: true,
         busy: false,
-        message: 'No lying-down readings for this period',
+        message: `No ${readings} for this period`,
       };
     case 'out-of-stall':
       return {
@@ -61,7 +74,7 @@ export function lyingDownStatePresentation(
         badgeTone: 'absent',
         blocksContent: true,
         busy: false,
-        message: 'Lying-down readings are temporarily unavailable',
+        message: 'These readings are temporarily unavailable',
       };
     case 'unsupported':
       return {
@@ -69,10 +82,10 @@ export function lyingDownStatePresentation(
         badgeTone: 'absent',
         blocksContent: true,
         busy: false,
-        message: 'This monitor does not support lying-down tracking',
+        message: `This monitor does not report ${readings}`,
       };
     case 'refreshing':
-      return current('Updating lying-down readings', true);
+      return current(`Updating ${readings}`, true);
     case 'stale': {
       const age =
         freshness?.lastObservedAt === null || freshness?.lastObservedAt === undefined

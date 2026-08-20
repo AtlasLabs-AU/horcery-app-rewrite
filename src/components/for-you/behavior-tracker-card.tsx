@@ -7,6 +7,19 @@ import { SplitRow } from '@/components/ui/split-row';
 import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
 import { LyingDownRow } from '@/components/charts/lying-down-row';
 import { LyingDownWeekRow } from '@/components/charts/lying-down-week-row';
+import { PeopleInStallRow } from '@/components/charts/people-in-stall-row';
+import { PeopleInStallWeekRow } from '@/components/charts/people-in-stall-week-row';
+import {
+  buildPeopleInStallWeek,
+  buildPeopleInStallWeekly,
+} from '@/charts/people-in-stall-behavior';
+import {
+  barelyVisited,
+  busyDay,
+  monitorGapMidday,
+  noData as peopleNoData,
+  routineWeek,
+} from '@/charts/fixtures/people-in-stall-behavior';
 import {
   buildLyingDownWeek,
   buildLyingDownWeekly,
@@ -269,6 +282,83 @@ export function BehaviorTrackerCard({
     ];
   }, [zone, dayStartHour]);
 
+  /**
+   * Sample stalls for People in Stall. Same construction and the same rules as
+   * the sample horses: a stated normal that does not come from the week being
+   * judged, an established stall so the history gates do not fire, and one
+   * fixture per state worth seeing — routine, high traffic, barely visited, a
+   * mid-day monitor outage, and nothing at all.
+   */
+  const sampleStalls = useMemo(() => {
+    if (!PREVIEWS.peopleInStallSampleData) return null;
+    const now = DateTime.now()
+      .setZone(zone)
+      .startOf('day')
+      .plus({ hours: dayStartHour === 0 ? 23 : dayStartHour - 1 });
+    const stallCreatedAt = now.minus({ months: 6 }).toISO();
+    const selectedDate = now.minus({ hours: dayStartHour }).toFormat('yyyy-MM-dd');
+
+    // Human presence clusters at feed times, so the usual curve steepens there
+    // rather than rising evenly. In production this comes from Data Science.
+    const curve = (avg: number) =>
+      [
+        [0, 0],
+        [0.08, 0.3],
+        [0.3, 0.42],
+        [0.5, 0.62],
+        [0.55, 0.78],
+        [1, 1],
+      ].map(([fractionOfDay, share]) => ({
+        fractionOfDay: fractionOfDay!,
+        lowSeconds: avg * share! * 0.75,
+        highSeconds: avg * share! * 1.25,
+      }));
+
+    const MIN = 60;
+    const stall = (
+      name: string,
+      result: ReturnType<typeof routineWeek>,
+      usualDailySeconds: number,
+    ) => {
+      const range = curve(usualDailySeconds);
+      const data = buildPeopleInStallWeek({
+        result,
+        selectedDate,
+        zone,
+        dayStartHour,
+        now,
+        usualCurve: range,
+        stallCreatedAt,
+      });
+      return {
+        name,
+        data,
+        avg: usualDailySeconds,
+        range,
+        weekly: buildPeopleInStallWeekly(data.week, {
+          usualSecondsByWeekday: Object.fromEntries(
+            [1, 2, 3, 4, 5, 6, 7].map((d) => [d, usualDailySeconds]),
+          ),
+          stallCreatedAt,
+          now,
+        }),
+      };
+    };
+
+    return [
+      // The barn routine: morning feed, midday check, evening feed.
+      stall('Stall 4 · Apollo', routineWeek(now), 95 * MIN),
+      // A stall under close attention — the case the caption must not overflow.
+      stall('Stall 2 · Storm', busyDay(now), 95 * MIN),
+      // One short visit and nothing since, against a normal 95 minutes.
+      stall('Stall 7 · Juniper', barelyVisited(now), 95 * MIN),
+      // The monitor dropped out over lunch and came back mid-afternoon.
+      stall('Stall 5 · Bubbles', monitorGapMidday(now), 95 * MIN),
+      // Nothing came back at all — never drawn as an empty stall.
+      stall('Stall 9 · Pepper', peopleNoData, 95 * MIN),
+    ];
+  }, [zone, dayStartHour]);
+
   return (
     <SectionCard testID="for-you-behavior-tracker">
       <SectionHeader
@@ -347,7 +437,40 @@ export function BehaviorTrackerCard({
         }
       />
 
-      {selected?.id === 'lying-down' && sampleHorses ? (
+      {selected?.id === 'people-in-stall' && sampleStalls ? (
+        <View
+          testID="for-you-tracker-chart"
+          onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}>
+          {sampleStalls.map((entry, index) => (
+            <View
+              key={entry.name}
+              style={
+                index > 0
+                  ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider }
+                  : undefined
+              }>
+              {period === 'weekly' ? (
+                <PeopleInStallWeekRow
+                  stallName={entry.name}
+                  summary={entry.weekly}
+                  width={rowWidth}
+                />
+              ) : (
+                <PeopleInStallRow
+                  stallName={entry.name}
+                  data={entry.data}
+                  averageSeconds={entry.avg}
+                  usualCurve={entry.range}
+                  width={rowWidth}
+                />
+              )}
+            </View>
+          ))}
+          <Text style={[type.footnote, styles.sampleNotice, { color: colors.tertiary }]}>
+            Sample data — not this stall
+          </Text>
+        </View>
+      ) : selected?.id === 'lying-down' && sampleHorses ? (
         <View
           testID="for-you-tracker-chart"
           onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}>

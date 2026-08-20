@@ -62,4 +62,11 @@ export const PREVIEWS = {
    * carries a visible "Sample data" marker whenever this flag renders it.
    */
   lyingDownSampleData: __DEV__ && optedIn,
+
+  /**
+   * People in Stall drawn from FIXTURE data, for the same reason and with the
+   * same visible marker. Separate from the lying-down flag so one chart can be
+   * shown to Inakshi while the other is being reworked.
+   */
+  peopleInStallSampleData: __DEV__ && optedIn,
 } as const;

@@ -48,12 +48,12 @@ describe('LyingDownWeekRow', () => {
     { state: 'partial', message: 'Some readings are missing', blocks: false },
     {
       state: 'unavailable',
-      message: 'Lying-down readings are temporarily unavailable',
+      message: 'These readings are temporarily unavailable',
       blocks: true,
     },
     {
       state: 'unsupported',
-      message: 'This monitor does not support lying-down tracking',
+      message: 'This monitor does not report lying-down readings',
       blocks: true,
     },
   ])('presents $state consistently on the weekly view', async ({ state, message, blocks }) => {
