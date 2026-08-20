@@ -76,4 +76,12 @@ export const PREVIEWS = {
    * reworked independently.
    */
   horseInStallSampleData: __DEV__ && optedIn,
+
+  /**
+   * Reads three named production monitors in a dev-only Protos screen. Unlike
+   * the fixture previews above, this is real data in a dev shell: it exists to
+   * validate the chart's actual pixels before an observation API is available.
+   * The screen labels its source, timezone assumption and read-only status.
+   */
+  liveMonitorPreview: __DEV__ && optedIn,
 } as const;

@@ -62,6 +62,7 @@ describe('preview features', () => {
     expect(flags.sampleForYouData).toBe(true);
     expect(flags.sampleHorsesData).toBe(true);
     expect(flags.sampleAlertsData).toBe(true);
+    expect(flags.liveMonitorPreview).toBe(true);
   });
 
   it('covers every declared flag — a new preview cannot escape this test', () => {

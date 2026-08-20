@@ -230,6 +230,7 @@ Evidence: `npm run check` green at 505 tests / 51 suites; commits `6e26f8f`,
 | 2026-08-19 | Reading drawn as a line, not a filled area | Inakshi | commit `a5af0ba` |
 | 2026-08-19 | Barn day taken from organization `chart_start_time`, fallback 06:00 | Inakshi | commit `97a5e48` |
 | 2026-08-19 | Direction of deviation derived on the phone; threshold stays with Data Science | Inakshi | commit `be2985a` |
+| 2026-08-20 | Added a dev-only, read-only live-preview path (Protos → Live monitors) using sm-1275 / sm-1272 / sm-1212. It uses the shared row and raw range adapter; on 2026-08-20 sm-1275 returned no lying-down series, while sm-1272 and sm-1212 measured 199 min and 171 min in the prior 24 h. | Inakshi / engineering | `src/app/proto-live-charts.tsx`, `src/services/prometheus/monitor-range.ts` |
 
 ## 11. Exceptions and remaining risks
 

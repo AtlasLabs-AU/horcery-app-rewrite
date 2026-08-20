@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { LiveMonitorPreviewLink } from '@/components/protos/live-monitor-preview-link';
 import { Fyp, Spacing } from '@/constants/theme';
 
 /**
@@ -122,6 +123,7 @@ export default function CarouselPrototypes() {
           testID="proto-bottom-sheet-link">
           Bottom Sheet options →
         </Text>
+        <LiveMonitorPreviewLink style={styles.stallsLink} />
         <Text style={styles.title}>Snapshot carousel</Text>
         <Text style={styles.subtitle}>Prototype — text style: {variant}</Text>
 
