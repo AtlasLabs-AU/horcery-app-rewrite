@@ -688,3 +688,47 @@ describe('defects found by audit', () => {
     expect(hasEnoughHistory(createdAt, 'daily', now)).toBe(true);
   });
 });
+
+/**
+ * One rule at both scales (Inakshi, 2026-08-20).
+ *
+ * A DAY with holes in its readings is badged Incomplete rather than compared
+ * against a normal. A WEEK with a missing day is the same statement one level
+ * up, so it gets the same answer — rather than a minimum-days threshold nobody
+ * has approved.
+ */
+describe('weekly verdict when days are missing', () => {
+  const usualByWeekday = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((d) => [d, 5700]));
+
+  it('judges a week only when every finished day was observed', () => {
+    const week = buildLyingDownWeek({
+      result: series([['2026-08-18T22:00:00', '2026-08-18T23:30:00']]),
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    const summary = buildLyingDownWeekly(week, { usualSecondsByWeekday: usualByWeekday });
+    expect(summary.verdict).not.toBe('incomplete');
+  });
+
+  it('withholds the weekly badge when a day went unobserved', () => {
+    const full = series([['2026-08-18T22:00:00', '2026-08-18T23:30:00']])[0]!;
+    // A whole BARN day, 06:00 to 06:00 — a calendar day leaves samples either
+    // side of the rollover, so the day still counts as observed.
+    const gapFrom = DateTime.fromISO('2026-08-16T06:00:00', { zone: ZONE }).toSeconds();
+    const gapTo = DateTime.fromISO('2026-08-17T06:00:00', { zone: ZONE }).toSeconds();
+    const week = buildLyingDownWeek({
+      result: [{ ...full, values: full.values.filter(([t]) => t < gapFrom || t >= gapTo) }],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    const summary = buildLyingDownWeekly(week, { usualSecondsByWeekday: usualByWeekday });
+
+    expect(summary.verdict).toBe('incomplete');
+    // The average over the days we DID see is still reported, with its count —
+    // that is a description of what was observed, not a judgement.
+    expect(summary.observedDays).toBeLessThan(6);
+    expect(summary.dailyAverageSeconds).not.toBeNull();
+  });
+});

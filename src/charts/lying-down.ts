@@ -672,12 +672,30 @@ export function buildLyingDownWeekly(
     dailyAverageSeconds,
     usualDailyAverageSeconds,
     observedDays: complete.length,
-    verdict: lyingDownVerdict({
-      deviationPercent: deviationPercentOf(dailyAverageSeconds, usualDailyAverageSeconds),
-      thresholdPercent,
-      valueSeconds: dailyAverageSeconds,
-      usualSeconds: usualDailyAverageSeconds,
-    }),
+    /**
+     * A week missing any day is not judged, exactly as a DAY missing any
+     * readings is not judged (Inakshi, 2026-08-20 — "are we overthinking
+     * this?"). One rule at both scales, so a customer learns it once, and no
+     * threshold nobody has approved.
+     *
+     * The average over the days we did see is still shown, with its own count
+     * beside it ("a day, over the 4 days we could see"). That is a description
+     * of what was observed. A badge is a judgement against a normal, and a
+     * four-day average is not comparable with a seven-day one.
+     *
+     * This is deliberately strict: one dead day removes the week's badge. If
+     * that proves too strict in real barns, THAT is the moment to ask Data
+     * Science for a minimum — with evidence, rather than inventing a number now.
+     */
+    verdict:
+      complete.length < days.filter((day) => !day.isToday).length
+        ? 'incomplete'
+        : lyingDownVerdict({
+            deviationPercent: deviationPercentOf(dailyAverageSeconds, usualDailyAverageSeconds),
+            thresholdPercent,
+            valueSeconds: dailyAverageSeconds,
+            usualSeconds: usualDailyAverageSeconds,
+          }),
   };
 }
 

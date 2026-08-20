@@ -131,10 +131,15 @@ verbatim in intent because it reverses an assumption two charts were built on:
    but "No history" (a stall too new to have a normal) is the wrong reason to
    give for a day whose readings have holes in them.
 
-**Still open:** the WEEKLY badge is still computed when some days are missing —
-it averages the days it could see and says so in the subline ("a day, over the
-4 days we could see"). Whether four observed days out of six is enough to
-support a weekly verdict is a Data Science question, not one to settle in code.
+4. **A week missing any finished day is not judged either** (Inakshi,
+   2026-08-20, "are we overthinking this?"). The same rule as the day, one
+   level up — no minimum-days threshold, because inventing one would be a
+   number nobody has approved. The average over the days we DID see is still
+   shown with its own count ("a day, over the 4 days we could see"): that is a
+   description of what was observed, not a judgement against a normal.
+   Deliberately strict — one dead day removes the week's badge. If that proves
+   too strict in real barns, that is the moment to ask Data Science for a
+   minimum, with evidence.
 
 ## Legacy defects: decision not to raise dev-team tickets (Inakshi, 2026-08-20)
 
