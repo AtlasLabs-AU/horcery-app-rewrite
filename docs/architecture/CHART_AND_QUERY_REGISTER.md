@@ -34,7 +34,7 @@ legacy reference and real monitor data. Absence from the register is not approva
 |---|---|---|---|---|---|---|---|---|---|
 | `horse-lying-down-daily` | For You → Behavior Tracker → Lying Down (Daily), one row per horse | Did this horse rest as much as it normally does today, and if not, which way? | Cumulative line across the barn day, dashed usual reference, observation-coverage strip, verdict badge | **Partial.** Detection query is Data Science's (PR 1928) but carries a one-character correction they have not signed off; the usual curve and the 25% threshold are the shipping app's, not re-approved. Product approved 2026-08-19 | Temporary rebuild adapter; **no live path yet** — fixture-backed behind `PREVIEWS.lyingDownSampleData` | Canonical seconds; displayed h/min. Axis from the organization's `chart_start_time` | Measured 2026-08-19 on sm-1275 / sm-1272 / sm-1212: 2–4 bouts a day, 14–189 min a day, 16–31 bouts a week | [`chart-specs/horse-lying-down-daily.md`](chart-specs/horse-lying-down-daily.md) | **building** |
 | `horse-lying-down-weekly` | For You → Behavior Tracker → Lying Down (Weekly), one row per horse | Has this horse's week been normal for it? | Bar per day, seven days ending today; that weekday's four-week average marked on each bar; verdict badge for the week | **Partial**, as for the daily chart. The four-week weekday average is the shipping app's `weeklyLyingDownAvg`, not re-approved. Product approved 2026-08-19 | Temporary rebuild adapter; **no live path yet** — fixture-backed behind `PREVIEWS.lyingDownSampleData` | Canonical seconds; displayed h/min. Figure is the week's daily average, excluding today | Same monitors and window as the daily chart | [`chart-specs/horse-lying-down-daily.md`](chart-specs/horse-lying-down-daily.md) §12 | **building** |
-| `stall-people-in-stall-daily` | For You → Behavior Tracker → People in Stall (Daily) | How much time did people spend in this stall today, and is that normal for it? | To follow Lying Down: cumulative line, dashed usual, verdict badge. Full spec in progress (GPT) | **meaning-blocked** overall, but the PRODUCT meaning is decided — see "Product decisions" below the table | Not started; will be fixture-backed behind a preview flag | Canonical seconds; displayed h/min | Pending | Spec in progress | **meaning-blocked** |
+| `stall-people-in-stall-daily` | For You → Behavior Tracker → People in Stall (Daily) | How much time did people spend in this stall today, and is that normal for it? | **Decided (Inakshi, 2026-08-19, "Option C"):** cumulative line + dashed usual (Lying Down layout), a visits strip beneath, and a sentence with ACTUAL visit times from the data ("3 visits · 7:05 AM, 12:40 PM, 5:15 PM") — never invented dayparts like "morning". Full spec in progress (GPT) | **meaning-blocked** overall, but the PRODUCT meaning is decided — see "Product decisions" below the table | Not started; will be fixture-backed behind a preview flag | Canonical seconds; displayed h/min | Pending | Spec in progress | **meaning-blocked** |
 | `stall-people-in-stall-weekly` | For You → Behavior Tracker → People in Stall (Weekly) | Has this stall had a normal week of human attention? | To follow Lying Down weekly: bar per day, weekday-average markers, week verdict | As above | As above | As above | Pending | Spec in progress | **meaning-blocked** |
 | `horse-activeness-score` | Horse detail status strip | **To approve** | Score card: Low / Normal / High | Latest Data Science query is version-controlled; full specification/approval record still required | Temporary service adapter | Category boundaries exist in code; semantic wording review remains | Tested during implementation; fixture/evidence link to backfill | Not yet created | **backfill-required** |
 | `horse-temperature-score` | Horse detail status strip | **To approve** | Temperature score card | Sensor query is version-controlled; full specification/approval record still required | Temporary service adapter | Canonical °C; display °C/°F | Fixture/evidence link to backfill | Not yet created | **backfill-required** |
@@ -61,6 +61,16 @@ re-asking:
 
 Customer question (Inakshi, same date): "how much time did people spend inside a
 stall" — time with at least one person present, never a headcount.
+
+4. **Presentation is Option C with actual times.** The Lying Down row layout —
+   cumulative line against the dashed usual — plus a strip showing WHEN people
+   were there, captioned with real clock times from the query's timestamps.
+   Dayparts ("morning", "evening") are forbidden: no one has defined where they
+   start, and inventing the boundary is unapproved meaning. Many visits collapse
+   to "8 visits · first 6:50 AM, last 9:10 PM". A monitor that stopped reporting
+   says so with its offline time ("monitor offline since 9:20 AM"), never a zero.
+5. **Weekly reuses the Lying Down weekly design unchanged** — bar per day,
+   hollow today, weekday-average markers, one badge for the week.
 
 ## Query corrections not yet accepted upstream
 
