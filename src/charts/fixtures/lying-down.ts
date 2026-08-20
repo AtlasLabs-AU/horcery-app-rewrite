@@ -33,8 +33,13 @@ function seriesFrom(
       ? now.toSeconds()
       : start.plus({ days: stopAfterDay + 1 }).toSeconds();
 
+  // Samples begin one calendar day BEFORE the plan: the oldest BARN day opens
+  // at 06:00 the previous calendar day, and a fixture starting at midnight left
+  // that day's first hours unobserved — which the partial-day detection now
+  // correctly flags, turning every sample week "Incomplete".
+  const coverageStart = start.minus({ days: 1 });
   const values: [number, string][] = [];
-  for (let t = start.toSeconds(); t <= Math.min(cutoff, now.toSeconds()); t += STEP) {
+  for (let t = coverageStart.toSeconds(); t <= Math.min(cutoff, now.toSeconds()); t += STEP) {
     values.push([t, ranges.some(([a, b]) => t >= a && t < b) ? '1' : '0']);
   }
   return [{ metric: { animal_type: 'horse', id: '0' }, values }];

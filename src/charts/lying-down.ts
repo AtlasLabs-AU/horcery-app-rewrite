@@ -380,14 +380,48 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   const observedDays = new Set<string>();
   let lastObservedAt: EpochSeconds | null = null;
   const asOf = now.toSeconds();
+  const stamps: number[] = [];
   for (const raw of observedSource ? [observedSource] : []) {
     for (const [timestamp] of raw.values) {
-      if (timestamp <= asOf && (lastObservedAt === null || timestamp > lastObservedAt)) {
-        lastObservedAt = timestamp;
+      if (timestamp <= asOf) {
+        stamps.push(timestamp);
+        if (lastObservedAt === null || timestamp > lastObservedAt) lastObservedAt = timestamp;
       }
       const day = timeline.days.find((d) => timestamp >= d.start && timestamp < d.nextMidnight);
       if (day) observedDays.add(day.key);
     }
+  }
+
+  /**
+   * Days the monitor reported only PART of — a hole in the middle, a late
+   * start, an early stop. Until 2026-08-20 the `partial` coverage state was
+   * declared but never assigned, so a monitor that dropped out over lunch drew
+   * a complete-looking day whose total silently undercounted (audit item 4).
+   *
+   * The cadence is measured from the data, not assumed — these queries have
+   * shipped at 30, 60 and 90-second steps — and a gap only counts at four
+   * times that spacing, never under five minutes, because Prometheus drops the
+   * odd scrape under load and a chart that cried "partial" at every missed
+   * sample would be ignored within a week. (Same rule as the behaviour strips.)
+   */
+  stamps.sort((a, b) => a - b);
+  const cadenceSteps = stamps
+    .slice(1)
+    .map((at, i) => at - stamps[i]!)
+    .sort((a, b) => a - b);
+  const cadenceMedian = cadenceSteps[Math.floor(cadenceSteps.length / 2)] ?? 60;
+  const gapLimit = Math.max(cadenceMedian * 4, 300);
+  const partialDays = new Set<string>();
+  for (const day of timeline.days) {
+    if (!observedDays.has(day.key)) continue;
+    const to = Math.min(day.nextMidnight, asOf);
+    const inDay = stamps.filter((at) => at >= day.start && at <= to);
+    if (inDay.length === 0) continue;
+    const holed =
+      inDay[0]! - day.start > gapLimit ||
+      to - inDay.at(-1)! > gapLimit ||
+      inDay.some((at, i) => i > 0 && at - inDay[i - 1]! > gapLimit);
+    if (holed) partialDays.add(day.key);
   }
 
   const series = timeline.series[0];
@@ -403,7 +437,7 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
       end: day.end,
       nextMidnight: day.nextMidnight,
       isToday: day.isToday,
-      coverage: observed ? 'observed' : 'no-observations',
+      coverage: !observed ? 'no-observations' : partialDays.has(day.key) ? 'partial' : 'observed',
       totalSeconds: observed ? totalOf(bouts) : null,
       bouts,
       inStallIntervals: inStallSeries?.intervalsByDay[day.key] ?? [],
@@ -640,16 +674,23 @@ export function buildLyingDownWeekly(
       end: day.end,
       verdict: day.isToday
         ? 'unknown'
-        : lyingDownVerdict({
-            deviationPercent: deviationPercentOf(day.totalSeconds, usualSeconds),
-            thresholdPercent,
-            valueSeconds: day.totalSeconds,
-            usualSeconds,
-          }),
+        : // A partly recorded day's total is an undercount, so it is never
+          // compared against a whole day's normal — same rule as the daily row.
+          day.coverage === 'partial'
+          ? 'incomplete'
+          : lyingDownVerdict({
+              deviationPercent: deviationPercentOf(day.totalSeconds, usualSeconds),
+              thresholdPercent,
+              valueSeconds: day.totalSeconds,
+              usualSeconds,
+            }),
     };
   });
 
-  const complete = days.filter((day) => !day.isToday && day.totalSeconds !== null);
+  // Fully observed only: a partly recorded day's total is an undercount, and
+  // folding it into the average would drag the week's figure down exactly the
+  // way the legacy divide-by-seven did.
+  const complete = days.filter((day) => !day.isToday && day.coverage === 'observed');
   const dailyAverageSeconds =
     complete.length === 0
       ? null

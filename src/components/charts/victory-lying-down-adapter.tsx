@@ -25,6 +25,12 @@ const BAR_WIDTH_RATIO = 0.46;
 const MARKER_OVERHANG = 4;
 /** How far an unselected day recedes while another is open. */
 const DIMMED = 0.3;
+/**
+ * A partly recorded day's bar. Distinct from DIMMED (an unselected row
+ * receding) and from the dashed outline (nothing recorded at all): this day
+ * has a real but undercounted total, so it is present yet visibly unfinished.
+ */
+const PARTIAL_FADE = 0.45;
 
 /**
  * Suppresses Victory's default chart chrome.
@@ -192,7 +198,13 @@ export function VictoryLyingDownWeeklyPlot({
                   height={Math.max(0, chartBounds.bottom - point.y)}
                   r={3}
                   color={colors.chartData}
-                  opacity={selectedIndex === null || selectedIndex === index ? 1 : DIMMED}
+                  // A partly recorded day fades: its height is an undercount,
+                  // and a solid bar would present it as a finished fact. The
+                  // tapped panel says why ("Partly recorded").
+                  opacity={
+                    (selectedIndex === null || selectedIndex === index ? 1 : DIMMED) *
+                    (summary.days[index]?.coverage === 'partial' ? PARTIAL_FADE : 1)
+                  }
                 />
               ),
             )}

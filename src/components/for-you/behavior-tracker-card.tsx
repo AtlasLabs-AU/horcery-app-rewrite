@@ -55,11 +55,11 @@ import {
   typicalWeek,
 } from "@/charts/fixtures/lying-down";
 import { PREVIEWS } from "@/config/previews";
-import { LinkButton } from "@/components/for-you/link-button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Menu } from "@/components/ui/menu";
 import { TextTabs } from "@/components/ui/text-tabs";
 import { useSession } from "@/hooks/use-session";
+import { useTextScale } from "@/hooks/use-text-scale";
 import { useTokens } from "@/hooks/use-tokens";
 import { radius, space, type } from "@/constants/tokens";
 
@@ -80,12 +80,22 @@ const FALLBACK_ZONE = "America/Chicago";
  */
 const CARD_WIDTH_FALLBACK = 320;
 
+/** One stable stall per sample horse, shared by all three behaviours. */
+const SAMPLE_STALL_OF: Record<string, string> = {
+  Apollo: "Stall 4",
+  Bubbles: "Stall 5",
+  Juniper: "Stall 7",
+  Willow: "Stall 8",
+  Pepper: "Stall 9",
+  Storm: "Stall 2",
+};
+
 const PERIOD_OPTIONS: { label: string; value: TrackerPeriod }[] = [
   { label: "Daily", value: "daily" },
   { label: "Weekly", value: "weekly" },
 ];
 
-const TRACKER_MENU_ACTIONS = [
+const TRACKER_MENU_STATIC = [
   {
     id: "customize",
     label: "Customize",
@@ -110,7 +120,7 @@ export interface Behavior {
 const DEFAULT_BEHAVIORS: Behavior[] = [
   { id: "lying-down", label: "Lying Down", icon: "lyingDown" },
   { id: "people-in-stall", label: "People in Stall", icon: "peopleInStall" },
-  { id: "in-stall", label: "In Stall", icon: "inStall" },
+  { id: "in-stall", label: "Horse in Stall", icon: "inStall" },
   { id: "feed", label: "Feed", icon: "feed" },
 ];
 
@@ -127,19 +137,26 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
  */
 export function BehaviorTrackerCard({
   behaviors = DEFAULT_BEHAVIORS,
-  onSwitchToStalls,
   previewTrends,
   previewLabels,
 }: {
   behaviors?: Behavior[];
-  onSwitchToStalls?: () => void;
   previewTrends?: Readonly<
     Record<string, Partial<Record<TrackerPeriod, readonly number[]>>>
   >;
   previewLabels?: readonly string[];
 }) {
   const { colors } = useTokens();
+  const { stack: stackBehaviorSelector } = useTextScale();
   const [period, setPeriod] = useState<TrackerPeriod>("daily");
+  /**
+   * Stall-first is the default (Inakshi, 2026-08-20): every camera appears
+   * even when nobody remembered to assign a horse, and it is the familiar
+   * pattern from other camera systems. The horse view exists for following one
+   * horse across stall moves. The switch lives in the three-dots sheet, not on
+   * the card face — a quiet preference, not a routine control.
+   */
+  const [viewMode, setViewMode] = useState<"stall" | "horse">("stall");
   const [selectedId, setSelectedId] = useState(behaviors[0]?.id);
   const [rowWidth, setRowWidth] = useState(CARD_WIDTH_FALLBACK);
   const { organization } = useSession();
@@ -223,7 +240,7 @@ export function BehaviorTrackerCard({
      * is visible and not only a low day.
      */
     const horse = (
-      name: string,
+      horseName: string,
       week: ReturnType<typeof build>,
       usualDailySeconds: number | null,
       withRange: boolean,
@@ -251,7 +268,10 @@ export function BehaviorTrackerCard({
           ? ("no-data" as const)
           : ("unknown" as const);
       return {
-        name,
+        horseName,
+        // The stall the sample horse lives in — stall-first is the default
+        // view, and a camera with no horse would appear as its stall alone.
+        stallName: `${SAMPLE_STALL_OF[horseName] ?? "Stall ?"} · ${horseName}`,
         verdict,
         avg,
         week,
@@ -364,7 +384,8 @@ export function BehaviorTrackerCard({
 
     const MIN = 60;
     const stall = (
-      name: string,
+      stallName: string,
+      horseName: string,
       result: ReturnType<typeof routineWeek>,
       usualDailySeconds: number,
     ) => {
@@ -379,7 +400,8 @@ export function BehaviorTrackerCard({
         stallCreatedAt,
       });
       return {
-        name,
+        stallName: `${stallName} · ${horseName}`,
+        horseName,
         data,
         avg: usualDailySeconds,
         range,
@@ -395,15 +417,15 @@ export function BehaviorTrackerCard({
 
     return [
       // The barn routine: morning feed, midday check, evening feed.
-      stall("Stall 4 · Apollo", routineWeek(now), 95 * MIN),
+      stall("Stall 4", "Apollo", routineWeek(now), 95 * MIN),
       // A stall under close attention — the case the caption must not overflow.
-      stall("Stall 2 · Storm", busyDay(now), 95 * MIN),
+      stall("Stall 2", "Storm", busyDay(now), 95 * MIN),
       // One short visit and nothing since, against a normal 95 minutes.
-      stall("Stall 7 · Juniper", barelyVisited(now), 95 * MIN),
+      stall("Stall 7", "Juniper", barelyVisited(now), 95 * MIN),
       // The monitor dropped out over lunch and came back mid-afternoon.
-      stall("Stall 5 · Bubbles", monitorGapMidday(now), 95 * MIN),
+      stall("Stall 5", "Bubbles", monitorGapMidday(now), 95 * MIN),
       // Nothing came back at all — never drawn as an empty stall.
-      stall("Stall 9 · Pepper", peopleNoData, 95 * MIN),
+      stall("Stall 9", "Pepper", peopleNoData, 95 * MIN),
     ];
   }, [zone, dayStartHour]);
 
@@ -450,7 +472,8 @@ export function BehaviorTrackerCard({
 
     const HOUR = 3600;
     const entity = (
-      name: string,
+      stallName: string,
+      horseName: string,
       result: ReturnType<typeof routineTurnout>,
       usualDailySeconds: number,
     ) => {
@@ -465,7 +488,8 @@ export function BehaviorTrackerCard({
         entityCreatedAt,
       });
       return {
-        name,
+        stallName: `${stallName} · ${horseName}`,
+        horseName,
         data,
         avg: usualDailySeconds,
         range,
@@ -483,17 +507,17 @@ export function BehaviorTrackerCard({
     const USUAL = 19 * HOUR;
     return [
       // Out after morning feed, back before evening feed.
-      entity("Stall 4 · Apollo", routineTurnout(now), USUAL),
+      entity("Stall 4", "Apollo", routineTurnout(now), USUAL),
       // Out twelve hours a day — at grass, and well below the normal.
-      entity("Stall 2 · Storm", longTurnout(now), USUAL),
+      entity("Stall 2", "Storm", longTurnout(now), USUAL),
       // Never left: box rest, or a week of weather.
-      entity("Stall 7 · Juniper", inAllDay(now), USUAL),
+      entity("Stall 7", "Juniper", inAllDay(now), USUAL),
       // Four separate absences — past the point where the caption lists them.
-      entity("Stall 5 · Bubbles", fragmentedDay(now), USUAL),
+      entity("Stall 5", "Bubbles", fragmentedDay(now), USUAL),
       // The monitor went down over lunch: must NOT be read as turnout.
-      entity("Stall 8 · Willow", inStallMonitorGap(now), USUAL),
+      entity("Stall 8", "Willow", inStallMonitorGap(now), USUAL),
       // Nothing at all — never drawn as a horse that stayed out.
-      entity("Stall 9 · Pepper", inStallNoData(), USUAL),
+      entity("Stall 9", "Pepper", inStallNoData(), USUAL),
     ];
   }, [zone, dayStartHour]);
 
@@ -509,9 +533,9 @@ export function BehaviorTrackerCard({
       sortRowsByAttention(
         sampleHorses,
         (horse) => (period === "weekly" ? horse.weekly.verdict : horse.verdict),
-        (horse) => horse.name,
+        (horse) => (viewMode === "horse" ? horse.horseName : horse.stallName),
       ),
-    [sampleHorses, period],
+    [sampleHorses, period, viewMode],
   );
 
   const orderedStalls = useMemo(
@@ -520,9 +544,9 @@ export function BehaviorTrackerCard({
       sortRowsByAttention(
         sampleStalls,
         (entry) => (period === "weekly" ? entry.weekly.verdict : entry.data.verdict),
-        (entry) => entry.name,
+        (entry) => (viewMode === "horse" ? entry.horseName : entry.stallName),
       ),
-    [sampleStalls, period],
+    [sampleStalls, period, viewMode],
   );
 
   const orderedInStall = useMemo(
@@ -531,9 +555,9 @@ export function BehaviorTrackerCard({
       sortRowsByAttention(
         sampleInStall,
         (entry) => (period === "weekly" ? entry.weekly.verdict : entry.data.verdict),
-        (entry) => entry.name,
+        (entry) => (viewMode === "horse" ? entry.horseName : entry.stallName),
       ),
-    [sampleInStall, period],
+    [sampleInStall, period, viewMode],
   );
 
   return (
@@ -552,15 +576,47 @@ export function BehaviorTrackerCard({
               icon="overflow"
               accessibilityLabel="Behavior tracker options"
               testID="for-you-tracker-menu"
-              actions={TRACKER_MENU_ACTIONS}
+              actions={[
+                ...TRACKER_MENU_STATIC,
+                // The horse/stall switch, moved off the card face into this
+                // sheet (Inakshi, 2026-08-20): a preference set once, not a
+                // control used routinely — the old app's prominent "Switch to
+                // Stalls" button is not the pattern to copy.
+                {
+                  id: "group-stalls",
+                  label: "Group by Stalls",
+                  description: "Every camera appears, even without a horse assigned",
+                  icon: "inStall" as const,
+                  selected: viewMode === "stall",
+                  onPress: () => setViewMode("stall"),
+                },
+                {
+                  id: "group-horses",
+                  label: "Group by Horses",
+                  description: "Follow a horse across stall moves",
+                  icon: "horse" as const,
+                  selected: viewMode === "horse",
+                  onPress: () => setViewMode("horse"),
+                },
+              ]}
             />
           </View>
         }
       />
 
-      <View style={styles.behaviorRow}>
+      <View
+        style={[
+          styles.behaviorRow,
+          stackBehaviorSelector && styles.behaviorGrid,
+        ]}
+        testID="for-you-behavior-selector"
+      >
         {behaviors.map((behavior) => {
           const isSelected = behavior.id === selected?.id;
+          const displayLabel =
+            !stackBehaviorSelector && behavior.label.endsWith(" in Stall")
+              ? behavior.label.replace(" in Stall", " in\nStall")
+              : behavior.label;
           return (
             <Pressable
               key={behavior.id}
@@ -571,6 +627,7 @@ export function BehaviorTrackerCard({
               testID={`for-you-behavior-${behavior.id}`}
               style={[
                 styles.behaviorTile,
+                stackBehaviorSelector && styles.behaviorTileStacked,
                 isSelected && { backgroundColor: colors.bed },
               ]}
             >
@@ -580,9 +637,11 @@ export function BehaviorTrackerCard({
                 color={isSelected ? colors.foreground : colors.tertiary}
               />
               {/*
-                "Lying Down" and "People in Stall" are two words each; on one
-                line they became "Lying Do…" and "People in…" one notch above
-                the default text size. Two lines, centred, and the tile grows.
+                Every tile reserves the same two-line label space. Without it,
+                a wrapped label moves its icon upwards while a one-line label
+                stays vertically centred, making the selector look uneven.
+                The space is a floor rather than a fixed height, so larger
+                accessibility text can still grow the whole row.
               */}
               <Text
                 style={[
@@ -593,7 +652,7 @@ export function BehaviorTrackerCard({
                 ]}
                 numberOfLines={2}
               >
-                {behavior.label}
+                {displayLabel}
               </Text>
             </Pressable>
           );
@@ -613,13 +672,6 @@ export function BehaviorTrackerCard({
             {selected?.label}
           </Text>
         }
-        trailing={
-          <LinkButton
-            label="Switch to Stalls"
-            onPress={onSwitchToStalls}
-            testID="for-you-tracker-switch"
-          />
-        }
       />
 
       {selected?.id === "in-stall" && orderedInStall ? (
@@ -630,7 +682,7 @@ export function BehaviorTrackerCard({
           >
             {orderedInStall.map((entry, index) => (
               <View
-                key={entry.name}
+                key={entry.horseName}
                 style={
                   index > 0
                     ? {
@@ -642,13 +694,13 @@ export function BehaviorTrackerCard({
               >
                 {period === "weekly" ? (
                   <HorseInStallWeekRow
-                    entityName={entry.name}
+                    entityName={viewMode === "horse" ? entry.horseName : entry.stallName}
                     summary={entry.weekly}
                     width={rowWidth}
                   />
                 ) : (
                   <HorseInStallRow
-                    entityName={entry.name}
+                    entityName={viewMode === "horse" ? entry.horseName : entry.stallName}
                     data={entry.data}
                     averageSeconds={entry.avg}
                     usualCurve={entry.range}
@@ -676,7 +728,7 @@ export function BehaviorTrackerCard({
           >
             {orderedStalls.map((entry, index) => (
               <View
-                key={entry.name}
+                key={entry.horseName}
                 style={
                   index > 0
                     ? {
@@ -688,13 +740,13 @@ export function BehaviorTrackerCard({
               >
                 {period === "weekly" ? (
                   <PeopleInStallWeekRow
-                    stallName={entry.name}
+                    stallName={viewMode === "horse" ? entry.horseName : entry.stallName}
                     summary={entry.weekly}
                     width={rowWidth}
                   />
                 ) : (
                   <PeopleInStallRow
-                    stallName={entry.name}
+                    stallName={viewMode === "horse" ? entry.horseName : entry.stallName}
                     data={entry.data}
                     averageSeconds={entry.avg}
                     usualCurve={entry.range}
@@ -722,7 +774,7 @@ export function BehaviorTrackerCard({
           >
             {orderedHorses.map((horse, index) => (
               <View
-                key={horse.name}
+                key={horse.horseName}
                 style={
                   index > 0
                     ? {
@@ -734,13 +786,13 @@ export function BehaviorTrackerCard({
               >
                 {period === "weekly" ? (
                   <LyingDownWeekRow
-                    horseName={horse.name}
+                    horseName={viewMode === "horse" ? horse.horseName : horse.stallName}
                     summary={horse.weekly}
                     width={rowWidth}
                   />
                 ) : (
                   <LyingDownRow
-                    horseName={horse.name}
+                    horseName={viewMode === "horse" ? horse.horseName : horse.stallName}
                     week={horse.week}
                     verdict={horse.verdict}
                     averageSeconds={horse.avg}
@@ -795,18 +847,29 @@ const styles = StyleSheet.create({
     gap: space.sm,
     marginTop: space.edge,
   },
+  behaviorGrid: {
+    flexWrap: "wrap",
+  },
   behaviorTile: {
     flex: 1,
-    minHeight: 64,
     paddingVertical: space.sm,
     paddingHorizontal: space.xs,
     gap: space.xs,
     borderRadius: radius.sm,
     borderCurve: "continuous",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
   },
-  behaviorLabel: { textAlign: "center" },
+  behaviorTileStacked: {
+    // Two per row at accessibility sizes. A percentage basis keeps the layout
+    // responsive while flexGrow shares any remaining width evenly.
+    flexBasis: "45%",
+  },
+  behaviorLabel: {
+    width: "100%",
+    minHeight: space.xl,
+    textAlign: "center",
+  },
   selectedCaption: { fontWeight: "600" },
   sampleNotice: { marginTop: 8, textAlign: "center" },
   selectedRow: {
