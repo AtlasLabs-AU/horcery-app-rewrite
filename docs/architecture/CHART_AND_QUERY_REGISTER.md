@@ -106,6 +106,35 @@ verbatim in intent because it reverses an assumption two charts were built on:
 2. **Entity model is the stall-first rule above**, which is where the two
    readings of this chart ("this horse was indoors" vs "this stall was
    occupied") are reconciled.
+3. **The caption names the ABSENCES, not the presences.** People in Stall lists
+   when someone came, because a person in a stall is an event. A horse in its
+   stall is the resting state, so listing when it was in tells a customer what
+   they already assumed; the useful fact is when it was out. Wording:
+   `Out 8:30 AM – 1:05 PM` · `Out 8:30 AM – 1:05 PM and 4:20 PM – 5:00 PM` ·
+   `Out 4 times · first 8:00 AM, last 4:00 PM` · `Out since 8:30 AM` ·
+   `In all day` · `Out all day` · `Partly recorded — time out is unknown` ·
+   `We can't tell where the horse was`.
+4. **A gap under five minutes is not turnout.** A missed reading or a moment in
+   the doorway must not announce an absence.
+
+## Product decisions — row order and the "incomplete" state (Inakshi, 2026-08-20)
+
+1. **Rows sort by tag: unusual to the top, everything below alphabetical.** A
+   card can carry twenty stalls, and the two needing attention must not be
+   buried mid-list. Sorted per TAB, because Daily and Weekly can disagree about
+   the same row. `no-data` is NOT lifted — an open question, noted in
+   `src/charts/row-order.ts`: a dead camera is arguably also worth the top.
+2. **A partly recorded day is never given a verdict.** Found on device: a row
+   said "Some readings are missing" and badged the same day "Usual". The total
+   is an undercount, so it was being compared against a whole day's normal.
+3. **`incomplete` is a distinct badge from `unknown`.** Both mean "not judged",
+   but "No history" (a stall too new to have a normal) is the wrong reason to
+   give for a day whose readings have holes in them.
+
+**Still open:** the WEEKLY badge is still computed when some days are missing —
+it averages the days it could see and says so in the subline ("a day, over the
+4 days we could see"). Whether four observed days out of six is enough to
+support a weekly verdict is a Data Science question, not one to settle in code.
 
 ## Legacy defects: decision not to raise dev-team tickets (Inakshi, 2026-08-20)
 
