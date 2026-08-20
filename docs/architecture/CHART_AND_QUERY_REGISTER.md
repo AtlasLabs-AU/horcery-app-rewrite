@@ -72,6 +72,28 @@ stall" — time with at least one person present, never a headcount.
 5. **Weekly reuses the Lying Down weekly design unchanged** — bar per day,
    hollow today, weekday-average markers, one badge for the week.
 
+## Product decisions — entity model for all behaviour charts (Inakshi, 2026-08-20)
+
+Applies to Lying Down, People in Stall, and Horse in Stall alike. Recorded
+verbatim in intent because it reverses an assumption two charts were built on:
+
+1. **The stall (camera) is the primary entity, and the default view.**
+   Customers sometimes forget to assign a horse to a stall; a horse-first list
+   would silently hide that camera's data. Showing every camera/stall is also
+   the familiar pattern from other camera systems. When a horse IS assigned,
+   its data rides along on the stall row.
+2. **The horse view exists for stitching, not browsing.** Its purpose is to
+   follow one horse across stall moves (and, in the future, multiple horses in
+   one stall — not supported today). It is the secondary view.
+3. **The switch is a subtle, sticky preference — not a prominent per-card
+   toggle.** Customers are not expected to flip it routinely; it behaves like a
+   main system preference. (The shipping app's prominent "Switch to Stalls"
+   button on the card is therefore not the pattern to copy.)
+4. **Consequence for the rewrite:** the Lying Down sample rows are currently
+   horse-named and People in Stall stall-named; when real data lands, both
+   default to the stall view, with horse names shown on the row when an
+   assignment exists.
+
 ## Query corrections not yet accepted upstream
 
 Recorded here because the register is the controlled inventory of queries as well
