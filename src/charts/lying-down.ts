@@ -355,10 +355,17 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   // Which days carry observations at all — independent of whether the horse
   // was down. Without this, an offline monitor is indistinguishable from a
   // horse that never lay down.
+  //
+  // Scanned from the SAME series the bouts come from. Scanning every series
+  // while reading bouts from the first marked a day observed on the strength of
+  // a camera whose intervals were then ignored, and an observed day with no
+  // bouts is a zero — reintroducing "missing data reads as none detected"
+  // through the back door (audit, 2026-08-20).
+  const observedSource = result[0];
   const observedDays = new Set<string>();
   let lastObservedAt: EpochSeconds | null = null;
   const asOf = now.toSeconds();
-  for (const raw of result) {
+  for (const raw of observedSource ? [observedSource] : []) {
     for (const [timestamp] of raw.values) {
       if (timestamp <= asOf && (lastObservedAt === null || timestamp > lastObservedAt)) {
         lastObservedAt = timestamp;
@@ -397,6 +404,12 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   if (state === 'ready') {
     if (outOfStall) state = 'out-of-stall';
     else if (result.length === 0) state = 'no-data';
+    // More than one matching series and no approved rule for combining them.
+    // The shipping app ADDS them, which can put more than 24 hours in a day;
+    // reading only the first silently hides a camera. Both are worse than
+    // saying we cannot show this, so we fail closed until Data Science defines
+    // union / max / error (register, "Legacy defects", item 5).
+    else if (result.length > 1) state = 'unavailable';
     else if (days.some((day) => day.coverage === 'no-observations')) state = 'partial';
   }
 
@@ -733,7 +746,10 @@ export function hasEnoughHistory(
   now: DateTime,
 ): boolean {
   if (!createdAt) return false;
-  const created = DateTime.fromISO(createdAt);
+  // Read in the organization's zone, carried by `now`. A bare `2026-08-13` with
+  // no offset otherwise parses in the DEVICE's zone, which can move the gate by
+  // a day for a stall right on the seven-day boundary (audit, 2026-08-20).
+  const created = DateTime.fromISO(createdAt, { zone: now.zone });
   if (!created.isValid) return false;
   const cutoff = timeframe === 'daily' ? now.minus({ days: 7 }) : now.minus({ weeks: 4 });
   return created <= cutoff;

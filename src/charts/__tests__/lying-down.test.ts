@@ -627,3 +627,64 @@ describe('usualByNow', () => {
     expect(usualByNow(built, [])).toBeNull();
   });
 });
+
+/**
+ * Guards for the three defects the 2026-08-20 audit found in THIS repo while
+ * checking that we had not reproduced the shipping app's.
+ *
+ * Inakshi decided not to raise dev-team tickets for the production bugs, on the
+ * explicit condition that the rewrite does not carry them. That makes these
+ * regressions, not merely bugs — each one puts the decision itself back in play.
+ */
+describe('defects found by audit', () => {
+  it('never marks a day observed on a series whose bouts it then ignores', () => {
+    // Two cameras on one stall. The first saw nothing on the 18th; the second
+    // did. Scanning both for coverage while reading bouts from the first alone
+    // made the 18th "observed" with no bouts — an observed ZERO, which reads as
+    // "the horse never lay down" rather than "we cannot combine these".
+    const quiet = series([])[0]!;
+    const secondCamera: PrometheusRangeSeries = {
+      metric: { animal_type: 'horse', id: '1' },
+      values: quiet.values.map(([t]) => [t, '1'] as [number, string]),
+    };
+    const week = buildLyingDownWeek({
+      result: [{ ...quiet, values: quiet.values.slice(0, 10) }, secondCamera],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+
+    const uncovered = week.days.filter((day) => day.coverage === 'no-observations');
+    expect(uncovered.length).toBeGreaterThan(0);
+    // The days the first series never reached must be null, never 0.
+    for (const day of uncovered) expect(day.totalSeconds).toBeNull();
+  });
+
+  it('refuses to draw at all when several series match, rather than picking one', () => {
+    // The shipping app SUMS them, which can exceed 24 hours in a day. Reading
+    // only the first hides a camera. Both are worse than saying so.
+    const one = series([['2026-08-19T08:00:00', '2026-08-19T09:00:00']]);
+    const week = buildLyingDownWeek({
+      result: [one[0]!, { ...one[0]!, metric: { animal_type: 'horse', id: '1' } }],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    expect(week.state).toBe('unavailable');
+  });
+
+  it('reads a zone-less created_at in the barn timezone, not the phone one', () => {
+    // A bare date has no offset, so Luxon would use the DEVICE zone. For a
+    // stall sitting exactly on the boundary that moves the verdict by a day.
+    // A barn at +14, early in its morning. The stall was created exactly seven
+    // barn-days ago, so it has just enough history and must be judged.
+    const now = DateTime.fromISO('2026-08-19T02:00:00', { zone: 'Pacific/Kiritimati' });
+    const createdAt = '2026-08-12';
+
+    // Read in the barn's zone that is midnight on the 12th — before the 02:00
+    // cutoff, so it qualifies. Read in the test runner's zone it is 2 PM on the
+    // 12th, which is AFTER the cutoff, and the horse silently loses its verdict
+    // for a day. Same string, same instant, different answer.
+    expect(hasEnoughHistory(createdAt, 'daily', now)).toBe(true);
+  });
+});
