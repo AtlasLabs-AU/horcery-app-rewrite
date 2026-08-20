@@ -539,6 +539,10 @@ export interface LyingDownWeeklyDay {
   /** Today is still accumulating, so its bar is incomplete by definition. */
   isToday: boolean;
   verdict: Verdict;
+  /** Whether this day was observed at all — a tapped bar must say which. */
+  coverage: DayCoverage;
+  /** The day's individual stretches, for the tapped-bar detail. */
+  bouts: LyingDownBout[];
 }
 
 export interface LyingDownWeeklySummary {
@@ -546,6 +550,8 @@ export interface LyingDownWeeklySummary {
   state: LyingDownState;
   asOf: EpochSeconds;
   lastObservedAt: EpochSeconds | null;
+  /** Organization zone, so a renderer can name a day without guessing one. */
+  zone: string;
   days: LyingDownWeeklyDay[];
   /**
    * This week's average across COMPLETE days. Today is excluded: a day three
@@ -597,6 +603,8 @@ export function buildLyingDownWeekly(
       totalSeconds: day.totalSeconds,
       usualSeconds,
       isToday: day.isToday,
+      coverage: day.coverage,
+      bouts: day.bouts,
       verdict: day.isToday
         ? 'unknown'
         : lyingDownVerdict({
@@ -626,6 +634,7 @@ export function buildLyingDownWeekly(
     state: week.state,
     asOf: week.asOf,
     lastObservedAt: week.lastObservedAt,
+    zone: week.zone,
     days,
     dailyAverageSeconds,
     usualDailyAverageSeconds,

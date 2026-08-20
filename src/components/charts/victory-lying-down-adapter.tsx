@@ -6,7 +6,7 @@ import {
 } from '@shopify/react-native-skia';
 import { Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Bar, CartesianChart, Line, Scatter } from 'victory-native';
+import { CartesianChart, Line, Scatter } from 'victory-native';
 
 import {
   sampleUsualCurve,
@@ -23,6 +23,8 @@ const WEEKLY_HEIGHT = 56;
 const REFERENCE_SAMPLES = 24;
 const BAR_WIDTH_RATIO = 0.46;
 const MARKER_OVERHANG = 4;
+/** How far an unselected day recedes while another is open. */
+const DIMMED = 0.3;
 
 /**
  * Suppresses Victory's default chart chrome.
@@ -147,10 +149,13 @@ export function VictoryLyingDownWeeklyPlot({
   summary,
   width,
   colors,
+  selectedIndex = null,
 }: {
   summary: LyingDownWeeklySummary;
   width: number;
   colors: TokenColors;
+  /** When a day is open, the others recede so the panel's subject is obvious. */
+  selectedIndex?: number | null;
 }) {
   const peak =
     Math.max(
@@ -175,13 +180,22 @@ export function VictoryLyingDownWeeklyPlot({
         explicitSize={{ width, height: WEEKLY_HEIGHT }}>
         {({ points, xScale, yScale, chartBounds }) => (
           <>
-            <Bar
-              points={points.completed}
-              chartBounds={chartBounds}
-              barWidth={barWidth}
-              color={colors.chartData}
-              roundedCorners={{ topLeft: 3, topRight: 3 }}
-            />
+            {/* Drawn per day rather than as one Bar series so a single day can
+                be emphasised while the rest recede. */}
+            {points.completed.map((point, index) =>
+              point.y == null || point.yValue == null ? null : (
+                <RoundedRect
+                  key={`bar-${index}`}
+                  x={xScale(index) - barWidth / 2}
+                  y={point.y}
+                  width={barWidth}
+                  height={Math.max(0, chartBounds.bottom - point.y)}
+                  r={3}
+                  color={colors.chartData}
+                  opacity={selectedIndex === null || selectedIndex === index ? 1 : DIMMED}
+                />
+              ),
+            )}
 
             {summary.days.map((day, index) => {
               const centre = xScale(index);
@@ -196,6 +210,7 @@ export function VictoryLyingDownWeeklyPlot({
                 <Fragment key={day.key}>
                   {isMissing || day.isToday ? (
                     <RoundedRect
+                      opacity={selectedIndex === null || selectedIndex === index ? 1 : DIMMED}
                       x={left}
                       y={outlineTop}
                       width={barWidth}
@@ -219,6 +234,7 @@ export function VictoryLyingDownWeeklyPlot({
                         color={isMissing ? colors.chartTrack : colors.chartReference}
                         style="stroke"
                         strokeWidth={2}
+                        opacity={selectedIndex === null || selectedIndex === index ? 1 : DIMMED}
                       />
                     );
                   })() : null}

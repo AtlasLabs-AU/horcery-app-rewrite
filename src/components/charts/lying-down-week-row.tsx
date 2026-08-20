@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import {
   formatDuration,
@@ -10,7 +10,8 @@ import { useTokens } from '@/hooks/use-tokens';
 import { LyingDownRowShell } from './lying-down-row-shell';
 import { ChartStateSurface } from './chart-state-surface';
 import { lyingDownStatePresentation } from './lying-down-state';
-import { VictoryLyingDownWeeklyPlot } from './victory-lying-down-adapter';
+import { WeeklyBars } from './weekly-bars';
+import { RESTS } from './weekly-day-detail';
 
 export interface LyingDownWeekRowProps {
   horseName: string;
@@ -20,9 +21,8 @@ export interface LyingDownWeekRowProps {
 
 /** Weekly composition; all drawing is delegated to the shared Victory adapter. */
 export function LyingDownWeekRow({ horseName, summary, width }: LyingDownWeekRowProps) {
-  const { colors, type, space } = useTokens();
+  const { space } = useTokens();
   const state = lyingDownStatePresentation(summary.state, summary.verdict, summary);
-  const columnWidth = width / summary.days.length;
 
   const figure =
     state.blocksContent || summary.dailyAverageSeconds === null
@@ -52,35 +52,17 @@ export function LyingDownWeekRow({ horseName, summary, width }: LyingDownWeekRow
         busy={state.busy}
         message={state.message}
       >
-        <>
-          <View style={{ marginTop: space.md }}>
-            <VictoryLyingDownWeeklyPlot summary={summary} width={width} colors={colors} />
-          </View>
-
-          <View style={[styles.axis, { marginTop: space.sm }]}>
-            {summary.days.map((day) => (
-              <Text
-                key={day.key}
-                style={[
-                  type.micro,
-                  styles.axisLabel,
-                  {
-                    width: columnWidth,
-                    color: day.totalSeconds === null ? colors.dimmed : colors.tertiary,
-                  },
-                ]}
-                numberOfLines={1}>
-                {day.isToday ? 'Today' : day.weekday}
-              </Text>
-            ))}
-          </View>
-        </>
+        <View style={{ marginTop: space.md }}>
+          <WeeklyBars
+            summary={summary}
+            width={width}
+            zone={summary.zone}
+            noun={RESTS}
+            testID="lying-down-weekly-bars"
+          />
+        </View>
       </ChartStateSurface>
     </LyingDownRowShell>
   );
 }
 
-const styles = StyleSheet.create({
-  axis: { flexDirection: 'row' },
-  axisLabel: { textAlign: 'center' },
-});
