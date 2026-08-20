@@ -80,6 +80,33 @@ it doesn't go in. When two collide, the tie-break rule at the bottom applies.
     patched for it one card at a time (PR 2174, `bugfix/HC84-35986`); we fixed
     the row instead of the card so the next screen inherits it.
 
+## Recorded exceptions to "native over custom" (principles 1 and 6)
+
+Principle 1 asks for `@expo/ui` first and principle 6 for the platform's own
+control. Every departure is listed here with its reason, so nobody has to
+re-derive it and so a shortcut cannot pass itself off as a decision.
+
+- **Chart rendering — Victory Native on Skia.** Decided after the two-week
+  renderer spike; see `docs/decisions/CHART_RENDERER_DECISION.md`. Note for
+  whoever revisits it: `@expo/ui` 57.0.10 now ships a native `Chart` (SwiftUI
+  Charts — line, bar, area, point, pie), but only in the `swift-ui` tree with no
+  Jetpack Compose counterpart, so it cannot be the renderer for a universal app.
+  Worth re-checking when Android parity lands.
+- **The tapped-day panel on the weekly charts** (Inakshi, 2026-08-20).
+  `@expo/ui` has a tooltip on *both* platforms — an iOS `Popover` and an Android
+  Material `TooltipBox` — but neither is in the `universal` tree, and they
+  disagree about the things that matter: Android triggers on long-press and
+  auto-dismisses on a timer, iOS is a presented panel with a system arrow, and
+  neither accepts our palette. Using them would make one chart behave and look
+  differently on the two phones. The panel is therefore plain `View`, `Text` and
+  `Pressable` — core React Native, which is *why* one implementation covers
+  both. Revisit if a tooltip appears in the universal tree.
+
+The test for any future exception is the one applied here: does the platform
+control exist on **both** platforms, behave the **same** way on both, and accept
+our design tokens? If not, universal primitives are the principled answer rather
+than the lazy one.
+
 ## Colour (decided by Inakshi, 2026-08-17)
 
 The look is **editorial**: white canvas, ink and grey doing the work, one

@@ -1,25 +1,26 @@
-import { DateTime } from 'luxon';
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DateTime } from "luxon";
+import { useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { SectionCard, SectionHeader } from '@/components/for-you/card';
-import { SplitRow } from '@/components/ui/split-row';
-import { ChartPlaceholder } from '@/components/for-you/chart-placeholder';
-import { LyingDownRow } from '@/components/charts/lying-down-row';
-import { LyingDownWeekRow } from '@/components/charts/lying-down-week-row';
-import { PeopleInStallRow } from '@/components/charts/people-in-stall-row';
-import { PeopleInStallWeekRow } from '@/components/charts/people-in-stall-week-row';
+import { SectionCard, SectionHeader } from "@/components/for-you/card";
+import { SplitRow } from "@/components/ui/split-row";
+import { ChartPlaceholder } from "@/components/for-you/chart-placeholder";
+import { LyingDownRow } from "@/components/charts/lying-down-row";
+import { LyingDownWeekRow } from "@/components/charts/lying-down-week-row";
+import { PeopleInStallRow } from "@/components/charts/people-in-stall-row";
+import { PeopleInStallWeekRow } from "@/components/charts/people-in-stall-week-row";
+import { WeeklyDetailProvider } from "@/components/charts/weekly-bars";
 import {
   buildPeopleInStallWeek,
   buildPeopleInStallWeekly,
-} from '@/charts/people-in-stall-behavior';
+} from "@/charts/people-in-stall-behavior";
 import {
   barelyVisited,
   busyDay,
   monitorGapMidday,
   noData as peopleNoData,
   routineWeek,
-} from '@/charts/fixtures/people-in-stall-behavior';
+} from "@/charts/fixtures/people-in-stall-behavior";
 import {
   buildLyingDownWeek,
   buildLyingDownWeekly,
@@ -28,7 +29,7 @@ import {
   hasEnoughHistory,
   lyingDownVerdict,
   usualByNow,
-} from '@/charts/lying-down';
+} from "@/charts/lying-down";
 import {
   inStallOvernight,
   inStallWithTurnout,
@@ -37,24 +38,24 @@ import {
   outMostOfDay,
   settledSleeper,
   typicalWeek,
-} from '@/charts/fixtures/lying-down';
-import { PREVIEWS } from '@/config/previews';
-import { LinkButton } from '@/components/for-you/link-button';
-import { Icon, type IconName } from '@/components/ui/icon';
-import { Menu } from '@/components/ui/menu';
-import { TextTabs } from '@/components/ui/text-tabs';
-import { useSession } from '@/hooks/use-session';
-import { useTokens } from '@/hooks/use-tokens';
-import { radius, space, type } from '@/constants/tokens';
+} from "@/charts/fixtures/lying-down";
+import { PREVIEWS } from "@/config/previews";
+import { LinkButton } from "@/components/for-you/link-button";
+import { Icon, type IconName } from "@/components/ui/icon";
+import { Menu } from "@/components/ui/menu";
+import { TextTabs } from "@/components/ui/text-tabs";
+import { useSession } from "@/hooks/use-session";
+import { useTokens } from "@/hooks/use-tokens";
+import { radius, space, type } from "@/constants/tokens";
 
-export type TrackerPeriod = 'daily' | 'weekly';
+export type TrackerPeriod = "daily" | "weekly";
 
 /**
  * Fallback zone, used only until the organization record arrives. The zone and
  * the barn-day start both belong to the organization (`timezone` and
  * `chart_start_time`), which is where the shipping app reads them from too.
  */
-const FALLBACK_ZONE = 'America/Chicago';
+const FALLBACK_ZONE = "America/Chicago";
 /**
  * Fallback only, used for the single frame before the container reports its
  * real width. It used to be the actual value passed to every row, which pinned
@@ -65,13 +66,23 @@ const FALLBACK_ZONE = 'America/Chicago';
 const CARD_WIDTH_FALLBACK = 320;
 
 const PERIOD_OPTIONS: { label: string; value: TrackerPeriod }[] = [
-  { label: 'Daily', value: 'daily' },
-  { label: 'Weekly', value: 'weekly' },
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
 ];
 
 const TRACKER_MENU_ACTIONS = [
-  { id: 'customize', label: 'Customize', icon: 'customize' as const, disabled: true },
-  { id: 'history', label: 'See History', icon: 'clock' as const, disabled: true },
+  {
+    id: "customize",
+    label: "Customize",
+    icon: "customize" as const,
+    disabled: true,
+  },
+  {
+    id: "history",
+    label: "See History",
+    icon: "clock" as const,
+    disabled: true,
+  },
 ];
 
 export interface Behavior {
@@ -82,10 +93,10 @@ export interface Behavior {
 }
 
 const DEFAULT_BEHAVIORS: Behavior[] = [
-  { id: 'lying-down', label: 'Lying Down', icon: 'lyingDown' },
-  { id: 'people-in-stall', label: 'People in Stall', icon: 'peopleInStall' },
-  { id: 'in-stall', label: 'In Stall', icon: 'inStall' },
-  { id: 'feed', label: 'Feed', icon: 'feed' },
+  { id: "lying-down", label: "Lying Down", icon: "lyingDown" },
+  { id: "people-in-stall", label: "People in Stall", icon: "peopleInStall" },
+  { id: "in-stall", label: "In Stall", icon: "inStall" },
+  { id: "feed", label: "Feed", icon: "feed" },
 ];
 
 /**
@@ -113,7 +124,7 @@ export function BehaviorTrackerCard({
   previewLabels?: readonly string[];
 }) {
   const { colors } = useTokens();
-  const [period, setPeriod] = useState<TrackerPeriod>('daily');
+  const [period, setPeriod] = useState<TrackerPeriod>("daily");
   const [selectedId, setSelectedId] = useState(behaviors[0]?.id);
   const [rowWidth, setRowWidth] = useState(CARD_WIDTH_FALLBACK);
   const { organization } = useSession();
@@ -143,7 +154,7 @@ export function BehaviorTrackerCard({
      */
     const now = DateTime.now()
       .setZone(zone)
-      .startOf('day')
+      .startOf("day")
       .plus({ hours: dayStartHour === 0 ? 23 : dayStartHour - 1 });
     const build = (
       result: ReturnType<typeof typicalWeek>,
@@ -156,7 +167,7 @@ export function BehaviorTrackerCard({
         // start we are still in yesterday's barn day, so the calendar date named
         // a day that has not begun — the daily view hid this (it looks `today`
         // up by key) but the weekly view put an empty future column last.
-        selectedDate: now.minus({ hours: dayStartHour }).toFormat('yyyy-MM-dd'),
+        selectedDate: now.minus({ hours: dayStartHour }).toFormat("yyyy-MM-dd"),
         zone,
         dayStartHour,
         now,
@@ -222,8 +233,8 @@ export function BehaviorTrackerCard({
             usualSeconds: usualSoFar,
           })
         : todaySeconds === null
-          ? ('no-data' as const)
-          : ('unknown' as const);
+          ? ("no-data" as const)
+          : ("unknown" as const);
       return {
         name,
         verdict,
@@ -254,8 +265,8 @@ export function BehaviorTrackerCard({
      * covered by `hasEnoughHistory`'s own tests.
      */
     const stallCreatedAt = now.minus({ months: 6 }).toISO();
-    const enoughDailyHistory = hasEnoughHistory(stallCreatedAt, 'daily', now);
-    const enoughWeeklyHistory = hasEnoughHistory(stallCreatedAt, 'weekly', now);
+    const enoughDailyHistory = hasEnoughHistory(stallCreatedAt, "daily", now);
+    const enoughWeeklyHistory = hasEnoughHistory(stallCreatedAt, "weekly", now);
 
     const buildLyingDownWeeklyGated = (
       week: ReturnType<typeof build>,
@@ -264,21 +275,41 @@ export function BehaviorTrackerCard({
       const summary = buildLyingDownWeekly(week, options);
       if (enoughWeeklyHistory) return summary;
       // Four weeks is the shipping app's own window for a weekly average.
-      return { ...summary, verdict: 'unknown' as const };
+      return { ...summary, verdict: "unknown" as const };
     };
 
     const MIN = 60;
     return [
       // A steady horse: today matches its normal, and so does its week.
-      horse('Apollo', build(typicalWeek(now), inStallWithTurnout(now)), 100 * MIN, true),
-      horse('Bubbles', build(settledSleeper(now), inStallOvernight(now)), 118 * MIN, true),
+      horse(
+        "Apollo",
+        build(typicalWeek(now), inStallWithTurnout(now)),
+        100 * MIN,
+        true,
+      ),
+      horse(
+        "Bubbles",
+        build(settledSleeper(now), inStallOvernight(now)),
+        118 * MIN,
+        true,
+      ),
       // A normal WEEK with a bad DAY — so Daily says Low and Weekly says Usual.
       // That difference between the two tabs is real, and worth showing.
-      horse('Juniper', build(lowToday(now), inStallWithTurnout(now)), 100 * MIN, true),
+      horse(
+        "Juniper",
+        build(lowToday(now), inStallWithTurnout(now)),
+        100 * MIN,
+        true,
+      ),
       // A genuinely low WEEK: short every day against a much higher normal.
-      horse('Willow', build(outMostOfDay(now), inStallWithTurnout(now)), 100 * MIN, true),
+      horse(
+        "Willow",
+        build(outMostOfDay(now), inStallWithTurnout(now)),
+        100 * MIN,
+        true,
+      ),
       // The monitor went offline: no reading at all, and never a zero.
-      horse('Pepper', build(monitorWentOffline(now)), 100 * MIN, false),
+      horse("Pepper", build(monitorWentOffline(now)), 100 * MIN, false),
     ];
   }, [zone, dayStartHour]);
 
@@ -293,10 +324,12 @@ export function BehaviorTrackerCard({
     if (!PREVIEWS.peopleInStallSampleData) return null;
     const now = DateTime.now()
       .setZone(zone)
-      .startOf('day')
+      .startOf("day")
       .plus({ hours: dayStartHour === 0 ? 23 : dayStartHour - 1 });
     const stallCreatedAt = now.minus({ months: 6 }).toISO();
-    const selectedDate = now.minus({ hours: dayStartHour }).toFormat('yyyy-MM-dd');
+    const selectedDate = now
+      .minus({ hours: dayStartHour })
+      .toFormat("yyyy-MM-dd");
 
     // Human presence clusters at feed times, so the usual curve steepens there
     // rather than rising evenly. In production this comes from Data Science.
@@ -347,15 +380,15 @@ export function BehaviorTrackerCard({
 
     return [
       // The barn routine: morning feed, midday check, evening feed.
-      stall('Stall 4 · Apollo', routineWeek(now), 95 * MIN),
+      stall("Stall 4 · Apollo", routineWeek(now), 95 * MIN),
       // A stall under close attention — the case the caption must not overflow.
-      stall('Stall 2 · Storm', busyDay(now), 95 * MIN),
+      stall("Stall 2 · Storm", busyDay(now), 95 * MIN),
       // One short visit and nothing since, against a normal 95 minutes.
-      stall('Stall 7 · Juniper', barelyVisited(now), 95 * MIN),
+      stall("Stall 7 · Juniper", barelyVisited(now), 95 * MIN),
       // The monitor dropped out over lunch and came back mid-afternoon.
-      stall('Stall 5 · Bubbles', monitorGapMidday(now), 95 * MIN),
+      stall("Stall 5 · Bubbles", monitorGapMidday(now), 95 * MIN),
       // Nothing came back at all — never drawn as an empty stall.
-      stall('Stall 9 · Pepper', peopleNoData, 95 * MIN),
+      stall("Stall 9 · Pepper", peopleNoData, 95 * MIN),
     ];
   }, [zone, dayStartHour]);
 
@@ -395,7 +428,8 @@ export function BehaviorTrackerCard({
               style={[
                 styles.behaviorTile,
                 isSelected && { backgroundColor: colors.bed },
-              ]}>
+              ]}
+            >
               <Icon
                 name={behavior.icon}
                 size={22}
@@ -413,7 +447,8 @@ export function BehaviorTrackerCard({
                   isSelected && styles.selectedCaption,
                   { color: isSelected ? colors.foreground : colors.tertiary },
                 ]}
-                numberOfLines={2}>
+                numberOfLines={2}
+              >
                 {behavior.label}
               </Text>
             </Pressable>
@@ -424,7 +459,13 @@ export function BehaviorTrackerCard({
       <SplitRow
         style={styles.selectedRow}
         leading={
-          <Text style={[type.title3, styles.selectedLabel, { color: colors.foreground }]}>
+          <Text
+            style={[
+              type.title3,
+              styles.selectedLabel,
+              { color: colors.foreground },
+            ]}
+          >
             {selected?.label}
           </Text>
         }
@@ -437,90 +478,116 @@ export function BehaviorTrackerCard({
         }
       />
 
-      {selected?.id === 'people-in-stall' && sampleStalls ? (
-        <View
-          testID="for-you-tracker-chart"
-          onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}>
-          {sampleStalls.map((entry, index) => (
-            <View
-              key={entry.name}
-              style={
-                index > 0
-                  ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider }
-                  : undefined
-              }>
-              {period === 'weekly' ? (
-                <PeopleInStallWeekRow
-                  stallName={entry.name}
-                  summary={entry.weekly}
-                  width={rowWidth}
-                />
-              ) : (
-                <PeopleInStallRow
-                  stallName={entry.name}
-                  data={entry.data}
-                  averageSeconds={entry.avg}
-                  usualCurve={entry.range}
-                  width={rowWidth}
-                />
-              )}
-            </View>
-          ))}
-          <Text style={[type.footnote, styles.sampleNotice, { color: colors.tertiary }]}>
-            Sample data — not this stall
-          </Text>
-        </View>
-      ) : selected?.id === 'lying-down' && sampleHorses ? (
-        <View
-          testID="for-you-tracker-chart"
-          onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}>
-          {sampleHorses.map((horse, index) => (
-            <View
-              key={horse.name}
-              style={
-                index > 0
-                  ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider }
-                  : undefined
-              }>
-              {period === 'weekly' ? (
-                <LyingDownWeekRow
-                  horseName={horse.name}
-                  summary={horse.weekly}
-                  width={rowWidth}
-                />
-              ) : (
-                <LyingDownRow
-                  horseName={horse.name}
-                  week={horse.week}
-                  verdict={horse.verdict}
-                  averageSeconds={horse.avg}
-                  usualCurve={horse.range}
-                  width={rowWidth}
-                />
-              )}
-            </View>
-          ))}
-          <Text style={[type.footnote, styles.sampleNotice, { color: colors.tertiary }]}>
-            Sample data — not this horse
-          </Text>
-        </View>
+      {selected?.id === "people-in-stall" && sampleStalls ? (
+        <WeeklyDetailProvider>
+          <View
+            testID="for-you-tracker-chart"
+            onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
+          >
+            {sampleStalls.map((entry, index) => (
+              <View
+                key={entry.name}
+                style={
+                  index > 0
+                    ? {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: colors.divider,
+                      }
+                    : undefined
+                }
+              >
+                {period === "weekly" ? (
+                  <PeopleInStallWeekRow
+                    stallName={entry.name}
+                    summary={entry.weekly}
+                    width={rowWidth}
+                  />
+                ) : (
+                  <PeopleInStallRow
+                    stallName={entry.name}
+                    data={entry.data}
+                    averageSeconds={entry.avg}
+                    usualCurve={entry.range}
+                    width={rowWidth}
+                  />
+                )}
+              </View>
+            ))}
+            <Text
+              style={[
+                type.footnote,
+                styles.sampleNotice,
+                { color: colors.tertiary },
+              ]}
+            >
+              Sample data — not this stall
+            </Text>
+          </View>
+        </WeeklyDetailProvider>
+      ) : selected?.id === "lying-down" && sampleHorses ? (
+        <WeeklyDetailProvider>
+          <View
+            testID="for-you-tracker-chart"
+            onLayout={(event) => setRowWidth(event.nativeEvent.layout.width)}
+          >
+            {sampleHorses.map((horse, index) => (
+              <View
+                key={horse.name}
+                style={
+                  index > 0
+                    ? {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: colors.divider,
+                      }
+                    : undefined
+                }
+              >
+                {period === "weekly" ? (
+                  <LyingDownWeekRow
+                    horseName={horse.name}
+                    summary={horse.weekly}
+                    width={rowWidth}
+                  />
+                ) : (
+                  <LyingDownRow
+                    horseName={horse.name}
+                    week={horse.week}
+                    verdict={horse.verdict}
+                    averageSeconds={horse.avg}
+                    usualCurve={horse.range}
+                    width={rowWidth}
+                  />
+                )}
+              </View>
+            ))}
+            <Text
+              style={[
+                type.footnote,
+                styles.sampleNotice,
+                { color: colors.tertiary },
+              ]}
+            >
+              Sample data — not this horse
+            </Text>
+          </View>
+        </WeeklyDetailProvider>
       ) : (
-      <ChartPlaceholder
-        height={168}
-        previewSeries={
-          selected
-            ? [
-                {
-                  label: selected.label,
-                  color: colors.accent,
-                  values: previewTrends?.[selected.id]?.[period] ?? [],
-                },
-              ]
-            : undefined
-        }
-        xLabels={previewLabels}
-        testID="for-you-tracker-chart"
-      />
+        <ChartPlaceholder
+          height={168}
+          previewSeries={
+            selected
+              ? [
+                  {
+                    label: selected.label,
+                    color: colors.accent,
+                    values: previewTrends?.[selected.id]?.[period] ?? [],
+                  },
+                ]
+              : undefined
+          }
+          xLabels={previewLabels}
+          testID="for-you-tracker-chart"
+        />
       )}
     </SectionCard>
   );
@@ -528,13 +595,13 @@ export function BehaviorTrackerCard({
 
 const styles = StyleSheet.create({
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: space.sm,
   },
   behaviorRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+    flexDirection: "row",
+    alignItems: "stretch",
     gap: space.sm,
     marginTop: space.edge,
   },
@@ -545,13 +612,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xs,
     gap: space.xs,
     borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderCurve: "continuous",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  behaviorLabel: { textAlign: 'center' },
-  selectedCaption: { fontWeight: '600' },
-  sampleNotice: { marginTop: 8, textAlign: 'center' },
+  behaviorLabel: { textAlign: "center" },
+  selectedCaption: { fontWeight: "600" },
+  sampleNotice: { marginTop: 8, textAlign: "center" },
   selectedRow: {
     marginTop: space.edge,
   },

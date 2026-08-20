@@ -75,6 +75,7 @@ export function PeopleInStallWeekRow({
             summary={summary}
             width={width}
             zone={summary.zone}
+            panelKey={stallName}
             noun={VISITS}
             testID="people-in-stall-weekly-bars"
           />

@@ -18,6 +18,7 @@ const mockPreviews = {
   faceIdUnlock: false,
   socialSignInButtons: false,
   lyingDownSampleData: false,
+  peopleInStallSampleData: false,
 };
 
 // A getter, not a value: the factory is evaluated while the component's own
@@ -47,6 +48,7 @@ jest.mock('@/hooks/use-session', () => ({
 
 afterEach(() => {
   mockPreviews.lyingDownSampleData = false;
+  mockPreviews.peopleInStallSampleData = false;
 });
 
 describe('BehaviorTrackerCard', () => {
@@ -103,5 +105,46 @@ describe('BehaviorTrackerCard', () => {
     // difference between the two tabs is the point of having both.
     expect(screen.getAllByText('Low')).toHaveLength(1);
     expect(screen.getByText('Willow')).toBeTruthy();
+  });
+
+  /**
+   * One panel at a time across the whole card.
+   *
+   * Each row owning its own open state let five stalls show five panels at
+   * once, and tapping a different row left the previous one behind — the same
+   * "why does it persist" complaint in a different form (Inakshi, 2026-08-20).
+   */
+  it('keeps only one day panel open across every row', async () => {
+    mockPreviews.peopleInStallSampleData = true;
+    await render(<BehaviorTrackerCard />);
+    // The card opens on Lying Down; these panels live on the People in Stall
+    // weekly view, so both selections have to be made.
+    await fireEvent.press(screen.getByTestId('for-you-behavior-people-in-stall'));
+    await fireEvent.press(screen.getByTestId('for-you-tracker-period-weekly'));
+
+    const rows = screen.getAllByTestId('weekly-day-0');
+    expect(rows.length).toBeGreaterThan(1);
+
+    await fireEvent.press(rows[0]!);
+    expect(screen.getAllByTestId('weekly-day-detail')).toHaveLength(1);
+
+    // A different ROW, not just a different day.
+    await fireEvent.press(rows[1]!);
+    expect(screen.getAllByTestId('weekly-day-detail')).toHaveLength(1);
+  });
+
+  it('closes the open panel when something other than a day is tapped', async () => {
+    mockPreviews.peopleInStallSampleData = true;
+    await render(<BehaviorTrackerCard />);
+    // The card opens on Lying Down; these panels live on the People in Stall
+    // weekly view, so both selections have to be made.
+    await fireEvent.press(screen.getByTestId('for-you-behavior-people-in-stall'));
+    await fireEvent.press(screen.getByTestId('for-you-tracker-period-weekly'));
+
+    await fireEvent.press(screen.getAllByTestId('weekly-day-0')[0]!);
+    expect(screen.getAllByTestId('weekly-day-detail')).toHaveLength(1);
+
+    await fireEvent.press(screen.getByTestId('weekly-detail-dismiss'));
+    expect(screen.queryByTestId('weekly-day-detail')).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { LyingDownWeeklySummary } from '@/charts/lying-down';
@@ -25,7 +25,47 @@ import { weeklyDayDetail, type StretchNoun } from './weekly-day-detail';
  * The tap targets are transparent views laid over the plot rather than handlers
  * on the Skia shapes: it keeps hit areas a full column wide — a 6 pt bar is not
  * a 44 pt target — and keeps the drawing layer free of interaction concerns.
+ *
+ * HAND-BUILT ON PURPOSE, and recorded as an exception in PRINCIPLES.md.
+ * `@expo/ui` does ship tooltips, but only in the platform-specific trees — an
+ * iOS `Popover` and an Android Material `TooltipBox` — and they disagree about
+ * the things that matter here: Android triggers on long-press and auto-dismisses
+ * on a timer, iOS is a presented panel with a system arrow, and neither takes
+ * our palette. Using them would make the same chart behave and look differently
+ * on the two phones. This is plain `View`/`Text`/`Pressable`, which is why one
+ * implementation covers both.
  */
+
+interface WeeklyDetailValue {
+  openKey: string | null;
+  setOpenKey: (key: string | null) => void;
+}
+
+const WeeklyDetailContext = createContext<WeeklyDetailValue | null>(null);
+
+/**
+ * Keeps one panel open across every row on the card.
+ *
+ * Without it each row owns its own state, so five stalls can have five panels
+ * open at once and tapping a different row leaves the previous one behind —
+ * which is the "why is it persistent" complaint in a different form.
+ */
+export function WeeklyDetailProvider({ children }: { children: React.ReactNode }) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const value = useMemo(() => ({ openKey, setOpenKey }), [openKey]);
+  return (
+    <WeeklyDetailContext.Provider value={value}>
+      <Pressable
+        testID="weekly-detail-dismiss"
+        accessible={false}
+        // Anything that is not a day closes the panel. The day targets sit above
+        // this and handle their own touches, so they are unaffected.
+        onPress={() => setOpenKey(null)}>
+        {children}
+      </Pressable>
+    </WeeklyDetailContext.Provider>
+  );
+}
 
 const PANEL_OFFSET = 6;
 /** Apple's minimum comfortable target; a bar is far narrower than a finger. */
@@ -36,12 +76,31 @@ export interface WeeklyBarsProps {
   width: number;
   zone: string;
   noun: StretchNoun;
+  /** Unique per row, so the card can keep exactly one panel open. */
+  panelKey?: string;
   testID?: string;
 }
 
-export function WeeklyBars({ summary, width, zone, noun, testID }: WeeklyBarsProps) {
+export function WeeklyBars({
+  summary,
+  width,
+  zone,
+  noun,
+  panelKey = 'weekly',
+  testID,
+}: WeeklyBarsProps) {
   const { colors, type, space, radius } = useTokens();
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const shared = useContext(WeeklyDetailContext);
+  // Falls back to local state when rendered outside a provider, so the component
+  // still works on its own — in a test, or on a screen with a single chart.
+  const [localIndex, setLocalIndex] = useState<number | null>(null);
+  const openIndex = shared
+    ? shared.openKey?.startsWith(`${panelKey}:`)
+      ? Number(shared.openKey.slice(panelKey.length + 1))
+      : null
+    : localIndex;
+  const setOpenIndex = (index: number | null) =>
+    shared ? shared.setOpenKey(index === null ? null : `${panelKey}:${index}`) : setLocalIndex(index);
   const columnWidth = width / summary.days.length;
 
   const open = openIndex === null ? null : summary.days[openIndex];
@@ -67,14 +126,18 @@ export function WeeklyBars({ summary, width, zone, noun, testID }: WeeklyBarsPro
               marginBottom: PANEL_OFFSET,
               padding: space.md,
               borderRadius: radius.sm,
-              backgroundColor: colors.foreground,
+              // The light grey bed, chosen by Inakshi 2026-08-20 over an ink
+              // slab: PRINCIPLES.md puts depth in air and hairlines rather than
+              // tinted containers, and a black panel was the one heavy object on
+              // an otherwise light page.
+              backgroundColor: colors.bed,
             },
           ]}>
-          <Text style={[type.caption, styles.panelTitle, { color: colors.background }]}>
+          <Text style={[type.caption, styles.panelTitle, { color: colors.foreground }]}>
             {detail.title}
           </Text>
           {detail.detail ? (
-            <Text style={[type.caption, { color: colors.dimmed }]}>{detail.detail}</Text>
+            <Text style={[type.caption, { color: colors.secondary }]}>{detail.detail}</Text>
           ) : null}
         </View>
       ) : null}

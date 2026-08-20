@@ -10,6 +10,9 @@ const MONDAY = '2026-08-17';
 const at = (hour: number, minute: number) =>
   DateTime.fromISO(MONDAY, { zone: ZONE }).set({ hour, minute }).toSeconds();
 
+/** `count` is the occupancy model's headcount; this chart never reads it. */
+const stretch = (enter: number, exit: number) => ({ enter, exit, count: 1 });
+
 function day(overrides: Partial<LyingDownWeeklyDay> = {}): LyingDownWeeklyDay {
   return {
     key: MONDAY,
@@ -20,9 +23,9 @@ function day(overrides: Partial<LyingDownWeeklyDay> = {}): LyingDownWeeklyDay {
     verdict: 'usual',
     coverage: 'observed',
     bouts: [
-      { enter: at(7, 2), exit: at(7, 40) },
-      { enter: at(12, 0), exit: at(12, 30) },
-      { enter: at(17, 10), exit: at(17, 46) },
+      stretch(at(7, 2), at(7, 40)),
+      stretch(at(12, 0), at(12, 30)),
+      stretch(at(17, 10), at(17, 46)),
     ],
     ...overrides,
   };
@@ -43,10 +46,9 @@ describe('weeklyDayDetail', () => {
   });
 
   it('summarises a busy day rather than listing every visit', () => {
-    const bouts = Array.from({ length: 27 }, (_, i) => ({
-      enter: at(6, 30) + i * 1800,
-      exit: at(6, 30) + i * 1800 + 360,
-    }));
+    const bouts = Array.from({ length: 27 }, (_, i) =>
+      stretch(at(6, 30) + i * 1800, at(6, 30) + i * 1800 + 360),
+    );
     const result = weeklyDayDetail(day({ bouts, totalSeconds: 9720 }), ZONE, VISITS);
     expect(result.detail).toMatch(/^27 visits · first .+, last .+$/);
   });
@@ -91,7 +93,7 @@ describe('weeklyDayDetail', () => {
 
   it('uses each behaviour own noun rather than inheriting one', () => {
     expect(weeklyDayDetail(day(), ZONE, RESTS).detail).toMatch(/^3 rests · /);
-    expect(weeklyDayDetail(day({ bouts: [{ enter: at(7, 2), exit: at(7, 40) }] }), ZONE, RESTS))
+    expect(weeklyDayDetail(day({ bouts: [stretch(at(7, 2), at(7, 40))] }), ZONE, RESTS))
       .toMatchObject({ detail: '1 rest · 7:02 AM' });
   });
 });

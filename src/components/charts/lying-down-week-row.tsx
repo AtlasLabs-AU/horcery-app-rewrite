@@ -57,6 +57,7 @@ export function LyingDownWeekRow({ horseName, summary, width }: LyingDownWeekRow
             summary={summary}
             width={width}
             zone={summary.zone}
+            panelKey={horseName}
             noun={RESTS}
             testID="lying-down-weekly-bars"
           />
