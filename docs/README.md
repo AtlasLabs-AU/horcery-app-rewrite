@@ -54,6 +54,7 @@ work that follows that decision.
 | `Charts_Spike_Review_2026-08-17_physical_pass.md` | Independent review of the physical-phone pass |
 | `Horcery_Android_Emulator_Handoff.md` | Android emulator setup |
 | `Alerts_Implementation_Plan_for_Codex.md` | Alerts — slice-by-slice technical plan (A0 ground truth → A1 domain → A2 read-only list → A3 create/edit gated); A4 waits on D1 |
+| `Live_Monitor_Preview_Handover.md` | Dev-only Protos screen: three real production monitors (sm-1275/72/12) — live video + the For You Lying Down chart fed by real Prometheus |
 
 Spike evidence (screenshots, raw logs — 1.7 GB) is **not** in git. It stays at
 `Horcery/spike-evidence/` on Inakshi's Mac; the review documents reference it
