@@ -52,4 +52,21 @@ describe('EventCard footage controls', () => {
     await fireEvent.press(tile);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('can open a timestamp even when the event has no footage', async () => {
+    const onPress = jest.fn();
+    const view = await render(
+      <EventCard
+        event={baseEvent}
+        onPress={onPress}
+        actionHint="tap to view this moment in Summary"
+      />,
+    );
+
+    const card = view.getByTestId('history-event-event-1');
+    expect(card.props.accessibilityRole).toBe('button');
+    expect(card.props.accessibilityLabel).toContain('view this moment in Summary');
+    await fireEvent.press(card);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
 });

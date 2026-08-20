@@ -41,6 +41,8 @@ export interface ReviewHistoryOptions {
    * you visited, so switching back is instant.
    */
   enabled?: boolean;
+  /** Explicit page size for the consuming surface; History defaults to 50. */
+  pageSize?: number;
 }
 
 /**
@@ -61,6 +63,7 @@ export function useReviewHistory({
   stallId,
   windowDays = 1,
   enabled: callerEnabled = true,
+  pageSize = PAGE_SIZE,
 }: ReviewHistoryOptions) {
   const organizationID = useAuthStore((s) => s.organizationID);
   const enabled = !!organizationID && callerEnabled;
@@ -81,7 +84,7 @@ export function useReviewHistory({
   const query = useInfiniteQuery({
     ...queries.event.infiniteList(
       {
-        page_size: PAGE_SIZE,
+        page_size: pageSize,
         ordering: '-start_time,-event_type',
         deleted_at__isnull: true,
         organization_id: organizationID ?? '',

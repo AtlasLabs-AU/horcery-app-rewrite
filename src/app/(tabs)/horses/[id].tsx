@@ -1,6 +1,6 @@
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import type { DateTime } from 'luxon';
-import { useCallback, useMemo, useState } from 'react';
+import { DateTime } from 'luxon';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -118,9 +118,9 @@ export default function HorseDetailScreen() {
    * inherits it rather than being the place it runs for the first time.
    */
   const [wantsLive, setWantsLive] = useState(false);
-  const [playingEventId, setPlayingEventId] = useState<string | null>(null);
   const [streamFailed, setStreamFailed] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
+  const listRef = useRef<FlatList<HistoryEvent>>(null);
 
   const isSample = PREVIEWS.sampleHorsesData && id.startsWith('sample-');
   const horse = useHorseDetail(id);
@@ -224,10 +224,9 @@ export default function HorseDetailScreen() {
       return () => {
         setIsFocused(false);
         setWantsLive(false);
-        setPlayingEventId(null);
       };
       // Setters are stable, but the React Compiler requires them declared.
-    }, [setIsFocused, setWantsLive, setPlayingEventId]),
+    }, [setIsFocused, setWantsLive]),
   );
 
   /**
@@ -261,38 +260,49 @@ export default function HorseDetailScreen() {
       // Stop first: the stream URL changes with the cursor, and a player left
       // running would silently jump to a different hour.
       setWantsLive(false);
-      setPlayingEventId(null);
       setStreamFailed(false);
       playhead.setDay(next);
     },
-    [playhead, setWantsLive, setPlayingEventId, setStreamFailed],
+    [playhead, setWantsLive, setStreamFailed],
   );
 
   const onBackToToday = useCallback(() => {
     setWantsLive(false);
-    setPlayingEventId(null);
     setStreamFailed(false);
     playhead.resetToToday();
-  }, [playhead, setWantsLive, setPlayingEventId, setStreamFailed]);
+  }, [playhead, setWantsLive, setStreamFailed]);
 
   const onToggleLive = useCallback(() => {
     setStreamFailed(false);
-    setPlayingEventId(null);
     setWantsLive((current) => !current);
-  }, [setStreamFailed, setPlayingEventId, setWantsLive]);
-
-  const onToggleEvent = useCallback((eventId: string) => {
-    // The page owns one decoder budget: an event and the hero never play at
-    // the same time, and tapping a second event replaces the first.
-    setWantsLive(false);
-    setPlayingEventId((current) => (current === eventId ? null : eventId));
-  }, [setWantsLive, setPlayingEventId]);
+  }, [setStreamFailed, setWantsLive]);
 
   const onChangeTab = useCallback((tab: DetailTab) => {
     setWantsLive(false);
-    setPlayingEventId(null);
     setActiveTab(tab);
-  }, [setWantsLive, setPlayingEventId, setActiveTab]);
+  }, [setWantsLive, setActiveTab]);
+
+  /**
+   * Event rows are bookmarks into the one horse timeline, not a second video
+   * player. This is the approved E2 behaviour: move the play-head to the
+   * event instant and return to Summary, where the hero and metrics agree on
+   * the same moment.
+   */
+  const onOpenEventMoment = useCallback(
+    (event: HistoryEvent) => {
+      const at = DateTime.fromISO(event.startTime, { setZone: true });
+      if (!at.isValid) return;
+
+      setWantsLive(false);
+      setStreamFailed(false);
+      playhead.setCursor(timezone ? at.setZone(timezone) : at);
+      setActiveTab('summary');
+      requestAnimationFrame(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      });
+    },
+    [playhead, timezone, setWantsLive, setStreamFailed, setActiveTab],
+  );
 
   /**
    * Scrubbing (slice 4c) commits an instant, not a day — the date bar and the
@@ -303,11 +313,10 @@ export default function HorseDetailScreen() {
   const onScrub = useCallback(
     (at: DateTime) => {
       setWantsLive(false);
-      setPlayingEventId(null);
       setStreamFailed(false);
       playhead.setCursor(at);
     },
-    [playhead, setWantsLive, setPlayingEventId, setStreamFailed],
+    [playhead, setWantsLive, setStreamFailed],
   );
 
   const onScrubbingChange = useCallback(
@@ -374,6 +383,7 @@ export default function HorseDetailScreen() {
     <View style={[styles.page, { backgroundColor: colors.background }]}>
       {screen}
       <FlatList
+        ref={listRef}
         data={listData}
         keyExtractor={(item) => item.id}
         contentInsetAdjustmentBehavior="automatic"
@@ -381,11 +391,8 @@ export default function HorseDetailScreen() {
         renderItem={({ item }) => (
           <EventCard
             event={item}
-            playing={playingEventId === item.id}
-            onPress={item.videoUri ? () => onToggleEvent(item.id) : undefined}
-            onPlaybackError={() =>
-              setPlayingEventId((current) => (current === item.id ? null : current))
-            }
+            onPress={item.startTime ? () => onOpenEventMoment(item) : undefined}
+            actionHint="tap to view this moment in Summary"
           />
         )}
         ItemSeparatorComponent={ListGap}

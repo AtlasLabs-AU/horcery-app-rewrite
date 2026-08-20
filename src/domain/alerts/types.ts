@@ -109,6 +109,8 @@ export interface AlertTypeDescriptor {
     kind: ThresholdKind;
     /** Unit label per system for `degrees` (°C / °F). Others are unitless or minutes. */
     unit?: { metric: string; imperial: string };
+    /** Inclusive validation bounds in the form's DISPLAY units. */
+    range?: { min: number; max: number };
     /** Presets in DISPLAY units. For degrees the SAME numbers apply in either system (A0 §1.1). */
     presets?: ThresholdPreset[];
     /** Options when kind === 'selection'. */

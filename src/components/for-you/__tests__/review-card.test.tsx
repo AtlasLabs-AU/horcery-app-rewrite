@@ -3,6 +3,16 @@ import { Text } from 'react-native';
 
 import { ReviewCard } from '@/components/for-you/review-card';
 
+const event = {
+  id: 'event-1',
+  title: 'Lying Down',
+  horseName: 'Willow',
+  stallName: 'Stall 4',
+  timeLabel: '10:32 am',
+  durationLabel: '12m',
+  icon: 'lyingDown' as const,
+};
+
 /**
  * Seed test 2 — component states.
  *
@@ -78,6 +88,21 @@ describe('ReviewCard', () => {
 
     expect(onFilter).toHaveBeenCalledTimes(1);
     expect(onSeeHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders real event rows and honest loading/error states', async () => {
+    const events = await render(<ReviewCard events={[event]} />);
+    expect(events.getByTestId('for-you-review-preview')).toBeTruthy();
+    expect(events.getByText('Willow')).toBeTruthy();
+
+    const loading = await render(<ReviewCard isLoading />);
+    expect(loading.getByTestId('for-you-review-loading')).toBeTruthy();
+
+    const retry = jest.fn();
+    const error = await render(<ReviewCard isError onRetry={retry} />);
+    expect(error.getByText('Couldn’t load recent events.')).toBeTruthy();
+    await fireEvent.press(error.getByTestId('for-you-review-retry'));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
 

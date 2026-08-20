@@ -22,7 +22,12 @@ import type {
   ThresholdPreset,
   Units,
 } from '../types';
-import { displayPresets } from '../units';
+import {
+  celsiusToFahrenheit,
+  deltaCToF,
+  displayPresets,
+  round1,
+} from '../units';
 import { GENERIC, REGISTRY, type RegistryEntry } from './registry';
 
 // ------------------------------------------------------------ scales
@@ -68,6 +73,17 @@ function selectionOptions(selectables: unknown): SelectionOption[] {
   return out.sort((a, b) => a[0] - b[0]).map(([, o]) => o);
 }
 
+/** Registry degree bounds are canonical °C; descriptors expose display units. */
+function displayRange(
+  range: { min: number; max: number } | undefined,
+  slug: string,
+  units: Units,
+): { min: number; max: number } | undefined {
+  if (!range || units === 'metric') return range;
+  const convert = slug === 'temp-change' ? deltaCToF : celsiusToFahrenheit;
+  return { min: round1(convert(range.min)), max: round1(convert(range.max)) };
+}
+
 // ------------------------------------------------------------ category
 
 /** Server categories: 1 environmental, 2 behavioural, 3 security, 4 AI insight, 5 other. */
@@ -106,6 +122,7 @@ export function resolveDescriptor(alertType: ServerAlertType, units: Units): Ale
   const threshold: AlertTypeDescriptor['threshold'] = {
     kind: base.threshold.kind,
     unit: base.threshold.unit,
+    range: displayRange(base.threshold.range, slug, units),
     allowCustom: base.threshold.allowCustom,
   };
   if (threshold.kind === 'duration') {

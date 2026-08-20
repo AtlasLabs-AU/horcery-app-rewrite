@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { SnapshotsCard, type Snapshot } from '@/components/for-you/snapshots-card';
 
@@ -78,5 +78,22 @@ describe('SnapshotsCard — live mode', () => {
 
     expect(view.getByTestId('for-you-snapshot-a')).toBeTruthy();
     expect(CARD).toContain('No stall monitor in this organisation to stream from.');
+  });
+
+  it('distinguishes loading, error with retry, and monitored-stall empty states', async () => {
+    const retry = jest.fn();
+    const loading = await render(<SnapshotsCard snapshots={[]} isLoading />);
+    expect(loading.getByTestId('for-you-snapshots-loading')).toBeTruthy();
+
+    const error = await render(
+      <SnapshotsCard snapshots={[]} isError onRetry={retry} />,
+    );
+    expect(error.getByText('Couldn’t load snapshots.')).toBeTruthy();
+    await fireEvent.press(error.getByTestId('for-you-snapshots-retry'));
+    expect(retry).toHaveBeenCalledTimes(1);
+
+    const empty = await render(<SnapshotsCard snapshots={[]} />);
+    expect(empty.getByTestId('for-you-snapshots-empty')).toBeTruthy();
+    expect(empty.getByText(/after a Stall Monitor is connected/)).toBeTruthy();
   });
 });

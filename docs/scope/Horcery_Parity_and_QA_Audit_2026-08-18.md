@@ -122,6 +122,18 @@ Ranked. "P" = plausible from reading, needs a repro before fixing.
 | C18 | `use-alert-rule.ts:18-30` | Cache read in `useMemo` is not reactive — an edit after A4 can be computed from a stale rule. |
 | C19 | `targets.tsx:52-53,76` | Selection carries across **Selected → Excluded** flips: "these 3" silently becomes "all except these 3". |
 | C20 | `use-alert-rule-form.ts:38` | `{type:'target'}` exists but nothing dispatches it → **cannot author a horse-scoped alert** (always stalls). No "create alert pre-scoped to this horse" entry either. |
+
+### Resolution log
+
+- **2026-08-20 — C8–C11 and C13 fixed.** Alert thresholds now validate the
+  approved display-unit bounds; Snapshots uses complete pagination, monitored
+  stalls only, and honest states; For You Review reads the real event query;
+  Horse Events moves the shared play-head to the selected event and returns to
+  Summary. Covered by focused tests and the full app gate.
+- **C12 was already fixed before this slice.** Review History builds poster and
+  video URLs, renders a play affordance only with a real handler, and falls
+  back to a written unavailable state. Its existing characterization tests
+  were rerun rather than replacing that working path.
 | C21 | `configure.tsx:193-204` | Edit-confirm dialog offers Cancel/Preview only; in a non-dev build it is unreachable. |
 | C22 | `auth-flow.tsx:285-292` | `USER_DISABLED`, `TOO_MANY_ATTEMPTS`, missing API key all render "check the connection". |
 | C23 | `auth-flow.tsx:115` | `KeyboardAvoidingView` behaviour undefined on Android — inputs under the keyboard. |

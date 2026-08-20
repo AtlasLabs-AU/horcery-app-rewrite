@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
+import { LinkButton } from '@/components/for-you/link-button';
 import { MediaCarousel } from '@/components/media/media-carousel';
 import { MediaTile } from '@/components/media/media-tile';
+import { Icon } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
@@ -42,6 +44,9 @@ export function SnapshotsCard({
   playbackSpeedLabel = '10x',
   subtitle = 'Last 2 hours at a glance',
   paused = false,
+  isLoading = false,
+  isError = false,
+  onRetry,
 }: {
   snapshots: Snapshot[];
   playbackSpeedLabel?: string;
@@ -54,6 +59,9 @@ export function SnapshotsCard({
    * stays testable in isolation, like every other For You card).
    */
   paused?: boolean;
+  isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
 }) {
   const { colors } = useTokens();
   const [wantsLive, setWantsLive] = useState(false);
@@ -131,11 +139,12 @@ export function SnapshotsCard({
         {live ? 'Live from the stall you are viewing' : subtitle}
       </Text>
 
-      <MediaCarousel
-        items={snapshots}
-        keyExtractor={(snapshot) => snapshot.id}
-        testID="for-you-snapshot-row"
-        renderItem={(snapshot, _index, isSnapped) => {
+      {snapshots.length ? (
+        <MediaCarousel
+          items={snapshots}
+          keyExtractor={(snapshot) => snapshot.id}
+          testID="for-you-snapshot-row"
+          renderItem={(snapshot, _index, isSnapped) => {
           const broken = failed.includes(snapshot.id);
           /**
            * ONE player, ever. `videoUri` is passed only to the snapped tile
@@ -174,9 +183,52 @@ export function SnapshotsCard({
               testID={`for-you-snapshot-${snapshot.id}`}
             />
           );
-        }}
-      />
+          }}
+        />
+      ) : isLoading ? (
+        <SnapshotState testID="for-you-snapshots-loading" icon="camera" text="Loading snapshots…" loading />
+      ) : isError ? (
+        <SnapshotState
+          testID="for-you-snapshots-error"
+          icon="cameraOff"
+          text="Couldn’t load snapshots."
+          action={onRetry ? <LinkButton label="Try again" onPress={onRetry} testID="for-you-snapshots-retry" /> : undefined}
+        />
+      ) : (
+        <SnapshotState
+          testID="for-you-snapshots-empty"
+          icon="cameraOff"
+          text="No monitored stalls yet. Snapshots appear after a Stall Monitor is connected."
+        />
+      )}
     </SectionCard>
+  );
+}
+
+function SnapshotState({
+  testID,
+  icon,
+  text,
+  loading = false,
+  action,
+}: {
+  testID: string;
+  icon: 'camera' | 'cameraOff';
+  text: string;
+  loading?: boolean;
+  action?: React.ReactNode;
+}) {
+  const { colors } = useTokens();
+  return (
+    <View style={[styles.state, { backgroundColor: colors.bed }]} testID={testID}>
+      {loading ? (
+        <ActivityIndicator color={colors.accent} />
+      ) : (
+        <Icon name={icon} size={18} color={colors.accent} />
+      )}
+      <Text style={[type.subhead, styles.stateText, { color: colors.secondary }]}>{text}</Text>
+      {action}
+    </View>
   );
 }
 
@@ -191,5 +243,18 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: space.xxs,
+  },
+  state: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    padding: space.edge,
+    marginTop: space.edge,
+  },
+  stateText: {
+    flex: 1,
+    lineHeight: 21,
   },
 });

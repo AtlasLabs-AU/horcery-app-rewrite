@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SectionCard, SectionHeader } from '@/components/for-you/card';
 import { LinkButton } from '@/components/for-you/link-button';
@@ -28,12 +28,18 @@ export interface ReviewPreviewEvent {
 export function ReviewCard({
   onFilter,
   onSeeHistory,
-  previewEvents,
+  events,
+  isLoading = false,
+  isError = false,
+  onRetry,
   children,
 }: {
   onFilter?: () => void;
   onSeeHistory?: () => void;
-  previewEvents?: readonly ReviewPreviewEvent[];
+  events?: readonly ReviewPreviewEvent[];
+  isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   /** Review cards when there are any; the empty state renders otherwise. */
   children?: React.ReactNode;
 }) {
@@ -59,17 +65,54 @@ export function ReviewCard({
         }
       />
       {children ??
-        (previewEvents?.length ? (
+        (events?.length ? (
           <MediaCarousel
-            items={previewEvents}
+            items={events}
             keyExtractor={(event) => event.id}
             testID="for-you-review-preview"
             renderItem={(event) => <ReviewPreviewTile event={event} />}
+          />
+        ) : isLoading ? (
+          <ReviewState testID="for-you-review-loading" text="Loading recent events…" loading />
+        ) : isError ? (
+          <ReviewState
+            testID="for-you-review-error"
+            text="Couldn’t load recent events."
+            action={
+              onRetry ? (
+                <LinkButton label="Try again" onPress={onRetry} testID="for-you-review-retry" />
+              ) : undefined
+            }
           />
         ) : (
           <ReviewEmptyState />
         ))}
     </SectionCard>
+  );
+}
+
+function ReviewState({
+  testID,
+  text,
+  loading = false,
+  action,
+}: {
+  testID: string;
+  text: string;
+  loading?: boolean;
+  action?: React.ReactNode;
+}) {
+  const { colors } = useTokens();
+  return (
+    <View style={[styles.info, { backgroundColor: colors.bed }]} testID={testID}>
+      {loading ? (
+        <ActivityIndicator color={colors.accent} />
+      ) : (
+        <Icon name="info" size={18} color={colors.accent} />
+      )}
+      <Text style={[type.subhead, styles.infoText, { color: colors.secondary }]}>{text}</Text>
+      {action}
+    </View>
   );
 }
 

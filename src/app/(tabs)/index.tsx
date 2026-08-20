@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,10 +14,13 @@ import { IntakeCard } from '@/components/for-you/intake-card';
 import { OrganizationCard } from '@/components/for-you/organization-card';
 import { ForYouPreviewBanner } from '@/components/for-you/preview-banner';
 import { ReviewCard } from '@/components/for-you/review-card';
+import type { ReviewPreviewEvent } from '@/components/for-you/review-card';
+import { toHistoryEvents } from '@/components/review-history/event-rows';
 import { SnapshotsCard } from '@/components/for-you/snapshots-card';
 import { useAlertStatus } from '@/hooks/use-alert-status';
 import { useForYouData } from '@/hooks/use-for-you-data';
 import { useSnapshots } from '@/hooks/use-snapshots';
+import { useReviewHistory } from '@/hooks/use-review-history';
 import { BottomTabInset, MaxContentWidth } from '@/constants/theme';
 import { space } from '@/constants/tokens';
 import { useTokens } from '@/hooks/use-tokens';
@@ -49,8 +52,10 @@ export default function ForYouScreen() {
     isRefreshing,
     refresh,
     timezone,
+    now,
   } = useForYouData();
-  const { snapshots } = useSnapshots();
+  const snapshotsQuery = useSnapshots();
+  const reviewQuery = useReviewHistory({ day: now, pageSize: 10 });
   /**
    * Whether this tab is on screen. Owned here rather than inside
    * `SnapshotsCard` so that card stays renderable without a navigator; it
@@ -67,7 +72,31 @@ export default function ForYouScreen() {
   const alertStatus = useAlertStatus(organizationID, timezone);
   const { colors } = useTokens();
   const preview = PREVIEWS.sampleForYouData;
-  const visibleSnapshots = snapshots.length > 0 ? snapshots : preview ? SAMPLE_FOR_YOU.snapshots : [];
+  const visibleSnapshots = snapshotsQuery.snapshots.length > 0
+    ? snapshotsQuery.snapshots
+    : preview && !snapshotsQuery.isLoading && !snapshotsQuery.isError
+      ? SAMPLE_FOR_YOU.snapshots
+      : [];
+  const reviewEvents = useMemo<ReviewPreviewEvent[]>(
+    () =>
+      toHistoryEvents(reviewQuery.events, { timezone }).map((event) => ({
+        id: event.id,
+        title: event.title,
+        horseName: event.animalName ?? event.stallName ?? 'Recent event',
+        stallName: event.stallName ?? 'Stall unavailable',
+        timeLabel: event.timeLabel,
+        durationLabel: event.durationLabel ?? '',
+        icon: event.icon,
+        posterUri: event.posterUri,
+        blurhash: event.blurhash,
+      })),
+    [reviewQuery.events, timezone],
+  );
+  const visibleReviewEvents = reviewEvents.length > 0
+    ? reviewEvents
+    : preview && !reviewQuery.isLoading && !reviewQuery.isError
+      ? SAMPLE_FOR_YOU.reviewEvents
+      : [];
 
   const openMenu = useCallback(() => router.push('/menu'), []);
   const openHistory = useCallback(() => router.push('/review-history'), []);
@@ -107,11 +136,20 @@ export default function ForYouScreen() {
             onManageAlerts={openAlerts}
           />
 
-          <SnapshotsCard snapshots={visibleSnapshots} paused={!isFocused} />
+          <SnapshotsCard
+            snapshots={visibleSnapshots}
+            paused={!isFocused}
+            isLoading={snapshotsQuery.isLoading}
+            isError={snapshotsQuery.isError}
+            onRetry={() => void snapshotsQuery.refetch()}
+          />
 
           <ReviewCard
             onSeeHistory={openHistory}
-            previewEvents={preview ? SAMPLE_FOR_YOU.reviewEvents : undefined}
+            events={visibleReviewEvents}
+            isLoading={reviewQuery.isLoading}
+            isError={reviewQuery.isError}
+            onRetry={() => void reviewQuery.refetch()}
           />
 
           <Deferred reserve={380}>

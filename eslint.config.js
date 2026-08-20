@@ -92,6 +92,9 @@ module.exports = defineConfig([
       'expo-env.d.ts',
       // Throwaway spike apps with their own dependencies (see jest.config.js).
       'spikes/**',
+      // Agent-created nested worktrees are separate checkouts with their own
+      // branch state; linting them here mixes two builds into one gate.
+      '.claude/worktrees/**',
     ],
   },
 

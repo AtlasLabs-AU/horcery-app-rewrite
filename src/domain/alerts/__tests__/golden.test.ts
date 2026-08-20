@@ -156,7 +156,8 @@ describe('every real rule is valid against its descriptor', () => {
   it.each(RULES.map((rule) => [rule.id, rule] as const))('%s', (_id, rule) => {
     const typeId = typeof rule.alert_type === 'string' ? rule.alert_type : (rule.alert_type.id ?? '');
     const d = byId.get(typeId)!;
-    const errors = validate(toForm(rule, d, unitsFor(rule), ZONE, ON), d);
+    const units = unitsFor(rule);
+    const errors = validate(toForm(rule, d, units, ZONE, ON), d, units);
     // Reading is faithful; the ONLY validation failure real rules may hit is
     // a window shorter than the type's minimum (the 7-minute test rule).
     const keys = Object.keys(errors);
@@ -168,7 +169,7 @@ describe('emptyForm', () => {
   it('starts every known type valid or with only the fields a user must fill', () => {
     for (const d of byId.values()) {
       const form = emptyForm(d, ZONE);
-      const errors = validate(form, d);
+      const errors = validate(form, d, 'metric');
       // presets fill values; nothing should be missing for the QA types
       expect(errors).toEqual({});
     }

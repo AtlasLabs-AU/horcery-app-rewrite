@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { getStallMonitorThumbnailURLs } from '@acme/config/utils/stall-monitor-video-helper';
-import { stallLiveStreamUrl } from '@/hooks/horses-data';
 import { queries } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 
 import type { Snapshot } from '@/components/for-you/snapshots-card';
+import { buildSnapshots } from '@/hooks/snapshots-data';
 
 /**
  * Frame URLs are quantised to this many seconds. Long enough that repeated
@@ -30,53 +29,48 @@ const FRAME_SLICE_SECONDS = 300;
  *   (`…/frames/<epoch>.jpeg`, the same source the current app already uses for
  *   thumbnails elsewhere), so the page costs images rather than video streams.
  *
- * The frame epoch is rounded to a 10s slice, which is both what the endpoint
+ * The frame epoch is rounded to a five-minute slice, which is both what the endpoint
  * expects and what makes the URL stable enough for the image cache to work.
  */
 export function useSnapshots() {
   const organizationID = useAuthStore((s) => s.organizationID);
   const enabled = !!organizationID;
 
-  const { data: stallData, isLoading } = useQuery({
-    ...queries.stall.list({
+  const stallsQuery = useQuery({
+    ...queries.stall.listComplete({
       organization_id: organizationID ?? '',
       deleted_at__isnull: true,
+      page_size: 100,
+      ordering: '-created_at',
+    }, [
+      // Match the shipping app: Snapshots is a camera surface, not an empty
+      // tile for every physical stall in the organisation.
+      { key: 'current_stall_monitor_deviceinstance__isnull', value: 'false' },
+    ]),
+    enabled,
+  });
+
+  const linksQuery = useQuery({
+    ...queries.animalStall.listComplete({
+      organization_id: organizationID ?? '',
+      deleted_at__isnull: true,
+      page_size: 100,
     }),
     enabled,
   });
 
-  const { data: animalStallData } = useQuery({
-    ...queries.animalStall.list({
+  const animalsQuery = useQuery({
+    ...queries.animal.listComplete({
       organization_id: organizationID ?? '',
       deleted_at__isnull: true,
-    }),
-    enabled,
-  });
-
-  const { data: animalData } = useQuery({
-    ...queries.animal.list({
-      organization_id: organizationID ?? '',
-      deleted_at__isnull: true,
+      page_size: 100,
     }),
     enabled,
   });
 
   const snapshots = useMemo<Snapshot[]>(() => {
-    const stalls = stallData?.data ?? [];
-    if (!stalls.length) return [];
-
-    const animals = animalData?.data ?? [];
-    const animalsById = new Map(animals.map((animal) => [animal.id, animal]));
-    const animalByStallId = new Map<string, (typeof animals)[number]>();
-
-    for (const link of animalStallData?.data ?? []) {
-      if (link.deleted_at) continue;
-      // `stall` is either the id or the expanded object depending on the query.
-      const stallId = typeof link.stall === 'string' ? link.stall : link.stall?.id;
-      const animal = animalsById.get(link.animal_id);
-      if (animal && stallId) animalByStallId.set(stallId, animal);
-    }
-
+    // The API filter is the efficient path; this local predicate is the
+    // correctness boundary if an older backend ignores that filter.
     // One frame, five minutes back: the monitor writes slices continuously and
     // the most recent one is not always flushed yet.
     //
@@ -91,28 +85,25 @@ export function useSnapshots() {
         DateTime.now().minus({ minutes: 5 }).toSeconds() / FRAME_SLICE_SECONDS,
       ) * FRAME_SLICE_SECONDS;
 
-    return stalls.map((stall) => {
-      const animal = animalByStallId.get(stall.id);
-      const [posterUri] = stall.stall_url
-        ? getStallMonitorThumbnailURLs(stall.stall_url, epoch)
-        : [undefined];
+    return buildSnapshots(
+      stallsQuery.data ?? [],
+      linksQuery.data ?? [],
+      animalsQuery.data ?? [],
+      epoch,
+    );
+  }, [stallsQuery.data, linksQuery.data, animalsQuery.data]);
 
-      const liveUri = stallLiveStreamUrl(stall);
+  const refetch = useCallback(
+    () => Promise.all([stallsQuery.refetch(), linksQuery.refetch(), animalsQuery.refetch()]),
+    [stallsQuery, linksQuery, animalsQuery],
+  );
 
-      return {
-        id: stall.id,
-        name: animal?.animal_name ?? stall.name ?? 'No Stall Assigned',
-        posterUri,
-        liveUri,
-        hasAudio: !!stall.UserMetaData?.audio_enable,
-        blurhash: stall.stall_blur_hash ?? undefined,
-        avatarUri:
-          animal?.animal_image && 'small' in animal.animal_image
-            ? animal.animal_image.small
-            : undefined,
-      };
-    });
-  }, [stallData, animalStallData, animalData]);
-
-  return { snapshots, isLoading };
+  return {
+    snapshots,
+    isLoading:
+      enabled &&
+      (stallsQuery.isPending || linksQuery.isPending || animalsQuery.isPending),
+    isError: stallsQuery.isError || linksQuery.isError || animalsQuery.isError,
+    refetch,
+  };
 }

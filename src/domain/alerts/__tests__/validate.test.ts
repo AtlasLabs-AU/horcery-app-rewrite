@@ -2,14 +2,16 @@ import { AlertCondition } from '@/config/enums/alert-conditions';
 
 import { resolveDescriptors } from '../descriptors';
 import { emptyForm } from '../payload';
-import type { AlertRuleForm, ServerAlertType } from '../types';
-import { isValid, validate } from '../validate';
+import type { AlertRuleForm, AlertTypeDescriptor, ServerAlertType } from '../types';
+import { isValid, validate as validateWithUnits } from '../validate';
 
 import typesFixture from '../__fixtures__/alert-types.json';
 
 const { bySlug } = resolveDescriptors(typesFixture as unknown as ServerAlertType[], 'metric');
 const ZONE = 'America/Chicago';
 const d = (slug: string) => bySlug.get(slug)!;
+const validate = (candidate: AlertRuleForm, descriptor: AlertTypeDescriptor) =>
+  validateWithUnits(candidate, descriptor, 'metric');
 const form = (slug: string, patch: Partial<AlertRuleForm> = {}): AlertRuleForm => ({
   ...emptyForm(d(slug), ZONE),
   ...patch,
@@ -35,6 +37,33 @@ describe('validate — the words under the field', () => {
     expect(validate(form('lying-down-count', { thresholdValue: null }), d('lying-down-count')).thresholdValue).toBe(
       'Enter a value.',
     );
+  });
+
+  it('enforces threshold bounds in the user\'s display units', () => {
+    expect(
+      validateWithUnits(
+        form('temperature', { thresholdValue: 500 }),
+        d('temperature'),
+        'metric',
+      ).thresholdValue,
+    ).toBe('Enter a value from -10 to 50 °C.');
+
+    const imperial = resolveDescriptors(
+      typesFixture as unknown as ServerAlertType[],
+      'imperial',
+    ).bySlug.get('temperature')!;
+    expect(
+      validateWithUnits(
+        { ...emptyForm(imperial, ZONE), thresholdValue: 500 },
+        imperial,
+        'imperial',
+      ).thresholdValue,
+    ).toBe('Enter a value from 14 to 122 °F.');
+
+    expect(
+      validate(form('lying-down-count', { thresholdValue: 21 }), d('lying-down-count'))
+        .thresholdValue,
+    ).toBe('Enter a value from 0 to 20.');
   });
 
   it('"within any" is required where the type says so (temp-change, lying-down-count)', () => {

@@ -1,5 +1,5 @@
 /**
- * `validate(form, descriptor)` → field errors. Pure. Replaces the shipping
+ * `validate(form, descriptor, units)` → field errors. Pure. Replaces the shipping
  * app's runtime-rebuilt zod schema (D2). Messages are the words shown under
  * the field, so they are written for a person, not a log.
  *
@@ -13,12 +13,16 @@
  * - a scope of "selected" with nothing selected is an error.
  */
 
-import type { AlertRuleForm, AlertTypeDescriptor, FieldErrors } from './types';
+import type { AlertRuleForm, AlertTypeDescriptor, FieldErrors, Units } from './types';
 import { windowMinutes } from './window';
 
 const MAX_MINUTES = 24 * 60;
 
-export function validate(form: AlertRuleForm, descriptor: AlertTypeDescriptor): FieldErrors {
+export function validate(
+  form: AlertRuleForm,
+  descriptor: AlertTypeDescriptor,
+  units: Units,
+): FieldErrors {
   const errors: FieldErrors = {};
   const kind = descriptor.threshold.kind;
 
@@ -34,6 +38,17 @@ export function validate(form: AlertRuleForm, descriptor: AlertTypeDescriptor): 
         errors.thresholdValue = 'Enter a value.';
       } else if (kind === 'count' && (form.thresholdValue < 0 || !Number.isInteger(form.thresholdValue))) {
         errors.thresholdValue = 'Enter a whole number.';
+      } else if (descriptor.threshold.range) {
+        const { min, max } = descriptor.threshold.range;
+        // A temperature-change threshold is a magnitude in the form. Its
+        // direction is encoded by the comparator when the payload is built.
+        const comparable = descriptor.slug === 'temp-change'
+          ? Math.abs(form.thresholdValue)
+          : form.thresholdValue;
+        if (comparable < min || comparable > max) {
+          const unit = descriptor.threshold.unit?.[units];
+          errors.thresholdValue = `Enter a value from ${formatNumber(min)} to ${formatNumber(max)}${unit ? ` ${unit}` : ''}.`;
+        }
       }
       break;
     case 'selection':
@@ -100,4 +115,8 @@ export function isValid(errors: FieldErrors): boolean {
 function formatMin(minutes: number): string {
   if (minutes % 60 === 0) return `${minutes / 60} h`;
   return `${minutes} min`;
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
 }

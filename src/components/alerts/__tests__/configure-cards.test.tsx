@@ -18,7 +18,7 @@ describe('AlertDetailsCard renders every real alert type from its descriptor', (
     const form = emptyForm(descriptor, ZONE);
     const dispatch = jest.fn();
     const screen = await render(
-      <AlertDetailsCard form={form} descriptor={descriptor} units="metric" errors={validate(form, descriptor)} dispatch={dispatch} disabled={false} />,
+      <AlertDetailsCard form={form} descriptor={descriptor} units="metric" errors={validate(form, descriptor, 'metric')} dispatch={dispatch} disabled={false} />,
     );
     expect(screen.getByTestId('alert-details')).toBeTruthy();
     // the field set follows the descriptor, not the slug
@@ -48,7 +48,7 @@ describe('AlertDetailsCard renders every real alert type from its descriptor', (
     const d = bySlug.get('temp-change')!;
     const form = { ...emptyForm(d, ZONE), queryRangeMinutes: null };
     const screen = await render(
-      <AlertDetailsCard form={form} descriptor={d} units="metric" errors={validate(form, d)} dispatch={jest.fn()} disabled={false} />,
+      <AlertDetailsCard form={form} descriptor={d} units="metric" errors={validate(form, d, 'metric')} dispatch={jest.fn()} disabled={false} />,
     );
     expect(screen.getByText('Enter a value for "within any".')).toBeTruthy();
 

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MediaTile } from '@/components/media/media-tile';
 import { Icon, type IconName } from '@/components/ui/icon';
@@ -56,14 +56,18 @@ export function EventCard({
   playing = false,
   onPress,
   onPlaybackError,
+  actionHint,
 }: {
   event: HistoryEvent;
   playing?: boolean;
   onPress?: () => void;
   onPlaybackError?: () => void;
+  /** Accessible outcome for a non-playback press, such as opening this moment. */
+  actionHint?: string;
 }) {
   const { colors } = useTokens();
-  const canPlay = !!event.videoUri && !!onPress;
+  const canPress = !!onPress;
+  const canPlay = !!event.videoUri && canPress && !actionHint;
   const hasVisual = !!event.posterUri || !!event.blurhash || !!event.videoUri;
 
   if (event.hasClip && hasVisual) {
@@ -80,19 +84,21 @@ export function EventCard({
         badge={event.durationLabel}
         showPlayBadge={canPlay && !playing}
         tag={event.isAlert ? { label: event.title, tone: 'alert' } : undefined}
-        onPress={canPlay ? onPress : undefined}
+        onPress={canPress ? onPress : undefined}
         accessibilityLabel={`${event.title}, ${event.animalName ?? event.stallName ?? ''}, ${event.timeLabel}${
-          canPlay ? (playing ? ', tap to stop video' : ', tap to play video') : ''
+          actionHint
+            ? `, ${actionHint}`
+            : canPlay
+              ? (playing ? ', tap to stop video' : ', tap to play video')
+              : ''
         }`}
         testID={`history-event-${event.id}`}
       />
     );
   }
 
-  return (
-    <View
-      style={[styles.card, { backgroundColor: colors.card }]}
-      testID={`history-event-${event.id}`}>
+  const writtenCard = (
+    <View style={[styles.card, { backgroundColor: colors.card }]}>
       <View style={styles.headerRow}>
         <Icon name={event.icon} size={18} color={colors.accent} />
         <Text
@@ -111,6 +117,21 @@ export function EventCard({
         {event.hasClip ? <InfoRow label="Footage" value="Unavailable" /> : null}
       </View>
     </View>
+  );
+
+  if (!canPress) {
+    return <View testID={`history-event-${event.id}`}>{writtenCard}</View>;
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title}, ${event.animalName ?? event.stallName ?? ''}, ${event.timeLabel}${actionHint ? `, ${actionHint}` : ''}`}
+      testID={`history-event-${event.id}`}
+      style={({ pressed }) => pressed && styles.pressed}>
+      {writtenCard}
+    </Pressable>
   );
 }
 
@@ -146,4 +167,5 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   infoRow: { gap: space.xxs },
+  pressed: { opacity: 0.65 },
 });

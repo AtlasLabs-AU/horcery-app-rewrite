@@ -105,7 +105,10 @@ export function useAlertRuleForm(opts: UseAlertRuleFormOptions) {
   const [form, dispatch] = useReducer(formReducer, opts.initial);
   const { descriptor, units, organizationId, now, mode, existingMetadata } = opts;
 
-  const errors = useMemo<FieldErrors>(() => validate(form, descriptor), [form, descriptor]);
+  const errors = useMemo<FieldErrors>(
+    () => validate(form, descriptor, units),
+    [form, descriptor, units],
+  );
   const valid = isValid(errors);
   const sentence = useMemo(() => ruleSummary(form, descriptor, units), [form, descriptor, units]);
   const payload = useMemo<AlertRulePayload>(

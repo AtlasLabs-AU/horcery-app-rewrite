@@ -23,7 +23,7 @@ export type RegistryEntry = Pick<
   AlertTypeDescriptor,
   'category' | 'icon' | 'conditions' | 'window'
 > & {
-  threshold: Pick<AlertTypeDescriptor['threshold'], 'kind' | 'unit' | 'allowCustom'>;
+  threshold: Pick<AlertTypeDescriptor['threshold'], 'kind' | 'unit' | 'range' | 'allowCustom'>;
   triggerDuration?: AlertTypeDescriptor['triggerDuration'];
   queryRange?: AlertTypeDescriptor['queryRange'];
   basedOn?: AlertTypeDescriptor['basedOn'];
@@ -41,14 +41,26 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   temperature: {
     category: 'environmental',
     icon: 'temperature',
-    threshold: { kind: 'degrees', unit: { metric: '°C', imperial: '°F' }, allowCustom: true },
+    threshold: {
+      kind: 'degrees',
+      unit: { metric: '°C', imperial: '°F' },
+      // Canonical °C bounds; `resolveDescriptor` projects them to display units.
+      range: { min: -10, max: 50 },
+      allowCustom: true,
+    },
     conditions: [AlertCondition.GREATER_THAN, AlertCondition.LESS_THAN],
     window: { minMinutes: 30, requireDistinct: true },
   },
   'temp-change': {
     category: 'environmental',
     icon: 'temperature',
-    threshold: { kind: 'degrees', unit: { metric: '°C', imperial: '°F' }, allowCustom: true },
+    threshold: {
+      kind: 'degrees',
+      unit: { metric: '°C', imperial: '°F' },
+      // Canonical °C delta bounds; sign is carried by the comparator.
+      range: { min: 2.7, max: 20 },
+      allowCustom: true,
+    },
     // rise = '>' with a positive threshold; drop = '<' with a NEGATIVE one (A0 §2.1)
     conditions: [AlertCondition.GREATER_THAN, AlertCondition.LESS_THAN],
     queryRange: { required: true, presetsMinutes: HOUR_PRESETS },
@@ -65,7 +77,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   'lying-down-count': {
     category: 'behavioural',
     icon: 'lyingDown',
-    threshold: { kind: 'count', allowCustom: true },
+    threshold: { kind: 'count', range: { min: 0, max: 20 }, allowCustom: true },
     conditions: [AlertCondition.GREATER_THAN],
     queryRange: { required: true, presetsMinutes: HOUR_PRESETS },
     window: { minMinutes: 30, requireDistinct: true },

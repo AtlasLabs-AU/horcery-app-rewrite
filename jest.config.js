@@ -22,8 +22,15 @@ module.exports = {
   // node_modules (the §6a chart harness). They are not part of the app: keep
   // their modules out of the haste map (duplicate-package collisions) and
   // their tests, if any, out of this run.
-  modulePathIgnorePatterns: ['<rootDir>/spikes/'],
-  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/spikes/'],
+  // Claude/Codex may create nested worktrees while this checkout is open.
+  // They carry their own package.json and tests, so crawling them both causes
+  // a haste collision and executes a different branch's test suite here.
+  modulePathIgnorePatterns: ['<rootDir>/spikes/', '<rootDir>/.claude/worktrees/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/spikes/',
+    '<rootDir>/.claude/worktrees/',
+  ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
