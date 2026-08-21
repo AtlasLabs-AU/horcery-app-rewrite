@@ -46,7 +46,7 @@ const PARTIAL_FADE = 0.45;
  * that generate them. Both plots pass an explicit `domain`, so removing the
  * ticks changes no scaling — only the decoration goes.
  */
-const NO_GRID_Y_AXIS = [{ lineWidth: 0, tickCount: 0 }];
+export const NO_GRID_Y_AXIS = [{ lineWidth: 0, tickCount: 0 }];
 
 /**
  * The only renderer-specific boundary for both lying-down views.

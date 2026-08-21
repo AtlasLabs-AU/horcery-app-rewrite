@@ -18,6 +18,14 @@ import { HorsePassport } from '@/components/horses/horse-passport';
 import { Last24HoursCard } from '@/components/charts/last-24-hours-card';
 import { buildLast24Hours } from '@/charts/last-24-hours';
 import { ordinaryDay as last24OrdinaryDay } from '@/charts/fixtures/last-24-hours';
+import { HorseTrendsCard } from '@/components/charts/horse-trends-card';
+import { buildActivenessDay, buildRollingWeek } from '@/charts/horse-trends';
+import {
+  activenessWithGap,
+  observedDaysWithOutage,
+  rollingPreviousWeek,
+  rollingWeek as rollingWeekFixture,
+} from '@/charts/fixtures/horse-trends';
 import { HorseStallCard } from '@/components/horses/horse-stall-card';
 import { HorseStatusStrip } from '@/components/horses/horse-status-strip';
 import { HorsesError, HorsesLoading, HorsesNoInternet } from '@/components/horses/horses-states';
@@ -523,6 +531,41 @@ export default function HorseDetailScreen() {
                         zone: timezone ?? now.zoneName ?? 'UTC',
                         segments: last24OrdinaryDay,
                       })}
+                      width={width - TAB_WIDTH_INSET - space.lg * 2}
+                    />
+                    <Text
+                      style={[
+                        type.micro,
+                        styles.last24Sample,
+                        { color: colors.tertiary },
+                      ]}>
+                      Sample data — not this horse
+                    </Text>
+                  </View>
+                ) : null}
+                {PREVIEWS.horseTrendsSampleData ? (
+                  <View
+                    style={[
+                      styles.last24Card,
+                      { backgroundColor: colors.card, borderColor: colors.divider },
+                    ]}>
+                    <HorseTrendsCard
+                      activeness={buildActivenessDay({
+                        samples: activenessWithGap(now),
+                        now,
+                      })}
+                      rollingEvents={rollingWeekFixture(now).filter(
+                        (event) => event.at >= now.minus({ hours: 24 }).toSeconds(),
+                      )}
+                      rollingWeek={buildRollingWeek({
+                        events: rollingWeekFixture(now),
+                        previousEvents: rollingPreviousWeek(now),
+                        observedDays: observedDaysWithOutage(now, 6),
+                        zone: timezone ?? now.zoneName ?? 'UTC',
+                        now,
+                      })}
+                      zone={timezone ?? now.zoneName ?? 'UTC'}
+                      now={now}
                       width={width - TAB_WIDTH_INSET - space.lg * 2}
                     />
                     <Text

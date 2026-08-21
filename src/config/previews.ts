@@ -91,4 +91,11 @@ export const PREVIEWS = {
    * are contract-shaped inputs; nothing is derived on the phone even here.
    */
   last24HoursSampleData: __DEV__ && optedIn,
+
+  /**
+   * Horse Trends (Activeness + Rolling) on Horse Details, from FIXTURE data,
+   * same reason and same visible marker. Activeness stays unit-less and
+   * badge-less until Data Science approves both.
+   */
+  horseTrendsSampleData: __DEV__ && optedIn,
 } as const;

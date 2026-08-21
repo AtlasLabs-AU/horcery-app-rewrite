@@ -39,6 +39,17 @@ jest.mock('@/components/charts/victory-lying-down-adapter', () => {
       React.createElement(View, { testID: 'lying-down-daily-plot' }),
     VictoryLyingDownWeeklyPlot: () =>
       React.createElement(View, { testID: 'lying-down-weekly-plot' }),
+    NO_GRID_Y_AXIS: [{ lineWidth: 0, tickCount: 0 }],
+  };
+});
+
+// Same boundary, same reason, for the Horse Trends adapter.
+jest.mock('@/components/charts/victory-trends-adapter', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    VictoryActivenessPlot: () =>
+      React.createElement(View, { testID: 'activeness-plot' }),
   };
 });
 
