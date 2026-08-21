@@ -5,6 +5,10 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SectionCard, SectionHeader } from "@/components/for-you/card";
 import { SplitRow } from "@/components/ui/split-row";
 import { ChartPlaceholder } from "@/components/for-you/chart-placeholder";
+import {
+  ConsumptionComingSoon,
+  ConsumptionUpsell,
+} from "@/components/charts/consumption-state";
 import { LyingDownRow } from "@/components/charts/lying-down-row";
 import { LyingDownWeekRow } from "@/components/charts/lying-down-week-row";
 import { PeopleInStallRow } from "@/components/charts/people-in-stall-row";
@@ -121,7 +125,9 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
   { id: "lying-down", label: "Lying Down", icon: "lyingDown" },
   { id: "people-in-stall", label: "People in Stall", icon: "peopleInStall" },
   { id: "in-stall", label: "Horse in Stall", icon: "inStall" },
-  { id: "feed", label: "Feed", icon: "feed" },
+  // "Consumption" is the shipping app's own name for this behaviour; its
+  // internal key stays `feed` because that is what the icon set calls it.
+  { id: "feed", label: "Consumption", icon: "feed" },
 ];
 
 /**
@@ -137,10 +143,17 @@ const DEFAULT_BEHAVIORS: Behavior[] = [
  */
 export function BehaviorTrackerCard({
   behaviors = DEFAULT_BEHAVIORS,
+  hasBucketMeters = false,
   previewTrends,
   previewLabels,
 }: {
   behaviors?: Behavior[];
+  /**
+   * Whether the organization owns any water or feed bucket meter. Decides
+   * which Consumption state shows, exactly as the current app decides it from
+   * `fypContext.hasFeedDevices || hasWaterDevices`.
+   */
+  hasBucketMeters?: boolean;
   previewTrends?: Readonly<
     Record<string, Partial<Record<TrackerPeriod, readonly number[]>>>
   >;
@@ -813,6 +826,16 @@ export function BehaviorTrackerCard({
             </Text>
           </View>
         </WeeklyDetailProvider>
+      ) : selected?.id === "feed" ? (
+        // Consumption has no chart yet. The current app shows the product
+        // upsell to an organization with no meters and a plain "Coming Soon!"
+        // to one that already owns them — never the advert to someone who has
+        // already bought the hardware.
+        hasBucketMeters ? (
+          <ConsumptionComingSoon testID="for-you-consumption-coming-soon" />
+        ) : (
+          <ConsumptionUpsell testID="for-you-consumption-upsell" />
+        )
       ) : (
         <ChartPlaceholder
           height={168}

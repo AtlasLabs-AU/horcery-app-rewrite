@@ -18,6 +18,13 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.env.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '**/*.test.{ts,tsx}'],
+  // `@/assets/*` resolves to the repo-root `assets/` folder, not `src/assets`
+  // — tsconfig has the mapping and Metro honours it, but jest-expo's own `@/`
+  // rule sends everything to `src/` and a required image fails to resolve.
+  // Listed before the general rule, which is the order jest applies them in.
+  moduleNameMapper: {
+    '^@/assets/(.*)$': '<rootDir>/assets/$1',
+  },
   // spikes/ holds throwaway measurement apps with their OWN package.json and
   // node_modules (the §6a chart harness). They are not part of the app: keep
   // their modules out of the haste map (duplicate-package collisions) and

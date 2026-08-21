@@ -154,6 +154,7 @@ export default function ForYouScreen() {
 
           <Deferred reserve={380}>
             <BehaviorTrackerCard
+              hasBucketMeters={devices.hasWaterDevices || devices.hasFeedDevices}
               previewTrends={preview ? SAMPLE_FOR_YOU.behaviorTrends : undefined}
               previewLabels={preview ? SAMPLE_FOR_YOU.chartLabels : undefined}
             />
