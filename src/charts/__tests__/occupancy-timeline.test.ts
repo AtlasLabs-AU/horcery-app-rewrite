@@ -416,3 +416,82 @@ describe('People In Stall fixtures', () => {
     expect(dstDay.end - dstDay.start).toBe(23 * 3600);
   });
 });
+
+/**
+ * Two QA-confirmed defects from the shipping app that must never enter this
+ * builder (Codex review; verified in legacy source; sign-off Inakshi
+ * 2026-08-21). Both would make every behaviour chart lie at once, because all
+ * three draw from this one interval builder.
+ */
+describe('defects the shipping app has', () => {
+  /** A minute-cadence run of "present" samples over the given ranges. */
+  const presentDuring = (
+    ranges: [string, string][],
+    gaps: [string, string][] = [],
+  ): [number, string][] => {
+    const points: [number, string][] = [];
+    for (let t = secs('2026-08-14T06:00:00'); t <= secs('2026-08-14T12:00:00'); t += 60) {
+      if (gaps.some(([a, b]) => t > secs(a) && t < secs(b))) continue;
+      const on = ranges.some(([a, b]) => t >= secs(a) && t < secs(b));
+      points.push([t, on ? '1' : '0']);
+    }
+    return points;
+  };
+
+  it('never lets an interval span a hole in the data', () => {
+    // Present 7–8, monitor silent 8–11, present again 11–12. The legacy
+    // builder bridges the silence and reports five occupied hours; only two
+    // were observed. The silence belongs to the coverage layer, not to a bar.
+    const raw: PrometheusRangeSeries = {
+      metric: { Event_Type: 'Human_Presence', instance: 'sm-1:9100' },
+      values: presentDuring(
+        [['2026-08-14T07:00:00', '2026-08-14T12:00:00']],
+        [['2026-08-14T08:00:00', '2026-08-14T11:00:00']],
+      ),
+    };
+    const { series: built } = build([raw]);
+    const intervals = built[0]!.intervalsByDay['2026-08-14']!;
+
+    const total = intervals.reduce((sum, i) => sum + (i.exit - i.enter), 0);
+    expect(intervals.length).toBe(2);
+    // Two observed hours, give or take the sample step — never five.
+    expect(total).toBeLessThanOrEqual(2 * 3600 + 120);
+    // And no interval crosses the silent stretch.
+    for (const interval of intervals) {
+      expect(
+        interval.enter >= secs('2026-08-14T11:00:00') ||
+          interval.exit <= secs('2026-08-14T08:00:00') + 120,
+      ).toBe(true);
+    }
+  });
+
+  it('closes a trailing open interval at the last observed sample, not the edge', () => {
+    // Samples stop at 08:00 while still "present". Running the bar to the end
+    // of the window would count four silent hours as presence.
+    const raw: PrometheusRangeSeries = {
+      metric: { Event_Type: 'Human_Presence', instance: 'sm-1:9100' },
+      values: presentDuring([['2026-08-14T07:00:00', '2026-08-14T12:00:00']]).filter(
+        ([t]) => t <= secs('2026-08-14T08:00:00'),
+      ),
+    };
+    const { series: built } = build([raw], { now: T('2026-08-14T12:00:00') });
+    const intervals = built[0]!.intervalsByDay['2026-08-14']!;
+    expect(intervals.at(-1)!.exit).toBeLessThanOrEqual(secs('2026-08-14T08:00:00'));
+  });
+
+  it('treats "1" and "1.0" as the same reading, not a new visit', () => {
+    // Prometheus serialises the same value both ways. Comparing the text made
+    // one continuous visit display as two.
+    const values: [number, string][] = [];
+    for (let t = secs('2026-08-14T07:00:00'); t <= secs('2026-08-14T08:00:00'); t += 60) {
+      values.push([t, t < secs('2026-08-14T07:30:00') ? '1' : '1.0']);
+    }
+    values.push([secs('2026-08-14T08:01:00'), '0']);
+    const raw: PrometheusRangeSeries = {
+      metric: { Event_Type: 'Human_Presence', instance: 'sm-1:9100' },
+      values,
+    };
+    const { series: built } = build([raw]);
+    expect(built[0]!.intervalsByDay['2026-08-14']).toHaveLength(1);
+  });
+});

@@ -152,15 +152,28 @@ function calendarDate(value: string, zone: string): DateTime {
 /**
  * Cuts the interval list for ONE day out of that day's samples.
  *
- * Faithful to the current app: an interval opens when the value rises above
- * threshold and closes when it changes to something else. If the day ends (or
- * `now` arrives) while it is still open, a synthetic closing sample is added so
- * the bar reaches the edge of the row instead of vanishing.
+ * An interval opens when the value rises above threshold and closes when it
+ * changes to something else. If the day ends (or `now` arrives) while it is
+ * still open, a synthetic closing sample is added so the bar reaches the edge
+ * of the row instead of vanishing.
+ *
+ * Two departures from the shipping app, both QA-confirmed defects (Codex
+ * review, sign-off Inakshi 2026-08-21):
+ *
+ * - **Values compare as numbers.** Prometheus can serialise the same reading
+ *   as "1" or "1.0"; comparing the text split one continuous visit into two.
+ * - **An interval never spans a hole in the data.** "Present", four silent
+ *   hours, "present" again used to count the silence as presence — the same
+ *   stretch the coverage layer was simultaneously reporting as unobserved. An
+ *   open interval now closes at the last sample actually seen before a gap
+ *   longer than `gapLimit`, and the same rule applies to the synthetic close
+ *   at the window's edge.
  */
 function intervalsForDay(
   samples: [EpochSeconds, string][],
   day: OccupancyDay,
   threshold: number,
+  gapLimit: number | null,
 ): OccupancyInterval[] {
   if (samples.length === 0) return [];
 
@@ -178,23 +191,42 @@ function intervalsForDay(
 
   const last = sorted[sorted.length - 1]!;
   if (Number(last[1]) > threshold) {
-    // Still occupied at the end of the window: close the bar at the row's edge.
-    // (The current app closes at 23:59:59.999; we close at the next midnight —
-    // a 1ms difference that lets adjacent days meet exactly.)
-    sorted.push([day.end, '0']);
+    // Still occupied at the end of the window: close the bar at the row's edge
+    // — unless the samples stopped well short of it, in which case the honest
+    // close is the last moment we actually observed. (The current app closes
+    // at 23:59:59.999; we close at the next midnight — a 1ms difference that
+    // lets adjacent days meet exactly.)
+    const edge =
+      gapLimit !== null && day.end - last[0] > gapLimit ? last[0] : day.end;
+    sorted.push([edge, String(threshold)]);
   }
 
   const intervals: OccupancyInterval[] = [];
+  const close = (enter: EpochSeconds, exit: EpochSeconds, value: number) => {
+    if (exit > enter) intervals.push({ enter, exit, count: Math.round(value) });
+  };
+
   let enter = sorted[0]![0];
-  let value = sorted[0]![1];
+  let value = Number(sorted[0]![1]);
+  let previous = sorted[0]![0];
 
   for (let i = 1; i < sorted.length; i++) {
-    const [t, v] = sorted[i]!;
-    if (v === value) continue;
+    const [t, raw] = sorted[i]!;
+    const v = Number(raw);
 
-    if (Number(value) > threshold) {
-      intervals.push({ enter, exit: t, count: Math.round(Number(value)) });
+    if (gapLimit !== null && t - previous > gapLimit) {
+      // The monitor went silent. Whatever was true before the hole ended at
+      // the last real sample; whatever is true after it starts fresh.
+      if (value > threshold) close(enter, previous, value);
+      enter = t;
+      value = v;
+      previous = t;
+      continue;
     }
+    previous = t;
+
+    if (v === value) continue;
+    if (value > threshold) close(enter, t, value);
     enter = t;
     value = v;
   }
@@ -281,10 +313,25 @@ export function buildOccupancyTimeline(
       byDay[dayIndex]!.push(sample);
     }
 
+    // How far apart this series' samples usually are, measured rather than
+    // assumed (these queries have shipped at 30, 60 and 90-second steps). A
+    // stretch beyond four times that spacing — never under five minutes — is a
+    // hole, and an interval must not claim it. Same rule as the coverage scans.
+    const stamps = raw.values
+      .map(([timestamp]) => timestamp)
+      .filter((timestamp) => timestamp <= nowSeconds)
+      .sort((a, b) => a - b);
+    const cadences = stamps
+      .slice(1)
+      .map((timestamp, i) => timestamp - stamps[i]!)
+      .sort((a, b) => a - b);
+    const median = cadences[Math.floor(cadences.length / 2)];
+    const gapLimit = median === undefined ? null : Math.max(median * 4, 300);
+
     const intervalsByDay: Record<string, OccupancyInterval[]> = {};
     for (let i = 0; i < days.length; i++) {
       const day = days[i]!;
-      const intervals = intervalsForDay(byDay[i]!, day, threshold);
+      const intervals = intervalsForDay(byDay[i]!, day, threshold, gapLimit);
       if (intervals.length > 0) {
         intervalsByDay[day.key] = intervals;
         intervalCount += intervals.length;

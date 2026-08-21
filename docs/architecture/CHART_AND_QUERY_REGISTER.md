@@ -185,6 +185,27 @@ every defect below must stay guarded, and must stay pinned by a test.
 4. **A day that sums past 24 hours is refused, not normalised.** Squeezing it
    to fit would hide the upstream error this chart exists to expose.
 
+## QA-confirmed defects closed in the shared interval builder (2026-08-21)
+
+From the Codex review, verified in legacy source, sign-off Inakshi 2026-08-21.
+Both lived in `occupancy-timeline.ts`, so both affected every behaviour chart:
+
+1. **An interval no longer spans a hole in the data.** "Present", four silent
+   hours, "present" again used to count the silence as presence — while the
+   coverage layer reported the same stretch as unobserved. Intervals now close
+   at the last observed sample before a gap (measured cadence × 4, floor five
+   minutes), including the synthetic close at the window edge.
+2. **Sample values compare as numbers.** "1" and "1.0" are the same reading;
+   comparing text split one continuous visit into two.
+
+Regression tests in `occupancy-timeline.test.ts` ("defects the shipping app
+has") were verified to FAIL against the pre-fix code.
+
+Still open from the same review, logged for wiring time: series identity
+validation (does the response belong to the requested stall/horse), naming
+every outage in the caption rather than the first, and rollover-spanning
+stretches reading as new visits.
+
 ## Query corrections not yet accepted upstream
 
 Recorded here because the register is the controlled inventory of queries as well
