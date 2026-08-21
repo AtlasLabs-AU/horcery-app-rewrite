@@ -38,6 +38,7 @@ legacy reference and real monitor data. Absence from the register is not approva
 | `stall-people-in-stall-weekly` | For You → Behavior Tracker → People in Stall (Weekly) | Has this stall had a normal week of human attention? | To follow Lying Down weekly: bar per day, weekday-average markers, week verdict | As above | As above | As above | Pending | Spec in progress | **meaning-blocked** |
 | `horse-in-stall-daily` | For You → Behavior Tracker → Horse in Stall (Daily) | How long was the horse in its stall today, and when was it out? | **Decided (Inakshi, 2026-08-20):** cumulative line + dashed usual (Lying Down layout), an in/out strip beneath, captioned by ABSENCE ("Out 8:30 AM – 1:05 PM") — see "Product decisions — Horse in Stall". A partly recorded day withholds both the absence list and the verdict (badge "Incomplete") | **meaning-blocked** overall; legacy `horse_in_stall` queries exist but the Behavior Tracker calculations are unapproved (see "Legacy defects") | Fixture-backed behind `PREVIEWS.horseInStallSampleData`; **no live path** | Canonical seconds; displayed h/min | Measured: 7.6–22.6 h in stall/day, 36–48 transitions/week | Pending | **meaning-blocked** |
 | `horse-in-stall-weekly` | For You → Behavior Tracker → Horse in Stall (Weekly) | Has this been a normal week in the stall? | Lying Down weekly unchanged; tapped-day panel names the absences; a partly recorded day draws FADED and is never judged; a week missing any finished day is badged "Incomplete" | As above | As above | As above | As above | Pending | **meaning-blocked** |
+| `horse-last-24-hours` | Horse Detail → Summary | How did this horse spend the 24 hours ending at the selected time? | **Decided (Inakshi, 2026-08-21, "Option B"):** one flat composition band + exact duration list drawn from the same values, subtitle "24 hours ending 2:30 PM", unknown time a visible dashed segment with a width floor. Replaces the shipping donut + four progress bars, which could show 25 h in a 24 h day | **Direction approved, query pending.** FE Requirement Gathering 2026-07-23: daily = previous 24 h, own query, approach approved, Anuvathan owns; data team offered (2026-07-10) to return categories directly. The Mobile Queries sheet marks the pie-chart query "Needed" with no replacement recorded; the candidate sits on an unmerged branch held pending Vikum (remote-config impact). Categories arrive as durations — the app derives nothing, and the remainder is always UNKNOWN, never a behaviour. Overflow (>24 h) refuses to draw | Fixture-backed behind `PREVIEWS.last24HoursSampleData`; **no live path** | Canonical seconds; displayed h/min | Legacy defects measured on SM-1272/1275/1212 (25 h day; candidate query triples "resting") | Pending | **data-blocked** |
 | `horse-activeness-score` | Horse detail status strip | **To approve** | Score card: Low / Normal / High | Latest Data Science query is version-controlled; full specification/approval record still required | Temporary service adapter | Category boundaries exist in code; semantic wording review remains | Tested during implementation; fixture/evidence link to backfill | Not yet created | **backfill-required** |
 | `horse-temperature-score` | Horse detail status strip | **To approve** | Temperature score card | Sensor query is version-controlled; full specification/approval record still required | Temporary service adapter | Canonical °C; display °C/°F | Fixture/evidence link to backfill | Not yet created | **backfill-required** |
 | `horse-noise-score` | Horse detail status strip | **To approve** | Noise Level score card | Sensor query is version-controlled; full specification/approval record still required | Temporary service adapter | Category thresholds/labels require recorded Data Science approval | Fixture/evidence link to backfill | Not yet created | **backfill-required** |
@@ -169,6 +170,20 @@ every defect below must stay guarded, and must stay pinned by a test.
    never the phone's.
 8. No runtime override may change what a chart MEANS without a release and a
    test — Remote Config may show or hide a chart, not redefine it.
+
+## Product decisions — Last 24 Hours (Inakshi, 2026-08-21)
+
+1. **Option B: the flat band.** Segments visibly make one whole, so totals
+   cannot contradict — the donut needed repeated progress bars to be readable,
+   and the repetition is where the 25-hour bug lived. The exact figures the
+   old bars carried remain, as the list under the band.
+2. **The category list is open.** REM joins the chart with the sleep work
+   (decided 2026-07-23), so a fifth segment must be an addition, not a
+   redesign. Pinned by test.
+3. **Unknown is a first-class segment** — dashed, hollow, minimum visible
+   width. The remainder of the day is never attributed to a behaviour.
+4. **A day that sums past 24 hours is refused, not normalised.** Squeezing it
+   to fit would hide the upstream error this chart exists to expose.
 
 ## Query corrections not yet accepted upstream
 

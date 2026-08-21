@@ -83,6 +83,13 @@ const media = {
 const chartLight = {
   /** Every ordinary reading. Denim. */
   chartData: '#41618C',
+  /**
+   * A second, quieter series drawn beside `chartData` when one chart carries
+   * two related measurements — the Last 24 Hours band's "in stall, awake"
+   * beside "resting". Same denim family, clearly lighter, so the two read as
+   * siblings rather than as data-versus-deviation.
+   */
+  chartDataSoft: '#9DB1CB',
   /** A reading outside this horse's usual range. Ochre — never red. */
   chartDeviation: '#B4711E',
   /** Bed behind a deviation badge. */
@@ -99,6 +106,7 @@ const chartLight = {
 
 const chartDark = {
   chartData: '#8FAFD4',
+  chartDataSoft: '#51688A',
   chartDeviation: '#E3A853',
   chartDeviationBed: '#3A2A14',
   chartDeviationInk: '#E8B96E',

@@ -15,6 +15,9 @@ import { EVENT_TYPE_ID } from '@acme/config/constants/event-types';
 import { HorseDateBar } from '@/components/horses/horse-date-bar';
 import { BuiltInSettingsNote, HorseDetailNotice } from '@/components/horses/horse-detail-notice';
 import { HorsePassport } from '@/components/horses/horse-passport';
+import { Last24HoursCard } from '@/components/charts/last-24-hours-card';
+import { buildLast24Hours } from '@/charts/last-24-hours';
+import { ordinaryDay as last24OrdinaryDay } from '@/charts/fixtures/last-24-hours';
 import { HorseStallCard } from '@/components/horses/horse-stall-card';
 import { HorseStatusStrip } from '@/components/horses/horse-status-strip';
 import { HorsesError, HorsesLoading, HorsesNoInternet } from '@/components/horses/horses-states';
@@ -508,6 +511,30 @@ export default function HorseDetailScreen() {
                   )
                 ) : null}
                 <HorseStallCard stallName={horse.row?.stallName} />
+                {PREVIEWS.last24HoursSampleData ? (
+                  <View
+                    style={[
+                      styles.last24Card,
+                      { backgroundColor: colors.card, borderColor: colors.divider },
+                    ]}>
+                    <Last24HoursCard
+                      data={buildLast24Hours({
+                        endsAt: playhead.isLive ? now : playhead.cursor,
+                        zone: timezone ?? now.zoneName ?? 'UTC',
+                        segments: last24OrdinaryDay,
+                      })}
+                      width={width - TAB_WIDTH_INSET - space.lg * 2}
+                    />
+                    <Text
+                      style={[
+                        type.micro,
+                        styles.last24Sample,
+                        { color: colors.tertiary },
+                      ]}>
+                      Sample data — not this horse
+                    </Text>
+                  </View>
+                ) : null}
                 <HorsePassport fields={passport} />
               </View>
             ) : (
@@ -645,6 +672,12 @@ const styles = StyleSheet.create({
   hero: { borderRadius: radius.lg, borderCurve: 'continuous' },
   titleBlock: { gap: space.xxs },
   summary: { gap: space.md, paddingTop: space.xs },
+  last24Card: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.md,
+    padding: space.lg,
+  },
+  last24Sample: { textAlign: "center", marginTop: space.md },
   tabIntro: { gap: space.sm, paddingTop: space.xs },
   gap: { height: space.md },
   footer: { paddingVertical: space.lg },

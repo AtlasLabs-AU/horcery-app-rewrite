@@ -84,4 +84,11 @@ export const PREVIEWS = {
    * The screen labels its source, timezone assumption and read-only status.
    */
   liveMonitorPreview: __DEV__ && optedIn,
+
+  /**
+   * Last 24 Hours band on Horse Details, drawn from FIXTURE durations, same
+   * reason and same visible marker as the other chart previews. The categories
+   * are contract-shaped inputs; nothing is derived on the phone even here.
+   */
+  last24HoursSampleData: __DEV__ && optedIn,
 } as const;
