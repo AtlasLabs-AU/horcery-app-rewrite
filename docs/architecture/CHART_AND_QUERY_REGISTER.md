@@ -268,6 +268,67 @@ incomplete, describe it, do not judge it. This is a one-number contract change
 rather than a redesign, it moves no computation, and it closes the defect
 permanently.
 
+## The 25% deviation threshold: measured, and it does not survive (2026-08-23)
+
+Same exercise as the usual line: legacy code, digest, sheet, docs, then the
+three production monitors. 45 days of daily lying-down totals per monitor.
+
+**1. No customer has ever seen this badge.** The shipping app renders the
+Usual/Unusual pill inside `{false && (...)}` — hard-disabled in
+`behavior-tracker-card/index.tsx:77`. The threshold is fetched, computed and
+thrown away. So there is no production precedent to preserve and no customer
+expectation to protect: we are choosing freely, but also with no field
+evidence behind the existing number.
+
+**2. Nobody owns the number.** `DEFAULT_DEVIATION_THRESHOLD = 25` with a
+Remote Config override per behaviour. No decision in the digest, no row in the
+Mobile Queries sheet, no rationale in code. It is a default that became a
+value by never being questioned.
+
+**3. Measured, 25% fires on more than half of ordinary days.**
+
+| Monitor | median day's deviation from its own trailing 7-day mean | days flagged at 25% |
+|---|---|---|
+| sm-1275 | 52% | **67%** |
+| sm-1272 | 33% | **54%** |
+| sm-1212 | 48% | **69%** |
+
+The 25% threshold sits at roughly the **37th percentile of ordinary
+variation** — so about two days in three would be badged "Unusual" purely by
+normal behaviour. That is not a signal; it is a light that is always on.
+
+**4. No fixed percentage rescues it.** Requiring a minimum absolute gap as
+well (the standard fix for ratios at low values) barely helps: 50% AND a
+60-minute gap still fires on 28–36% of days. To reach one day in ten you need
+roughly 100–150%, and the right figure differs per horse (96% on one monitor,
+151% on another).
+
+**5. The shape is wrong, not just the value.** Each horse's own day-to-day
+spread is **39–65% of its own mean**. A single global percentage cannot
+separate horses whose natural variation differs that much. Comparing instead
+against the horse's own spread self-calibrates:
+
+| Rule | days flagged |
+|---|---|
+| beyond 1.5 standard deviations | 18–38% |
+| beyond 2 standard deviations | 10–21% |
+| beyond 2.5 standard deviations | **5–10%** |
+
+**6. Weekly is meaningfully calmer than daily** — median deviation 13–36%
+against 42% daily, and 25% flags 20–60% of weeks. Better, still too often on
+one monitor. (Small sample: five to six weeks per monitor.)
+
+**Conclusion.** The 25% does not survive for the daily view on any reading of
+this evidence, and it is unowned. Reporting these numbers to Data Science is
+worth doing regardless — it is the field evidence their threshold decision
+needs, and we have it and they do not.
+
+**Open decision for Inakshi:** whether the app ships a daily badge at all
+before that comparison is approved. Withholding it matches what we already did
+for Activeness; adopting the spread rule would mean the app choosing a
+threshold, which the engineering standard reserves to Data Science and would
+have to be recorded as a deliberate exception.
+
 ## Query corrections not yet accepted upstream
 
 Recorded here because the register is the controlled inventory of queries as well
