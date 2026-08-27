@@ -38,8 +38,8 @@ legacy reference and real monitor data. Absence from the register is not approva
 | `stall-people-in-stall-weekly` | For You → Behavior Tracker → People in Stall (Weekly) | Has this stall had a normal week of human attention? | To follow Lying Down weekly: bar per day, weekday-average markers, week verdict | As above | As above | As above | Pending | Spec in progress | **meaning-blocked** |
 | `horse-in-stall-daily` | For You → Behavior Tracker → Horse in Stall (Daily) | How long was the horse in its stall today, and when was it out? | **Decided (Inakshi, 2026-08-20):** cumulative line + dashed usual (Lying Down layout), an in/out strip beneath, captioned by ABSENCE ("Out 8:30 AM – 1:05 PM") — see "Product decisions — Horse in Stall". A partly recorded day withholds both the absence list and the verdict (badge "Incomplete") | **meaning-blocked** overall; legacy `horse_in_stall` queries exist but the Behavior Tracker calculations are unapproved (see "Legacy defects") | Fixture-backed behind `PREVIEWS.horseInStallSampleData`; **no live path** | Canonical seconds; displayed h/min | Measured: 7.6–22.6 h in stall/day, 36–48 transitions/week | Pending | **meaning-blocked** |
 | `horse-in-stall-weekly` | For You → Behavior Tracker → Horse in Stall (Weekly) | Has this been a normal week in the stall? | Lying Down weekly unchanged; tapped-day panel names the absences; a partly recorded day draws FADED and is never judged; a week missing any finished day is badged "Incomplete" | As above | As above | As above | As above | Pending | **meaning-blocked** |
-| `horse-last-24-hours` | Horse Detail → Summary | How did this horse spend the 24 hours ending at the selected time? | **Decided (Inakshi, 2026-08-21, "Option B"):** one flat composition band + exact duration list drawn from the same values, subtitle "24 hours ending 2:30 PM", unknown time a visible dashed segment with a width floor. Replaces the shipping donut + four progress bars, which could show 25 h in a 24 h day | **Categories RESOLVED on production evidence (2026-08-23), query still pending.** Resting = `horse_sitting_per_id`, In-stall-awake = `horse_standing_per_id` (measured, not a subtraction), Out = not in-stall, remainder = Unknown; the two partition in-stall time exactly across 1,847 samples — see "Last 24 Hours categories" below. FE Requirement Gathering 2026-07-23: daily = previous 24 h, own query, approach approved, Anuvathan owns; data team offered (2026-07-10) to return categories directly. The Mobile Queries sheet marks the pie-chart query "Needed" with no replacement recorded; the candidate sits on an unmerged branch held pending Vikum (remote-config impact). Categories arrive as durations — the app derives nothing, and the remainder is always UNKNOWN, never a behaviour. Overflow (>24 h) refuses to draw | Fixture-backed behind `PREVIEWS.last24HoursSampleData`; **no live path** | Canonical seconds; displayed h/min | Legacy defects measured on SM-1272/1275/1212 (25 h day; candidate query triples "resting") | Pending | **data-blocked** |
-| `horse-trends-activeness` | Horse Detail → Summary → Horse Trends | How has this horse's activity changed over the last 24 hours / 7 days? | **Decided (Inakshi, 2026-08-21):** line for 24 h that BREAKS at monitoring gaps (pale band), unit-less y-axis until Data Science names the unit, no Higher/Usual/Lower pill until the comparison is approved (the shipping pill fires on any difference at all). 7-day view arrives with the approved daily query | **meaning-blocked, and now known to be query-defective.** Measured 2026-08-23: the shipping query's subqueries carry no resolution, so its value depends on the request step — 4–10× differences, and a flat zero at 300 s. No badge can rest on it until that is fixed (`:15s`). The ×1000 is cosmetic on a unitless index and is not carried over; the unlabelled axis is therefore correct, not merely cautious | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; **no live path** | UNNAMED unit, deliberately | Legacy defects verified in `trend-widget-v2/activeness` (×1000 at :345, bare pill comparison) | Pending | **meaning-blocked** |
+| `horse-last-24-hours` | Horse Detail → Summary | How did this horse spend the 24 hours ending at the selected time? | **Decided (Inakshi, 2026-08-21, "Option B"):** one flat composition band + exact duration list drawn from the same values, subtitle "24 hours ending 2:30 PM", unknown time a visible dashed segment with a width floor. Replaces the shipping donut + four progress bars, which could show 25 h in a 24 h day | **Categories still meaning-blocked.** A 2026-08-23 attempt to settle them from posture data was withdrawn: sitting/standing measure POSTURE, and the team's own record anticipates standing-resting and sitting-active, so posture does not give awareness — see "evidence kept, conclusions withdrawn" below. FE Requirement Gathering 2026-07-23: daily = previous 24 h, own query, approach approved, Anuvathan owns; data team offered (2026-07-10) to return categories directly. The Mobile Queries sheet marks the pie-chart query "Needed" with no replacement recorded; the candidate sits on an unmerged branch held pending Vikum (remote-config impact). Categories arrive as durations — the app derives nothing, and the remainder is always UNKNOWN, never a behaviour. Overflow (>24 h) refuses to draw | Fixture-backed behind `PREVIEWS.last24HoursSampleData`; **no live path** | Canonical seconds; displayed h/min | Legacy defects measured on SM-1272/1275/1212 (25 h day; candidate query triples "resting") | Pending | **data-blocked** |
+| `horse-trends-activeness` | Horse Detail → Summary → Horse Trends | How has this horse's activity changed over the last 24 hours / 7 days? | **Decided (Inakshi, 2026-08-21):** line for 24 h that BREAKS at monitoring gaps (pale band), unit-less y-axis until Data Science names the unit, no Higher/Usual/Lower pill until the comparison is approved (the shipping pill fires on any difference at all). 7-day view arrives with the approved daily query | **meaning-blocked.** The query omits subquery resolutions, which is a real reproducibility concern, but the 2026-08-23 claim that its value varies with the request step was FALSE and is withdrawn (identical values at shared timestamps). `:15s` redefines the metric rather than fixing it, because `sum_over_time` takes in more samples. The silent `* 0` fallback IS a defect. Unlabelled axis and hidden badge remain correct | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; **no live path** | UNNAMED unit, deliberately | Legacy defects verified in `trend-widget-v2/activeness` (×1000 at :345, bare pill comparison) | Pending | **meaning-blocked** |
 | `horse-trends-rolling` | Horse Detail → Summary → Horse Trends | When did this horse roll in the last 24 hours, and how does this week compare? | **Decided (Inakshi, 2026-08-21):** 24 h = event dots at EXACT times with caption ("Rolled 3 times · …"), matching the Figma dots; 7 days = this week's bars with last week as markers (option B), today hollow, unobserved days empty dashed slots; tap opens Review History. "Partial Rolling" keeps the established 103/104/105 grouping (Review History ticket D2). Range labels are **24 hours / 7 days** — recorded deviation from the Figma annotation's Daily/Weekly | Backend events, not Prometheus. Contract asks: exact timestamps (not hourly buckets), explicit numeric count, org-timezone day boundaries | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; **no live path** | Counts | Legacy defects verified in `trend-widget-v2/rolling` (phone zone at :83, missing→0 at :50, last week via +7d shift) | Pending | **data-blocked** |
 | `horse-activeness-score` | Horse detail status strip | **To approve** | Score card: Low / Normal / High | Latest Data Science query is version-controlled; full specification/approval record still required | Temporary service adapter | Category boundaries exist in code; semantic wording review remains | Tested during implementation; fixture/evidence link to backfill | Not yet created | **backfill-required** |
 | `horse-temperature-score` | Horse detail status strip | **To approve** | Temperature score card | Sensor query is version-controlled; full specification/approval record still required | Temporary service adapter | Canonical °C; display °C/°F | Fixture/evidence link to backfill | Not yet created | **backfill-required** |
@@ -422,76 +422,102 @@ question their contract still owes: what does `id` mean, and why do five of
 them exist simultaneously on one camera? That may be a pipeline defect rather
 than an aggregation question, and these numbers are the evidence for it.
 
-## Last 24 Hours categories: measured, not derived (2026-08-23)
+## Last 24 Hours and Activeness: evidence kept, conclusions withdrawn (2026-08-23)
 
-The open item was "written definitions of Resting and Awake". The monitors
-already answer it — the categories are DIRECTLY measured, not subtractions.
+The measurements below stand. The conclusions originally drawn from them in
+commit `d2c095c` were overclaimed and are withdrawn. Both charts stay
+**meaning-blocked**. Recorded in full because the errors are instructive.
 
-The shipping app derives Awake as "in stall minus resting", which is why an
-earlier review objected that it may quietly include standing rest or
-unclassified readings. It does not have to: `horse_standing_per_id` exists
-alongside `horse_sitting_per_id`.
+### What was measured, and still holds
 
-**Measured, sm-1272, 7 days, 1,847 aligned samples:**
+**Posture partitions observed in-stall time.** sm-1272, 7 days, 1,847 aligned
+samples: sitting and standing were never both above 0.5 (0 samples) and never
+both below (0 samples); 87% standing, 13% sitting. Reproduced on sm-1275 and
+sm-1212.
 
-| in stall | sitting | standing | share |
-|---|---|---|---|
-| yes | no | yes | 87.0% |
-| yes | yes | no | 13.0% |
+Exact reproduction: `horse_sitting_per_id{animal_type="horse",id="0"}` and
+`horse_standing_per_id{...}` against `n1.dat.use.wg0.horcery.com/sm-1272`,
+7 days to 2026-08-23, `step=300`, compared at 0.5.
 
-- Sitting AND standing at once: **0 samples**
-- In stall but NEITHER: **0 samples**
+**The silent-zero fallback is real.** The activeness query ends
+`or on(instance) (activeness_in_stall * 0)`. When the main branch drops out —
+which it does whenever the horse is out of the stall — this supplies zeros, so
+the chart draws a confident flat line rather than saying it has nothing. This
+is a genuine defect and the one part of the original diagnosis that survives.
 
-The two partition in-stall time exactly. So the contract is available today:
+### What was overclaimed, and why each was wrong
 
-- **Resting** = `horse_sitting_per_id` (already the Lying Down signal)
-- **In stall, awake** = `horse_standing_per_id` — a measurement, not a residue
-- **Out of stall** = not `horse_in_stall_per_id`
-- **Not observed** = no readings
+**1. "Resting = sitting, Awake = standing" — WITHDRAWN.** The data shows
+posture, not awareness. The team's own record (digest, 2026-07-23) anticipates
+**sitting-active**, **standing-resting** and **standing-active** as distinct
+states, which contradicts the mapping directly. A horse can rest standing; that
+is ordinary equine behaviour. Converting a posture measurement into a
+sleep/wake conclusion crosses the ownership line the chart standard draws.
 
-**Not inferable, and still genuinely Data Science's:** `horse_behaviour_per_id`
-carries a categorical code (values 0–7 seen over a week). Cross-referencing it
-against the booleans did NOT yield a clean mapping — code 1 was 14% sitting,
-code 2 was 35% — so the code→name mapping is a model artefact that cannot be
-read off the data. It is not needed for this chart, and it is where REM will
-presumably arrive.
+**2. "Out of stall = absent readings" — WITHDRAWN.** The `_per_id` readings
+stop for several reasons: horse out, horse present but untracked, identity
+unassigned, monitor offline. Treating absence as "out" is the
+missing-data-as-fact failure this whole standard exists to prevent, and I wrote
+it into the register while claiming to guard against it.
 
-## Activeness: the shipping query is not reproducible (2026-08-23)
+**3. "The behaviour codes cannot be read off the data" — FALSE.** They are
+published in the monitors' own metadata endpoint, which I did not check:
 
-The open items were the query, a unit name, and the comparison rule. Measuring
-the first found a defect that changes the other two.
+| Code | Meaning | | Code | Meaning |
+|---:|---|---|---:|---|
+| -1 | unknown | | 4 | sitting down |
+| 0 | standing | | 5 | standing up |
+| 1 | sternal | | 6 | sternal to lateral |
+| 2 | lateral | | 7 | lateral to sternal |
+| 3 | rolling | | | |
 
-**The subqueries carry no resolution.** `[1m:]` and `[2m:]` fall back to the
-server's global evaluation interval, which is not part of the query. The
-result therefore depends on how the chart asks, not only on what the horse did:
+There is **no REM category**. The earlier note that this is "probably where REM
+will arrive" was speculation and is removed.
 
-| Monitor | shipping query | with explicit `[1m:15s]` |
-|---|---|---|
-| sm-1275 | 0.0009 | 0.0089 |
-| sm-1212 | 0.0010 | 0.0037 |
-| sm-1272 | 0.0022 at 60 s step; **100% zeros at 300 s step** | 0.0137 |
+**4. "The activeness answer depends on how the chart asks" — FALSE.** An
+omitted subquery resolution defaults to the server's global evaluation
+interval, not to the outer `query_range` step. Tested properly — same window
+10:00–12:00, steps 60 and 300 — the 25 shared timestamps returned **byte-identical
+values**. The original comparison changed the window AND the step together and
+blamed the step.
 
-Same horse, same hour, answers differing by roughly 4–10× — and collapsing to
-a flat zero at a coarser step, because `deriv()` needs two points in its range
-and a resolution-less subquery supplies one. When it collapses, the query's
-`or on(instance) (activeness_in_stall * 0)` branch supplies zeros silently, so
-the chart shows a confident flat line rather than an error.
+**5. "A 300 s step collapses `deriv()` to one point, giving 100% zeros" —
+FALSE.** Re-tested over a 6-hour window at both steps: 0 zeros at either. The
+zeros originally seen came from a window where the horse was OUT of the stall,
+so the `* 0` fallback fired — finding 3 above, not a resolution problem.
 
-The raw signal is healthy throughout (`activeness_in_stall` median ~15, never
-zero), so this is a query defect, not a sensor problem. Adding `:15s` to the
-three subqueries fixes it.
+**6. "Adding `:15s` fixes it" — WITHDRAWN.** It does not fix, it redefines.
+The query uses `sum_over_time`, so a finer resolution puts more samples inside
+the sum and mechanically raises the result (sm-1272 0.0032 → 0.0159). Choosing
+between summing, averaging, normalising per second, or a fixed approved
+resolution is exactly the meaning decision that belongs to Data Science.
 
-**On the unit:** the measurement is the summed absolute SECOND derivative of an
-activeness index over two minutes — a rate-of-change-of-movement index with no
-physical unit. The ×1000 in the shipping app is cosmetic, turning 0.0137 into
-a readable 13.7. That vindicates the decision already taken for this chart:
-show the SHAPE with an unlabelled axis, because there is no honest label to
-put on it. A number that changes with the request step should certainly not be
-printed as a quantity.
+**7. The wrong query may have been tested at all.** The legacy app reads
+`TREND_LAST_24_HOURS_QUERY` from Firebase Remote Config and falls back to the
+in-source query only when that is empty
+(`trend-widget-v2/activeness/index.tsx:160`). Without the production Remote
+Config values, everything above tested the fallback, not necessarily what
+customers receive.
 
-**Consequence for the comparison rule:** a Higher/Lower badge cannot be built
-on this query at all while its value depends on the request step. That is now
-a fact rather than a missing approval.
+### Two further facts the metadata settles
+
+- These metrics are **fractions of the scrape window (0.0–1.0)**, not booleans.
+  The partition result above depends on comparing at 0.5, which is a threshold
+  choice made here and not an approved one.
+- `activeness_in_stall` is documented as "difference between the current and
+  previous activeness value" — already a first difference. The query then takes
+  `deriv(deriv(...))` of it, so the charted quantity is effectively a THIRD
+  derivative. Whatever it is named, it is further from "how active is this
+  horse" than the name suggests.
+
+### Standing position
+
+Last 24 Hours: **meaning-blocked**. Activeness: **meaning-blocked**, badge
+hidden, axis unlabelled. The open questions are not two but five: the
+state→category mapping; distinguishing out-of-stall from untracked and
+offline; the approved activeness formula, resolution, normalisation and name;
+the comparison observation and threshold (the digest records the badge
+becoming its own query); and the Rolling and tracking-identity contracts.
 
 ## Query corrections not yet accepted upstream
 

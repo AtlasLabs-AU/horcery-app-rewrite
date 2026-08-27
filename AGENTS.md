@@ -63,3 +63,22 @@ midnight" was an inference in a subagent report, was repeated as fact, and was
 wrong.
 
 Recorded 2026-08-19 by Inakshi, after five such errors in a single day.
+
+# Check the metadata, and change one thing at a time
+
+Two failures on 2026-08-23, both while confidently "settling" open questions:
+
+- **Prometheus publishes its own documentation.** `/api/v1/metadata` on each
+  monitor carries a HELP string for every metric. It documented the
+  `horse_behaviour_per_id` code table, and that these metrics are FRACTIONS of
+  the scrape window rather than booleans, while the register recorded the codes
+  as unknowable. Read the metadata before inferring a metric's meaning from its
+  values.
+- **A comparison that changes two things measures neither.** "The value depends
+  on the request step" came from comparing a 3-day window at one step against a
+  1-hour window at another. Same window, different steps, returns identical
+  values. Hold everything fixed but the variable under test.
+
+Both errors pointed the same way: the checks were rigorous on the questions
+already marked uncertain, and absent on the answers that felt settled. Confidence
+is the signal to check, not the reason to skip.
