@@ -66,11 +66,12 @@ describe('LyingDownWeekRow', () => {
     expect(screen.getByText(message)).toBeTruthy();
     if (blocks) {
       expect(screen.queryByTestId('lying-down-weekly-plot')).toBeNull();
-      expect(screen.queryByText(measuredBadge)).toBeNull();
       expect(screen.getByText('—')).toBeTruthy();
     } else {
       expect(screen.getByTestId('lying-down-weekly-plot')).toBeTruthy();
-      expect(screen.getByText(measuredBadge)).toBeTruthy();
     }
+    // The deviation badge is withheld in every state while the threshold is
+    // unapproved (Inakshi, 2026-08-23) — the state message still shows.
+    expect(screen.queryByText(measuredBadge)).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
 import { formatDuration, type LyingDownState, type Verdict } from '@/charts/lying-down';
 
-import { BADGE, type BadgeTone } from './lying-down-badge';
+import { BADGE, verdictIsShowable, type BadgeTone } from './lying-down-badge';
 
 export interface LyingDownStatePresentation {
-  badgeLabel: string;
+  /** `null` withholds the badge — see `DEVIATION_VERDICTS_APPROVED`. */
+  badgeLabel: string | null;
   badgeTone: BadgeTone;
   blocksContent: boolean;
   busy: boolean;
@@ -35,8 +36,12 @@ export function lyingDownStatePresentation(
   readings: string = 'lying-down readings',
 ): LyingDownStatePresentation {
   const measured = BADGE[verdict];
+  // A withheld verdict shows NO badge rather than a substitute word: every
+  // stand-in we tried ("No history", "Unknown") states a reason that is not
+  // the true one.
+  const showable = verdictIsShowable(verdict);
   const current = (message: string | null, busy = false): LyingDownStatePresentation => ({
-    badgeLabel: measured.label,
+    badgeLabel: showable ? measured.label : null,
     badgeTone: measured.tone,
     blocksContent: false,
     busy,

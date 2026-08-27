@@ -66,9 +66,12 @@ describe('PeopleInStallRow', () => {
     expect(screen.getByText(/^\d+ visits · first .+, last .+$/)).toBeTruthy();
   });
 
-  it('flags a barely-visited stall rather than leaving it to the reader', async () => {
+  it('withholds the verdict on a barely-visited stall rather than judging it', async () => {
+    // The row is plainly quiet and the caption says so, but "Low" rests on the
+    // unowned 25% threshold, so it is not said (Inakshi, 2026-08-23).
     await render(row(barelyVisited(NOW)));
-    expect(screen.getByText('Low')).toBeTruthy();
+    expect(screen.queryByText('Low')).toBeNull();
+    expect(screen.getByText(/visit/)).toBeTruthy();
   });
 
   it('says the monitor was offline rather than counting the gap as quiet', async () => {

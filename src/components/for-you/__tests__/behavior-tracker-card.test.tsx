@@ -119,9 +119,11 @@ describe('BehaviorTrackerCard', () => {
     expect(screen.getByText('Stall 4 · Apollo')).toBeTruthy();
     expect(screen.getByText('Stall 7 · Juniper')).toBeTruthy();
     expect(screen.getByText('Stall 9 · Pepper')).toBeTruthy();
-    // And the states that matter are visible without tapping anything.
-    expect(screen.getAllByText('Low').length).toBeGreaterThan(0);
+    // The states we can PROVE are visible without tapping anything. Deviation
+    // verdicts are withheld (Inakshi, 2026-08-23) — "No data" is a fact about
+    // the readings, "Low" would be a judgement on an unowned threshold.
     expect(screen.getByText('No data')).toBeTruthy();
+    expect(screen.queryByText('Low')).toBeNull();
   });
 
   /**
@@ -133,26 +135,28 @@ describe('BehaviorTrackerCard', () => {
    * badge contradicted its own chart twice. This is the guard: if a fixture or a
    * normal changes so the demonstration no longer demonstrates, this fails.
    */
-  it('shows the states each sample horse exists to demonstrate', async () => {
+  it('shows the data states it can prove, and withholds the ones it cannot', async () => {
     mockPreviews.lyingDownSampleData = true;
     await render(<BehaviorTrackerCard />);
 
-    // Daily judges TODAY. Juniper had a bad day; Willow is short every day.
-    expect(screen.getAllByText('Low')).toHaveLength(2);
-    // Two steady horses, plus a monitor that went offline.
-    expect(screen.getAllByText('Usual')).toHaveLength(2);
+    // Usual / Low / High all rest on the 25% threshold, which nobody owns and
+    // which flags a quarter to two-thirds of ordinary days when measured
+    // against 45 days of real monitor data. None of them may appear.
+    for (const verdict of ['Usual', 'Low', 'High', 'Unusual']) {
+      expect(screen.queryByText(verdict)).toBeNull();
+    }
+
+    // What survives is everything the row can back: the horse, its figure,
+    // its average, and the honest data states.
+    expect(screen.getByText('Stall 4 · Apollo')).toBeTruthy();
     expect(screen.getByText('No data')).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('for-you-tracker-period-weekly'));
-    // Confirm the tab actually switched before reading badges off it: an
-    // un-awaited press left the assertions on the daily view, still passing for
-    // the wrong reason. "Today" is the weekly axis's last column.
     expect(screen.getAllByText('Today').length).toBeGreaterThan(0);
-
-    // Weekly judges the WEEK, so Juniper's single bad day no longer shows —
-    // its week was normal. Only Willow, short all week, stays Low. That
-    // difference between the two tabs is the point of having both.
-    expect(screen.getAllByText('Low')).toHaveLength(1);
+    // The weekly badge rests on the same threshold, so it goes too.
+    for (const verdict of ['Usual', 'Low', 'High', 'Unusual']) {
+      expect(screen.queryByText(verdict)).toBeNull();
+    }
     expect(screen.getByText('Stall 8 · Willow')).toBeTruthy();
   });
 

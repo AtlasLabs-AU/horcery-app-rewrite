@@ -343,11 +343,27 @@ this evidence, and it is unowned. Reporting these numbers to Data Science is
 worth doing regardless — it is the field evidence their threshold decision
 needs, and we have it and they do not.
 
-**Open decision for Inakshi:** whether the app ships a daily badge at all
-before that comparison is approved. Withholding it matches what we already did
-for Activeness; adopting the spread rule would mean the app choosing a
-threshold, which the engineering standard reserves to Data Science and would
-have to be recorded as a deliberate exception.
+**DECIDED (Inakshi, 2026-08-23): keep it hidden for now.** Implemented as
+`DEVIATION_VERDICTS_APPROVED = false` in `lying-down-badge.ts`, a code
+constant rather than a runtime flag so that changing the meaning of a welfare
+badge costs a review and a test run.
+
+Applied to BOTH tabs, not just daily — the weekly badge rests on the same
+unowned number — and to the chart LINE COLOUR as well: an ochre line says
+"outside normal" as plainly as the badge does, so withholding the words while
+keeping the colour would only move the unapproved claim somewhere harder to
+argue with.
+
+What still shows: the figure, the average, the dashed usual line, and the
+honest data states (`No data`, `No history`, `Incomplete`). The line is
+between describing what was observed and judging what it means.
+
+**One place the hidden verdict still speaks, flagged rather than assumed:**
+row ORDER. `sortRowsByAttention` floats Low/High rows to the top of the card,
+and it still reads the real verdict. That is arguably useful — it surfaces the
+rows worth a look — but by the same argument used for the ochre line it is the
+unapproved judgement expressed as position. Left in place pending Inakshi's
+call; if it goes, the card falls back to plain stall order.
 
 ## Query corrections not yet accepted upstream
 

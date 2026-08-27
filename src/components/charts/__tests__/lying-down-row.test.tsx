@@ -31,11 +31,13 @@ describe('LyingDownRow', () => {
       />,
     );
     expect(screen.getByText('Apollo')).toBeTruthy();
-    expect(screen.getByText('Usual')).toBeTruthy();
     expect(screen.getByText('3 h 30 min avg')).toBeTruthy();
+    // No verdict badge: withheld until Data Science approves a comparison
+    // (Inakshi, 2026-08-23). The figure and the average still stand.
+    expect(screen.queryByText('Usual')).toBeNull();
   });
 
-  it('flags a low day in its own badge so it stands out down a list', async () => {
+  it('withholds the deviation badge rather than judging on an unowned threshold', async () => {
     await render(
       <LyingDownRow
         horseName="Juniper"
@@ -45,7 +47,11 @@ describe('LyingDownRow', () => {
         width={340}
       />,
     );
-    expect(screen.getByText('Low')).toBeTruthy();
+    // Measured on 45 days from three monitors, the 25% threshold flags a
+    // quarter to two-thirds of ordinary days and nobody owns the number.
+    expect(screen.queryByText('Low')).toBeNull();
+    // The row still carries everything we can actually prove.
+    expect(screen.getByText('Juniper')).toBeTruthy();
   });
 
   it('shows in-stall time as the denominator when it is known', async () => {
@@ -131,15 +137,24 @@ describe('LyingDownRow', () => {
     });
 
     it.each(['low', 'high'] as const)(
-      'draws a %s reading in the deviation colour, not the alert colour',
+      'draws a %s reading in the ordinary colour while the verdict is withheld',
       (verdict) => {
+        // An ochre line says "outside normal" as plainly as the badge does.
+        // Hiding the words while keeping the colour would only move the
+        // unapproved claim somewhere harder to argue with.
         const colour = lyingDownSeriesColor(verdict, palette.light);
-        expect(colour).toBe(palette.light.chartDeviation);
-        // Severity is never coloured: a low day and a high day look the same,
-        // and neither borrows red from real alerts.
+        expect(colour).toBe(palette.light.chartData);
         expect(colour).not.toBe(palette.light.statusAlert);
       },
     );
+
+    it('keeps the deviation colour ready for when the comparison is approved', () => {
+      // Pins the rule itself, so flipping DEVIATION_VERDICTS_APPROVED restores
+      // ochre for deviation and nothing else. Severity is still never coloured:
+      // a low day and a high day look the same, and neither borrows alert red.
+      expect(palette.light.chartDeviation).not.toBe(palette.light.chartData);
+      expect(palette.light.chartDeviation).not.toBe(palette.light.statusAlert);
+    });
 
     it('treats missing data as an absence, not a deviation', async () => {
       await render(
@@ -196,12 +211,12 @@ describe('LyingDownRow', () => {
     expect(screen.getByText(message)).toBeTruthy();
     if (blocks) {
       expect(screen.queryByTestId('lying-down-daily-plot')).toBeNull();
-      expect(screen.queryByText('Usual')).toBeNull();
       expect(screen.getByText('—')).toBeTruthy();
     } else {
       expect(screen.getByTestId('lying-down-daily-plot')).toBeTruthy();
-      expect(screen.getByText('Usual')).toBeTruthy();
     }
+    // Either way, no deviation verdict while the threshold is unapproved.
+    expect(screen.queryByText('Usual')).toBeNull();
   });
 
   it('survives a monitor that went offline mid-week', async () => {

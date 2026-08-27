@@ -19,7 +19,8 @@ export function LyingDownRowShell({
   children,
 }: {
   horseName: string;
-  badgeLabel: string;
+  /** `null` withholds the badge entirely — see `DEVIATION_VERDICTS_APPROVED`. */
+  badgeLabel: string | null;
   badgeTone: BadgeTone;
   figure: string;
   subline?: string;
@@ -39,18 +40,20 @@ export function LyingDownRowShell({
         }
         trailing={
           <View style={[styles.summary, { gap: space.sm }]}>
-            <View
-              style={[
-                styles.badge,
-                badgeStyleFor(badgeTone, colors),
-                { paddingHorizontal: space.sm },
-              ]}>
-              <Text
-                style={[type.caption, styles.badgeText, { color: badgeInkFor(badgeTone, colors) }]}
-                numberOfLines={1}>
-                {badgeLabel}
-              </Text>
-            </View>
+            {badgeLabel === null ? null : (
+              <View
+                style={[
+                  styles.badge,
+                  badgeStyleFor(badgeTone, colors),
+                  { paddingHorizontal: space.sm },
+                ]}>
+                <Text
+                  style={[type.caption, styles.badgeText, { color: badgeInkFor(badgeTone, colors) }]}
+                  numberOfLines={1}>
+                  {badgeLabel}
+                </Text>
+              </View>
+            )}
             <Text style={[type.title3, styles.figure, { color: colors.foreground }]}>
               {figure}
             </Text>
