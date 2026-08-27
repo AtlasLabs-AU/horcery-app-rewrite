@@ -107,6 +107,30 @@ deferred implementation.
   5. Custom composition of the above
   6. New third-party dependency — explicit logged decision required
 
+### iOS widget capability (installed 2026-08-27; product surface not approved)
+
+- `expo-widgets` `~57.0.9` is installed as the Expo SDK 57-compatible route to
+  iOS Home Screen widgets, Lock Screen widgets and Live Activities. It is an
+  official Expo package (sourcing level 2), not a third-party exception.
+- The package is **iOS-only** and additive. It does not change the requirement
+  that the main Horcery app and every core workflow are first-class on Android.
+  An Android widget needs its own supported implementation and parity plan.
+- Installation does not create a widget target or expose a customer-facing
+  feature. Do not configure or ship a placeholder widget merely because the
+  dependency exists; `expo-widgets` also requires a rebuilt development client
+  and is unavailable in Expo Go.
+- Before the first widget target is approved, specify and test: the read-only
+  data contract, organization/account switching, authentication expiry,
+  privacy on unlocked and locked screens, update cadence and operating-system
+  limits, explicit loading/error/empty/stale states, deep-link destinations,
+  accessibility and all supported widget sizes, light/dark/tinted rendering,
+  and App Store compliance. A monitoring widget must never present old or
+  unavailable data as current or healthy.
+- First candidate for a bounded spike: an at-a-glance monitored-horse or alert
+  summary using the same semantic server data as the app. No PromQL, generic
+  CRUD response model or independent health interpretation may enter the
+  widget target.
+
 ## 4b. Localization (decided 2026-08-13)
 
 - The rewrite is **born localized** — English, Spanish, Russian, Turkmen from day one,
