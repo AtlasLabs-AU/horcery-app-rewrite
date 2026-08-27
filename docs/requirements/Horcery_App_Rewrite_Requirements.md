@@ -107,7 +107,7 @@ deferred implementation.
   5. Custom composition of the above
   6. New third-party dependency — explicit logged decision required
 
-### iOS widget capability (installed 2026-08-27; product surface not approved)
+### iOS widget capability (installed 2026-08-27; deferred by Inakshi)
 
 - `expo-widgets` `~57.0.9` is installed as the Expo SDK 57-compatible route to
   iOS Home Screen widgets, Lock Screen widgets and Live Activities. It is an
@@ -130,6 +130,13 @@ deferred implementation.
   summary using the same semantic server data as the app. No PromQL, generic
   CRUD response model or independent health interpretation may enter the
   widget target.
+- **Deferred 2026-08-27:** widgets are not required for the current rebuild
+  milestone. When widget work is discussed again, explicitly raise the Android
+  gap: keep one shared product/data specification, build the supported iOS
+  surface, and time-box an Expo 57 / React Native 0.86 Android-library
+  compatibility spike before accepting a new third-party dependency. Do not
+  build a custom Android widget framework or let this optional surface delay
+  the core app without a new product decision.
 
 ## 4b. Localization (decided 2026-08-13)
 
@@ -875,6 +882,7 @@ hardening H1–H4.
 | 6 | Android rounded typeface (see §4d) | SF Pro Rounded cannot ship on Android; needed before the type ramp lands, an hour's comparison |
 | 7 | Backend endpoint for 6-digit password-reset codes | Inakshi chose in-app code reset (2026-08-14) over Firebase's web reset page; Firebase alone cannot issue codes, so the dev team needs to add issue+verify endpoints before the flow goes live. The prototype's flow is front-end only. |
 | 8 | Apple/Google sign-in wiring | Front-end approved for preview 2026-08-14; real wiring needs native builds + backend acceptance of those identities (and Apple sign-in is mandatory on iOS once Google ships) |
+| 9 | Cross-platform Home Screen widgets — deferred | Optional, not part of the current rebuild milestone. `expo-widgets` is installed but no widget target is configured. When reopened, use one shared specification, build iOS, and run a one-day Android compatibility spike before choosing a dependency; do not custom-build by default. |
 
 ## 8. Success criteria
 
