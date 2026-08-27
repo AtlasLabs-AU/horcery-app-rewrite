@@ -208,6 +208,54 @@ validation (does the response belong to the requested stall/horse), naming
 every outage in the caption rather than the first, and rollover-spanning
 stretches reading as new visits.
 
+## The "usual" line: what a comprehensive check settled (2026-08-23)
+
+Inakshi asked whether we already had what we needed to decide how the charts'
+dashed "usual" reference is calculated. Checked: legacy queries, the team
+digest, the Mobile Queries sheet, this repo's docs, and — decisively — the
+three production monitors.
+
+**Established, no longer open:**
+
+1. **The legacy average queries WORK.** `dailyLyingDownAvg` run against
+   production returns plausible values: 2.32 h (sm-1275), 3.04 h (sm-1272)
+   average daily lying down, inside the measured 14–189 min/day range. This is
+   not a broken query; it is a query with a coverage assumption.
+2. **The work is already assigned.** Anuvathan owns "implement the lying-down
+   count / average-value query" (action item, 2026-07-23), lying-down queries
+   are FIRST in the agreed build order, and the data team offered on
+   2026-07-10 to return computed levels rather than have the app threshold
+   them. This is not a new ask; it is a scope note on work in flight.
+3. **Prometheus returns a point for EVERY day**, so a day with no readings
+   comes back as exactly `0`, not as absent. Measured: 31/31 days returned on
+   all three monitors, with 3–5 days a month reading exactly zero.
+4. **Those particular zeros are real.** Probing two of them found ~289 raw
+   samples across the day — full coverage, the horse simply was not detected
+   lying down. So the fixed divisor is not currently harming these monitors.
+5. **`up` cannot be used to tell the difference.** It reads 1.0 on all 31 days
+   on every series; it measures whether the scrape target answered, not
+   whether horse analytics produced readings. (Same defect as the Last 24
+   Hours "Offline" category.)
+
+**The conclusion that follows, which is a finding rather than a question:**
+
+Our own charts distinguish "observed zero" from "not observed" by scanning raw
+sample timestamps, and that works. But `dailyLyingDownAvg` and
+`weeklyLyingDownAvg` do their aggregation INSIDE Prometheus and return one
+pre-divided number. By the time the app sees it, the coverage information is
+gone — there is no query the app can write, and no metric it can join against,
+that recovers how many days went into that divisor.
+
+So the app cannot verify the usual line, however carefully it is written.
+
+**Recommendation (for Inakshi, 2026-08-23): ask for one extra field, not a
+recalculation.** Have the average query return the number of days actually
+observed alongside the average. The app then decides whether to trust it —
+using the same rule it already applies everywhere else: if the window is
+incomplete, describe it, do not judge it. This is a one-number contract change
+rather than a redesign, it moves no computation, and it closes the defect
+permanently.
+
 ## Query corrections not yet accepted upstream
 
 Recorded here because the register is the controlled inventory of queries as well
