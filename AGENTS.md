@@ -7,7 +7,21 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 Read `PRINCIPLES.md` before making any design or engineering decision in this
 repo, and hold every change against it. Tie-break: smooth over showy.
 
+# Skills and engineering judgement
+
+Repository skills are optional aids, not mandatory operating modes. Use a skill
+when its specialised procedure would materially improve the task. Do not invoke
+one merely because it exists, and do not let a skill override the user's request,
+verified repository evidence or better engineering judgement. If a skill is
+outdated, too narrow or conflicts with the task, explain that and use the better
+approach.
+
 # Charts
+
+Consider `$horcery-chart-engineering` from
+`.agents/skills/horcery-chart-engineering/SKILL.md` when its controlled workflow
+would help to propose, implement, change, fix, investigate or review a chart or
+chart-like score. It supports engineering judgement; it does not replace it.
 
 Before proposing, changing or implementing any chart or chart-like score, read
 `docs/architecture/CHART_ENGINEERING_STANDARD.md` and complete

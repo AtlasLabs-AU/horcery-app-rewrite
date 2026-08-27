@@ -1,0 +1,6 @@
+interface:
+  display_name: "Horcery Chart Engineering"
+  short_description: "Build truthful, tested Horcery charts"
+  default_prompt: "Use $horcery-chart-engineering to build or review this Horcery chart against its approved meaning and device gates."
+policy:
+  allow_implicit_invocation: true
