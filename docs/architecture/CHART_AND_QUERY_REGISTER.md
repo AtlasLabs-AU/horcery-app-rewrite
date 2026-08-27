@@ -248,7 +248,19 @@ that recovers how many days went into that divisor.
 
 So the app cannot verify the usual line, however carefully it is written.
 
-**Recommendation (for Inakshi, 2026-08-23): ask for one extra field, not a
+**BUILT INSTEAD, same day (Inakshi: "can't you work with what we've got?").**
+We do not have to wait. The chart already fetches seven days of raw readings to
+draw itself — the same window the daily average covers — so `usualWindowObserved()`
+counts the observed days ourselves and downgrades the verdict to `incomplete`
+when the window has holes. All three behaviour charts inherit it.
+
+Conservative by construction, and honest about two limits: the windows are
+offset by a day (ours is the six finished days on screen, the average's is the
+seven before today), and it says nothing about the WEEKLY average, which runs
+over four weeks the app never fetches. Both make it under-claim rather than
+over-claim. Live data is unblocked for the daily charts.
+
+**Still worth asking for eventually: one extra field, not a
 recalculation.** Have the average query return the number of days actually
 observed alongside the average. The app then decides whether to trust it —
 using the same rule it already applies everywhere else: if the window is

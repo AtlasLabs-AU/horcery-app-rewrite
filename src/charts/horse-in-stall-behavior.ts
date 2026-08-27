@@ -7,6 +7,7 @@ import {
   hasEnoughHistory,
   lyingDownVerdict,
   usualByNow,
+  usualWindowObserved,
   type LyingDownWeek,
   type LyingDownWeeklySummary,
   type UsualCurvePoint,
@@ -164,7 +165,14 @@ export function buildHorseInStallWeek({
         ? 'no-data'
         : today.partlyRecorded
           ? 'incomplete'
-          : !enoughHistory
+          : // The usual line comes from an upstream average over the last seven
+            // days. We cannot see its divisor, but we DO fetch those same seven
+            // days to draw the chart — so a window with holes in it means a
+            // usual we have reason to distrust, and an untrustworthy normal is
+            // not something to judge a horse against.
+            !usualWindowObserved(week)
+            ? 'incomplete'
+            : !enoughHistory
             ? 'unknown'
             : lyingDownVerdict({
                 deviationPercent: deviationPercentOf(today.totalSeconds, usualByNowSeconds),

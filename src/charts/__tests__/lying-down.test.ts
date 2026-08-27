@@ -17,6 +17,7 @@ import {
   hasEnoughHistory,
   usualByNow,
   elapsedFractionOfDay,
+  usualWindowObserved,
 } from '@/charts/lying-down';
 import type { PrometheusRangeSeries } from '@/charts/occupancy-timeline';
 
@@ -730,5 +731,53 @@ describe('weekly verdict when days are missing', () => {
     // that is a description of what was observed, not a judgement.
     expect(summary.observedDays).toBeLessThan(6);
     expect(summary.dailyAverageSeconds).not.toBeNull();
+  });
+});
+
+/**
+ * Working with what we've got (Inakshi, 2026-08-23).
+ *
+ * The upstream average hides its own divisor, so a dead camera day drags the
+ * usual line down invisibly. Rather than wait for Data Science to return the
+ * day count, the app checks the window itself — it already fetches those seven
+ * days to draw the chart. Conservative by design: it can only confirm the
+ * window looks complete, never that the upstream divisor was right.
+ */
+describe('usualWindowObserved', () => {
+  it('accepts a week whose finished days were all observed', () => {
+    const week = buildLyingDownWeek({
+      result: series([['2026-08-18T22:00:00', '2026-08-18T23:30:00']]),
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    expect(usualWindowObserved(week)).toBe(true);
+  });
+
+  it('rejects a week with a day the monitor never reported', () => {
+    const full = series([['2026-08-18T22:00:00', '2026-08-18T23:30:00']])[0]!;
+    const from = DateTime.fromISO('2026-08-16T06:00:00', { zone: ZONE }).toSeconds();
+    const to = DateTime.fromISO('2026-08-17T06:00:00', { zone: ZONE }).toSeconds();
+    const week = buildLyingDownWeek({
+      result: [{ ...full, values: full.values.filter(([t]) => t < from || t >= to) }],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    expect(usualWindowObserved(week)).toBe(false);
+  });
+
+  it('rejects a week with a day only partly recorded', () => {
+    // A four-hour hole still means an undercounted day inside the average.
+    const full = series([['2026-08-18T22:00:00', '2026-08-18T23:30:00']])[0]!;
+    const from = DateTime.fromISO('2026-08-16T11:40:00', { zone: ZONE }).toSeconds();
+    const to = DateTime.fromISO('2026-08-16T15:30:00', { zone: ZONE }).toSeconds();
+    const week = buildLyingDownWeek({
+      result: [{ ...full, values: full.values.filter(([t]) => t < from || t >= to) }],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+    expect(usualWindowObserved(week)).toBe(false);
   });
 });

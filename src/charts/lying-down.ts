@@ -833,3 +833,41 @@ export function hasEnoughHistory(
   const cutoff = timeframe === 'daily' ? now.minus({ days: 7 }) : now.minus({ weeks: 4 });
   return created <= cutoff;
 }
+
+/**
+ * Days the upstream "usual" average is computed over. The shipping app's
+ * `dailyLyingDownAvg` divides by exactly this, unconditionally.
+ */
+export const USUAL_WINDOW_DAYS = 7;
+
+/**
+ * Whether the window behind the "usual" line was actually observed.
+ *
+ * WHY THIS EXISTS (Inakshi, 2026-08-23 — "can't you work with what we've
+ * got?"). The upstream average query aggregates inside Prometheus and returns
+ * one pre-divided number, so the app cannot see how many days went into it,
+ * and a dead camera day counts as a zero that drags the average down. Asking
+ * Data Science to return the day count is the clean fix and is recorded in the
+ * register.
+ *
+ * But we do not have to wait for it. The chart already fetches seven days of
+ * raw readings to draw itself, which is the same window the daily average
+ * covers — so we can count the observed days ourselves and refuse to judge
+ * against a usual line we have reason to distrust.
+ *
+ * Honest about its limits, both of which make it CONSERVATIVE rather than
+ * wrong:
+ *
+ * - The windows are offset by a day: the average runs over the seven days
+ *   before today, this counts the six finished days on screen plus today. A
+ *   week whose finished days were all observed is overwhelmingly likely to sit
+ *   on a complete average window, and a week with holes is exactly the case we
+ *   want to withhold judgement on either way.
+ * - It says nothing about the WEEKLY average, which runs over four weeks the
+ *   app never fetches. That one still needs the day count from upstream.
+ */
+export function usualWindowObserved(week: LyingDownWeek): boolean {
+  const finished = week.days.filter((day) => !day.isToday);
+  if (finished.length === 0) return false;
+  return finished.every((day) => day.coverage === 'observed');
+}
