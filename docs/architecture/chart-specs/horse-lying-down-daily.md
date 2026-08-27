@@ -54,7 +54,7 @@ horse is physically on the floor.
 | Observation/API ID | none — direct Prometheus, `horse_sitting_per_id` |
 | Contract version | n/a (raw metric; no versioned observation contract exists) |
 | Query version/provenance | Data Science via PR 1928 on `84-horcery-app-react-native`, **with a one-character correction, §11-E1** |
-| Entity-selection rule | one series per horse `id` label; the stall monitor's own device scope |
+| Entity-selection rule | **All streams matching the filtered query are unioned** (highest value per instant) — see "Several streams for one stall", register, 2026-08-23. Measured on sm-1272, 8–12 July, with the query the app actually runs: 3 streams, 784 minutes with one positive, ZERO simultaneous. Union therefore equals the legacy sum here and cannot exceed a day. Opt-in per caller (`combineSameKeyStreams`); correct only for this binary signal. Data Science still owes the meaning of `id` |
 | Requested time range | 7 barn days ending on the selected date |
 | Effective time range | barn day = organization `chart_start_time` → same time next day |
 | Organization timezone | organization `timezone`; Luxon zone arithmetic, DST-safe by construction |

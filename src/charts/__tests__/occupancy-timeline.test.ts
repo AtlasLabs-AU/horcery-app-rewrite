@@ -495,3 +495,35 @@ describe('defects the shipping app has', () => {
     expect(built[0]!.intervalsByDay['2026-08-14']).toHaveLength(1);
   });
 });
+
+/**
+ * Union is opt-in, and this is why (Codex review, 2026-08-23).
+ *
+ * The union takes the highest value at each instant, which is only correct for
+ * a BINARY signal — the highest of several yeses is still one yes. This
+ * builder also serves counted signals, where two streams carrying two people
+ * and three people mean five, not three. Defaulting it on would quietly
+ * undercount exactly the chart it was not measured against.
+ */
+describe('combineSameKeyStreams', () => {
+  const twoStreams = (): PrometheusRangeSeries[] => [
+    series('Human_Presence', [
+      ['2026-08-14T09:00:00', '2'],
+      ['2026-08-14T10:00:00', '0'],
+    ]),
+    series('Human_Presence', [
+      ['2026-08-14T09:00:00', '3'],
+      ['2026-08-14T10:00:00', '0'],
+    ]),
+  ];
+
+  it('leaves streams alone by default, so counted signals are never merged', () => {
+    const { series: built } = build(twoStreams());
+    expect(built).toHaveLength(2);
+  });
+
+  it('merges them only when the caller says the signal is binary', () => {
+    const { series: built } = build(twoStreams(), { combineSameKeyStreams: true });
+    expect(built).toHaveLength(1);
+  });
+});

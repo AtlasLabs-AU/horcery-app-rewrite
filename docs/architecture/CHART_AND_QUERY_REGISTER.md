@@ -370,23 +370,34 @@ call; if it goes, the card falls back to plain stall order.
 Inakshi: "refusing to draw is not an option." Correct — a blank chart helps
 nobody, and the refusal was a placeholder for a decision, not a decision.
 
-**What the production data says.** On sm-1275, sm-1272 and sm-1212 the
-90-day history returns up to FIVE `id` streams from a single monitor, and they
-are concurrent, not sequential — all five were present at one instant on
-2026-06-20. (An earlier review reported four, appearing at different times;
-both details are wrong, and the correction matters: sequential identities
-could be stitched, concurrent ones cannot.)
+**FIRST MEASUREMENT WAS INVALID — recorded so the mistake is not repeated.**
+The original evidence (five concurrent `id` streams on sm-1275, June) was
+gathered with the RAW metric `horse_sitting_per_id`. Those historical streams
+carry **no `animal_type` label at all**, so the query the app actually runs —
+`horse_sitting_per_id{animal_type="horse"}` — returns **zero** of them.
+Verified 2026-08-23: unfiltered 5 series at that instant, filtered 0. The
+conclusion happened to survive; the evidence did not support it. Caught by
+Codex review.
 
-**The decisive measurement.** Over four days on sm-1275, sampled every minute:
+**Correct measurement, using the query the app runs.** Over 90 days:
 
-- 623 minutes where at least one stream reported lying down
-- **0 minutes where two streams reported it at the same instant**
+| Monitor | distinct `id` under `animal_type="horse"` |
+|---|---|
+| sm-1275 | 1 |
+| sm-1212 | 1 |
+| **sm-1272** | **4** (ids 0, 1, 2, 3) |
 
-They never overlap. So these are not five horses and not duplicate cameras —
-they are one horse whose tracking identity keeps changing, and the streams
-complete each other. Reading only the first stream loses real rest: 0.40 h
-against 2.35 h on 22 June, and 0.00 h against 1 h 19 on 25 June, where the
-first stream saw nothing at all.
+So multiple streams DO occur under the production contract — on sm-1272,
+which the review generalised past by checking only sm-1275.
+
+**The decisive measurement**, sm-1272, 8–12 July, filtered query, one-minute
+sampling: three streams present; **784 minutes** where one reported lying
+down; **0 minutes** where two reported it simultaneously. The union therefore
+equals the legacy sum on this data, and cannot exceed a day.
+
+Exact reproduction: `clamp_max(round(avg_over_time(horse_sitting_per_id{animal_type="horse"}[1m:30s])),1)`
+against `n1.dat.use.wg0.horcery.com/sm-1272`, `start=2026-07-08T00:00 local`,
+`end=2026-07-12T00:00 local`, `step=60`.
 
 **Decision: union the streams within a `seriesKey` group** — at each instant
 the subject is present if any stream says so. Three reasons, in order of
@@ -398,9 +409,13 @@ weight:
    the streams never overlap — so nothing about the numbers surprises anyone.
 3. It keeps the rest that picking one stream throws away.
 
-Union applies only within a series key, so People in Stall's Human_Presence
-and Human_Interaction stay separate — merging those would be the mistake this
-guards against.
+**Union is OPT-IN per caller** (`combineSameKeyStreams`, default off). Taking
+the highest value at each instant is correct only for a BINARY signal, where
+the highest of several yeses is still one yes. It is wrong for a counted one:
+two streams carrying two people and three people mean five, not three. The
+shared occupancy builder serves both kinds, so Lying Down and Horse in Stall
+opt in and People in Stall does not — pinned by test. (Codex review, 2026-08-23:
+the rule was originally added to the generic builder for every caller.)
 
 **Recorded as our reading, for Data Science to confirm**, along with the
 question their contract still owes: what does `id` mean, and why do five of

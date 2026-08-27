@@ -349,6 +349,13 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
     dayStartHour,
     // One horse, one series. Any label split would be a different chart.
     seriesKey: () => 'lying-down',
+    /**
+     * Measured on sm-1272, 8–12 July 2026, using the query the app actually
+     * runs (`animal_type="horse"`): three streams, 784 minutes where one
+     * reported lying down, ZERO where two did. They never overlap, so the
+     * union equals the sum and cannot produce an impossible day.
+     */
+    combineSameKeyStreams: true,
   });
 
   // In-stall runs through the same day cutting, so its intervals line up
@@ -363,6 +370,8 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
         now,
         dayStartHour,
         seriesKey: () => 'in-stall',
+        // Binary signal: union is safe, and a horse cannot be twice in a stall.
+        combineSameKeyStreams: true,
       })
     : null;
   const inStallSeries = inStall?.series[0];

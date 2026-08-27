@@ -92,6 +92,20 @@ export interface BuildOccupancyTimelineInput {
   /** Which metric label distinguishes series. Defaults to `Event_Type`. */
   seriesKey?: (metric: Record<string, string>) => string;
   /**
+   * Union streams that share a `seriesKey` into one, taking the highest value
+   * at each instant. Default OFF.
+   *
+   * Only correct for a BINARY signal, where the value answers yes/no and the
+   * highest of several yeses is still one yes. It is wrong for a COUNTED one:
+   * if two streams legitimately carry two people and three people, the union
+   * reports three, not five. This builder serves both kinds, so the caller —
+   * which knows what its query measures — has to say.
+   *
+   * Lying Down and Horse in Stall opt in (`clamp_max(...,1)` — binary).
+   * People in Stall does not.
+   */
+  combineSameKeyStreams?: boolean;
+  /**
    * Hour the BARN day begins, 0–23. Default 0 (calendar midnight), which is
    * what People In Stall has always used and what its characterised behaviours
    * are pinned to.
@@ -246,6 +260,7 @@ export function buildOccupancyTimeline(
     threshold,
     days: dayCount = DEFAULT_DAYS,
     seriesKey = (metric) => metric.Event_Type ?? 'default',
+    combineSameKeyStreams = false,
   } = input;
 
   const now = input.now.setZone(zone);
@@ -312,14 +327,15 @@ export function buildOccupancyTimeline(
    * stay apart. Merging those would be the mistake this guards against.
    */
   const grouped = new Map<string, PrometheusRangeSeries[]>();
-  for (const raw of result) {
+  for (const raw of combineSameKeyStreams ? result : []) {
     const key = seriesKey(raw.metric);
     const bucket = grouped.get(key);
     if (bucket) bucket.push(raw);
     else grouped.set(key, [raw]);
   }
 
-  const merged: PrometheusRangeSeries[] = [...grouped.entries()].map(([, group]) => {
+  const merged: PrometheusRangeSeries[] = combineSameKeyStreams
+    ? [...grouped.entries()].map(([, group]) => {
     if (group.length === 1) return group[0]!;
     const byTimestamp = new Map<EpochSeconds, number>();
     for (const raw of group) {
@@ -336,7 +352,8 @@ export function buildOccupancyTimeline(
         .sort((a, b) => a[0] - b[0])
         .map(([timestamp, value]) => [timestamp, String(value)] as [EpochSeconds, string]),
     };
-  });
+      })
+    : result;
 
   for (const raw of merged) {
     // Samples in the future are noise from `end` overshooting `now`; drop them
