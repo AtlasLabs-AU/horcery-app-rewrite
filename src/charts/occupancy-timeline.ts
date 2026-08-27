@@ -288,7 +288,57 @@ export function buildOccupancyTimeline(
   const series: OccupancySeries[] = [];
   let intervalCount = 0;
 
+  /**
+   * Streams that mean the SAME thing are unioned before anything else looks at
+   * them: at each instant the subject counts as present if any of them says so.
+   *
+   * WHY (measured 2026-08-23, sm-1275, the window where five streams coexist).
+   * A single monitor can emit several `id` streams at once — up to five — and
+   * they are NOT five horses. Over four days they never once both reported
+   * presence at the same minute: 623 minutes with one stream positive, **zero**
+   * with two. They are one horse whose tracking identity keeps changing, so the
+   * streams complete each other rather than duplicating each other.
+   *
+   * That makes the union the right combination on three counts. It is IDENTICAL
+   * to the shipping app's sum on every day measured, so nothing about the
+   * numbers surprises anyone. It is arithmetically incapable of the sum's
+   * failure — a union of intervals cannot exceed the day, so no 25-hour day.
+   * And it keeps what picking one stream would throw away: on 22 June, id=0
+   * alone reported 0.40 h against the union's 2.35 h, and on 25 June id=0
+   * reported nothing at all while the horse had lain down for 1 h 19.
+   *
+   * Union is applied only WITHIN a `seriesKey` group, so genuinely different
+   * measurements — People in Stall's Human_Presence and Human_Interaction —
+   * stay apart. Merging those would be the mistake this guards against.
+   */
+  const grouped = new Map<string, PrometheusRangeSeries[]>();
   for (const raw of result) {
+    const key = seriesKey(raw.metric);
+    const bucket = grouped.get(key);
+    if (bucket) bucket.push(raw);
+    else grouped.set(key, [raw]);
+  }
+
+  const merged: PrometheusRangeSeries[] = [...grouped.entries()].map(([, group]) => {
+    if (group.length === 1) return group[0]!;
+    const byTimestamp = new Map<EpochSeconds, number>();
+    for (const raw of group) {
+      for (const [timestamp, value] of raw.values) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) continue;
+        const seen = byTimestamp.get(timestamp);
+        if (seen === undefined || numeric > seen) byTimestamp.set(timestamp, numeric);
+      }
+    }
+    return {
+      metric: group[0]!.metric,
+      values: [...byTimestamp.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([timestamp, value]) => [timestamp, String(value)] as [EpochSeconds, string]),
+    };
+  });
+
+  for (const raw of merged) {
     // Samples in the future are noise from `end` overshooting `now`; drop them
     // (the current app does the same).
     const byDay: [EpochSeconds, string][][] = days.map(() => []);

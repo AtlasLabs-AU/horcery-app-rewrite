@@ -365,6 +365,48 @@ rows worth a look — but by the same argument used for the ochre line it is the
 unapproved judgement expressed as position. Left in place pending Inakshi's
 call; if it goes, the card falls back to plain stall order.
 
+## Several streams for one stall: measured, then unioned (2026-08-23)
+
+Inakshi: "refusing to draw is not an option." Correct — a blank chart helps
+nobody, and the refusal was a placeholder for a decision, not a decision.
+
+**What the production data says.** On sm-1275, sm-1272 and sm-1212 the
+90-day history returns up to FIVE `id` streams from a single monitor, and they
+are concurrent, not sequential — all five were present at one instant on
+2026-06-20. (An earlier review reported four, appearing at different times;
+both details are wrong, and the correction matters: sequential identities
+could be stitched, concurrent ones cannot.)
+
+**The decisive measurement.** Over four days on sm-1275, sampled every minute:
+
+- 623 minutes where at least one stream reported lying down
+- **0 minutes where two streams reported it at the same instant**
+
+They never overlap. So these are not five horses and not duplicate cameras —
+they are one horse whose tracking identity keeps changing, and the streams
+complete each other. Reading only the first stream loses real rest: 0.40 h
+against 2.35 h on 22 June, and 0.00 h against 1 h 19 on 25 June, where the
+first stream saw nothing at all.
+
+**Decision: union the streams within a `seriesKey` group** — at each instant
+the subject is present if any stream says so. Three reasons, in order of
+weight:
+
+1. It cannot produce the shipping app's impossible day. A union of intervals
+   cannot exceed the day, whatever the streams do.
+2. It is IDENTICAL to the shipping app's sum on every day measured, because
+   the streams never overlap — so nothing about the numbers surprises anyone.
+3. It keeps the rest that picking one stream throws away.
+
+Union applies only within a series key, so People in Stall's Human_Presence
+and Human_Interaction stay separate — merging those would be the mistake this
+guards against.
+
+**Recorded as our reading, for Data Science to confirm**, along with the
+question their contract still owes: what does `id` mean, and why do five of
+them exist simultaneously on one camera? That may be a pipeline defect rather
+than an aggregation question, and these numbers are the evidence for it.
+
 ## Query corrections not yet accepted upstream
 
 Recorded here because the register is the controlled inventory of queries as well

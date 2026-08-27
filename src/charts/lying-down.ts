@@ -371,17 +371,18 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   // was down. Without this, an offline monitor is indistinguishable from a
   // horse that never lay down.
   //
-  // Scanned from the SAME series the bouts come from. Scanning every series
-  // while reading bouts from the first marked a day observed on the strength of
-  // a camera whose intervals were then ignored, and an observed day with no
-  // bouts is a zero — reintroducing "missing data reads as none detected"
-  // through the back door (audit, 2026-08-20).
-  const observedSource = result[0];
+  // Coverage must be scanned over exactly the streams the bouts come from.
+  // That used to be `result[0]` alone, because only the first stream was read;
+  // since 2026-08-23 the timeline unions every stream of the same meaning, so
+  // coverage follows and scans them all. Scanning MORE than is read is the bug
+  // that version fixed — a day marked observed on the strength of a stream
+  // whose intervals were discarded became an observed zero.
+  const observedSource = result.length === 0 ? undefined : result;
   const observedDays = new Set<string>();
   let lastObservedAt: EpochSeconds | null = null;
   const asOf = now.toSeconds();
   const stamps: number[] = [];
-  for (const raw of observedSource ? [observedSource] : []) {
+  for (const raw of observedSource ?? []) {
     for (const [timestamp] of raw.values) {
       if (timestamp <= asOf) {
         stamps.push(timestamp);
@@ -453,12 +454,6 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   if (state === 'ready') {
     if (outOfStall) state = 'out-of-stall';
     else if (result.length === 0) state = 'no-data';
-    // More than one matching series and no approved rule for combining them.
-    // The shipping app ADDS them, which can put more than 24 hours in a day;
-    // reading only the first silently hides a camera. Both are worse than
-    // saying we cannot show this, so we fail closed until Data Science defines
-    // union / max / error (register, "Legacy defects", item 5).
-    else if (result.length > 1) state = 'unavailable';
     else if (days.some((day) => day.coverage === 'no-observations')) state = 'partial';
   }
 

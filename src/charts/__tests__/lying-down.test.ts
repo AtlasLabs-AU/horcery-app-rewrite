@@ -638,40 +638,63 @@ describe('usualByNow', () => {
  * regressions, not merely bugs — each one puts the decision itself back in play.
  */
 describe('defects found by audit', () => {
-  it('never marks a day observed on a series whose bouts it then ignores', () => {
-    // Two cameras on one stall. The first saw nothing on the 18th; the second
-    // did. Scanning both for coverage while reading bouts from the first alone
-    // made the 18th "observed" with no bouts — an observed ZERO, which reads as
-    // "the horse never lay down" rather than "we cannot combine these".
+  it('uses every stream of the same meaning rather than dropping all but one', () => {
+    // Measured on sm-1275 (2026-08-23): one monitor emits up to five `id`
+    // streams at once, and they never both report at the same minute — 623
+    // minutes with one positive, ZERO with two. They are one horse whose
+    // tracking identity changes, so a stream we discard is rest we lose. On
+    // 25 June id=0 reported nothing at all while the horse had lain 1 h 19.
     const quiet = series([])[0]!;
-    const secondCamera: PrometheusRangeSeries = {
+    const second: PrometheusRangeSeries = {
       metric: { animal_type: 'horse', id: '1' },
-      values: quiet.values.map(([t]) => [t, '1'] as [number, string]),
+      values: quiet.values.map(([t]) => [
+        t,
+        t >= DateTime.fromISO('2026-08-18T01:00:00', { zone: ZONE }).toSeconds() &&
+        t < DateTime.fromISO('2026-08-18T02:00:00', { zone: ZONE }).toSeconds()
+          ? '1'
+          : '0',
+      ] as [number, string]),
     };
+
     const week = buildLyingDownWeek({
-      result: [{ ...quiet, values: quiet.values.slice(0, 10) }, secondCamera],
+      result: [quiet, second],
       selectedDate: SELECTED,
       zone: ZONE,
       now: NOW,
     });
 
-    const uncovered = week.days.filter((day) => day.coverage === 'no-observations');
-    expect(uncovered.length).toBeGreaterThan(0);
-    // The days the first series never reached must be null, never 0.
-    for (const day of uncovered) expect(day.totalSeconds).toBeNull();
+    // The hour only the second stream saw is counted, not discarded...
+    const day = week.days.find((d) => d.key === '2026-08-17');
+    expect(day?.totalSeconds).toBe(3600);
+    // ...and no day is left looking unobserved.
+    expect(week.days.filter((d) => d.coverage === 'no-observations')).toHaveLength(0);
   });
 
-  it('refuses to draw at all when several series match, rather than picking one', () => {
-    // The shipping app SUMS them, which can exceed 24 hours in a day. Reading
-    // only the first hides a camera. Both are worse than saying so.
-    const one = series([['2026-08-19T08:00:00', '2026-08-19T09:00:00']]);
+  it('unions overlapping streams instead of summing them into an impossible day', () => {
+    // The shipping app ADDS matching streams, which is how a day grows past 24
+    // hours. Two streams reporting the SAME hour must total one hour, not two.
+    const base = series([])[0]!;
+    const from = DateTime.fromISO('2026-08-18T01:00:00', { zone: ZONE }).toSeconds();
+    const to = DateTime.fromISO('2026-08-18T02:00:00', { zone: ZONE }).toSeconds();
+    const sameHour = (id: string): PrometheusRangeSeries => ({
+      metric: { animal_type: 'horse', id },
+      values: base.values.map(([t]) => [t, t >= from && t < to ? '1' : '0'] as [number, string]),
+    });
+
     const week = buildLyingDownWeek({
-      result: [one[0]!, { ...one[0]!, metric: { animal_type: 'horse', id: '1' } }],
+      result: [sameHour('0'), sameHour('1'), sameHour('2')],
       selectedDate: SELECTED,
       zone: ZONE,
       now: NOW,
     });
-    expect(week.state).toBe('unavailable');
+
+    const day = week.days.find((d) => d.key === '2026-08-17');
+    expect(day?.totalSeconds).toBe(3600);
+    expect(week.state).not.toBe('unavailable');
+    // Whatever else changes, a day can never hold more than a day.
+    for (const each of week.days) {
+      expect(each.totalSeconds ?? 0).toBeLessThanOrEqual(24 * 3600);
+    }
   });
 
   it('reads a zone-less created_at in the barn timezone, not the phone one', () => {
