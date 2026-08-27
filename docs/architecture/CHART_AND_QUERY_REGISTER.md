@@ -293,9 +293,29 @@ value by never being questioned.
 | sm-1272 | 33% | **54%** |
 | sm-1212 | 48% | **69%** |
 
-The 25% threshold sits at roughly the **37th percentile of ordinary
-variation** — so about two days in three would be badged "Unusual" purely by
-normal behaviour. That is not a signal; it is a light that is always on.
+**CORRECTION, same day.** The figures above are inflated by days registering
+ZERO lying down, which are 7–22% of all days and each score a 100% deviation.
+Excluding them:
+
+| Monitor | median deviation | days flagged at 25% |
+|---|---|---|
+| sm-1275 | 12% | 27% |
+| sm-1272 | 19% | 39% |
+| sm-1212 | 36% | 64% |
+
+So "two days in three" was wrong; the honest range is **27–64%**, and one
+monitor is far calmer than the headline suggested. The conclusion that 25%
+over-fires survives — a badge firing on a quarter to two-thirds of days is
+still not a signal — but it survives less dramatically, and by a margin that
+differs enormously per horse.
+
+**The zero days are the more interesting finding.** Ten of 46 days on sm-1275
+register no lying down at all, and probing two of them found ~289 raw samples
+across the day — the monitor was reporting. So either those horses genuinely
+did not lie down (which is exactly what a welfare badge SHOULD flag, and means
+excluding them above understates the case) or the detection missed it (a
+data-quality question that belongs with Data Science and undermines any
+threshold built on this metric). Nothing in our data distinguishes the two.
 
 **4. No fixed percentage rescues it.** Requiring a minimum absolute gap as
 well (the standard fix for ratios at low values) barely helps: 50% AND a
