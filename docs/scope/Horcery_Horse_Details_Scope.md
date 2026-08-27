@@ -205,7 +205,7 @@ Legend: **BUILD** = new in the rewrite · **REUSE** = exists in the rewrite alre
 |---|---|---|---|
 | S1a | Last 24 Hours donut + bars | **BUILD** — slice 3, **after §6a** | Chart. Domain input: three `ObservationSeries` → four derived hours. Good second chart after People In Stall |
 | S1b | Water / Feed summary rows | **DEFER** to the Intake slice (§4.5) | Only renders with bucket meters; QA org has none |
-| S1c | Activeness trend + Rolling trend + switch + info sheet | **BUILD** — slice 3, **after §6a** | Two line charts. Info sheet → surface sheet |
+| S1c | Activeness trend + Rolling trend + switch + info sheet | **BUILT 2026-08-23** (fixture-only, `PREVIEWS.horseTrendsSampleData`) | Activeness: 24 h line breaking at gaps. Rolling: exact-time event strip (24 h) and bars with last-week markers (7 d) — NOT two line charts; corrected per the 2026-08-22 review. Info sheet → surface sheet |
 | S1d | Special-instructions block | **REMOVE** — decided | The Summary card holds a stub (hard-coded "Buttercup" text, add/delete only `debug()`) of a real half-built feature: event type 7, unmounted `special-instructions-card-widget`, a Review History filter. **Inakshi, 2026-08-17: out.** A special instruction is customer-typed text, so it is part of the **Record** family removed on 2026-08-16 (req §2). Not a deferral — a removal. Review History's default type list no longer requests type 7 |
 
 ### 4.3 Summary tab — S2 Stall card

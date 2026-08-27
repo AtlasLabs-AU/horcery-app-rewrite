@@ -32,7 +32,7 @@ legacy reference and real monitor data. Absence from the register is not approva
 
 | ID | Surface | Customer question | Presentation | Meaning/query approval | Delivery | Units/labels | Real-data evidence | Specification | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| `horse-lying-down-daily` | For You → Behavior Tracker → Lying Down (Daily), one row per horse | Did this horse rest as much as it normally does today, and if not, which way? | Cumulative line across the barn day, dashed usual reference, observation-coverage strip, verdict badge | **Partial.** Detection query is Data Science's (PR 1928) but carries a one-character correction they have not signed off; the usual curve and the 25% threshold are the shipping app's, not re-approved. Product approved 2026-08-19 | Temporary rebuild adapter; fixture-backed behind `PREVIEWS.lyingDownSampleData`; **dev-only live preview path (Protos → Live monitors) since 2026-08-20** | Canonical seconds; displayed h/min. Axis from the organization's `chart_start_time` | Measured 2026-08-19 on sm-1275 / sm-1272 / sm-1212: 2–4 bouts a day, 14–189 min a day, 16–31 bouts a week | [`chart-specs/horse-lying-down-daily.md`](chart-specs/horse-lying-down-daily.md) | **building** |
+| `horse-lying-down-daily` | For You → Behavior Tracker → Lying Down (Daily), one row per horse | Did this horse rest as much as it normally does today, and if not, which way? | Cumulative line across the barn day, dashed usual reference, observation-coverage strip, verdict badge | **Partial.** Detection query is Data Science's (PR 1928); the one-character label-case correction is RESOLVED on production evidence (see "Query corrections", 2026-08-23); the usual curve and the 25% threshold are the shipping app's, not re-approved. Product approved 2026-08-19 | Temporary rebuild adapter; fixture-backed behind `PREVIEWS.lyingDownSampleData`; **dev-only live preview path (Protos → Live monitors) since 2026-08-20** | Canonical seconds; displayed h/min. Axis from the organization's `chart_start_time` | Measured 2026-08-19 on sm-1275 / sm-1272 / sm-1212: 2–4 bouts a day, 14–189 min a day, 16–31 bouts a week | [`chart-specs/horse-lying-down-daily.md`](chart-specs/horse-lying-down-daily.md) | **building** |
 | `horse-lying-down-weekly` | For You → Behavior Tracker → Lying Down (Weekly), one row per horse | Has this horse's week been normal for it? | Bar per day, seven days ending today; that weekday's four-week average marked on each bar; verdict badge for the week | **Partial**, as for the daily chart. The four-week weekday average is the shipping app's `weeklyLyingDownAvg`, not re-approved. Product approved 2026-08-19 | Temporary rebuild adapter; **no live path yet** — fixture-backed behind `PREVIEWS.lyingDownSampleData` | Canonical seconds; displayed h/min. Figure is the week's daily average, excluding today | Same monitors and window as the daily chart | [`chart-specs/horse-lying-down-daily.md`](chart-specs/horse-lying-down-daily.md) §12 | **building** |
 | `stall-people-in-stall-daily` | For You → Behavior Tracker → People in Stall (Daily) | How much time did people spend in this stall today, and is that normal for it? | **Decided (Inakshi, 2026-08-19, "Option C"):** cumulative line + dashed usual (Lying Down layout), a visits strip beneath, and a sentence with ACTUAL visit times from the data ("3 visits · 7:05 AM, 12:40 PM, 5:15 PM") — never invented dayparts like "morning". Full spec in progress (GPT) | **meaning-blocked** overall, but the PRODUCT meaning is decided — see "Product decisions" below the table | Not started; will be fixture-backed behind a preview flag | Canonical seconds; displayed h/min | Pending | Spec in progress | **meaning-blocked** |
 | `stall-people-in-stall-weekly` | For You → Behavior Tracker → People in Stall (Weekly) | Has this stall had a normal week of human attention? | To follow Lying Down weekly: bar per day, weekday-average markers, week verdict | As above | As above | As above | Pending | Spec in progress | **meaning-blocked** |
@@ -236,9 +236,19 @@ The corrected form, which this app uses:
 round(clamp_max(avg_over_time(horse_sitting_per_id{animal_type="horse"}[1m30s:30s] offset -1m),1))
 ```
 
-**Status:** not approved by Data Science. Queries are theirs to define, so this
-stands as a recorded exception (specification §11-E1) rather than as a decision
-we made, until they confirm it.
+**Status: RESOLVED as a matter of fact (Inakshi, 2026-08-23 — "make the
+correction yourself").** Re-verified against production that day: on sm-1275
+and sm-1272, `animal_type="Horse"` returns 0 series while `"horse"` returns a
+full series, and `count by (animal_type) (horse_sitting_per_id)` shows the
+metric carries exactly one label value: lowercase `horse`. The data itself is
+the authority on what its labels are; there is nothing left to confirm. This
+app uses the lowercase form everywhere.
+
+What remains is a courtesy, not a question: PR 1928 in the dev team's repo
+still carries the capital-H form, and merged as written THEIR feature ships
+reading zero forever. Whether to mention it to them is Inakshi's call — it is
+outside the no-tickets decision, which covered defects our rewrite makes moot;
+this one breaks a feature of theirs we don't inherit.
 
 ## Change rule
 
