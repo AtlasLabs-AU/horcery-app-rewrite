@@ -90,10 +90,15 @@ files import React Native, both MMKV plumbing.
 
 ```bash
 npm install
-npx expo start          # then scan with Expo Go
+./script/build_and_run.sh --ios   # assigned Pro Max + dev client + Metro 8083
+./script/build_and_run.sh --check # non-secret local setup check
+npx expo start          # generic Expo start
 npx expo start --web    # browser preview
 npx tsc --noEmit        # type check — must be clean before commit
 ```
+
+The verified simulator, preview-flag and secret-safe QA-login procedure is in
+[`docs/runbooks/Horcery_Rewrite_Simulator_Run.md`](docs/runbooks/Horcery_Rewrite_Simulator_Run.md).
 
 ## Conventions
 

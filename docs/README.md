@@ -82,6 +82,9 @@ this file; it says where they live.
 `Horcery_Rewrite_iPhone_Run.md` — the short, verified procedure for running the
 Expo 57 rewrite already installed on Inakshi's physical iPhone.
 
+`Horcery_Rewrite_Simulator_Run.md` — the canonical iPhone 17 Pro Max simulator
+launcher, Metro/preview-cache rules, and secret-safe QA sign-in procedure.
+
 ## Where the dev team is
 
 The rewrite repo is Inakshi, Claude and Codex. The dev team works on the
