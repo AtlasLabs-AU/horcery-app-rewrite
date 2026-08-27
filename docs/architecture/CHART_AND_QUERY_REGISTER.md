@@ -38,16 +38,16 @@ legacy reference and real monitor data. Absence from the register is not approva
 | `stall-people-in-stall-weekly` | For You → Behavior Tracker → People in Stall (Weekly) | Has this stall had a normal week of human attention? | To follow Lying Down weekly: bar per day, weekday-average markers, week verdict | As above | As above | As above | Pending | Spec in progress | **meaning-blocked** |
 | `horse-in-stall-daily` | For You → Behavior Tracker → Horse in Stall (Daily) | How long was the horse in its stall today, and when was it out? | **Decided (Inakshi, 2026-08-20):** cumulative line + dashed usual (Lying Down layout), an in/out strip beneath, captioned by ABSENCE ("Out 8:30 AM – 1:05 PM") — see "Product decisions — Horse in Stall". A partly recorded day withholds both the absence list and the verdict (badge "Incomplete") | **meaning-blocked** overall; legacy `horse_in_stall` queries exist but the Behavior Tracker calculations are unapproved (see "Legacy defects") | Fixture-backed behind `PREVIEWS.horseInStallSampleData`; **no live path** | Canonical seconds; displayed h/min | Measured: 7.6–22.6 h in stall/day, 36–48 transitions/week | Pending | **meaning-blocked** |
 | `horse-in-stall-weekly` | For You → Behavior Tracker → Horse in Stall (Weekly) | Has this been a normal week in the stall? | Lying Down weekly unchanged; tapped-day panel names the absences; a partly recorded day draws FADED and is never judged; a week missing any finished day is badged "Incomplete" | As above | As above | As above | As above | Pending | **meaning-blocked** |
-| `horse-last-24-hours` | Horse Detail → Summary | How did this horse spend the 24 hours ending at the selected time? | **Decided (Inakshi, 2026-08-21, "Option B"):** one flat composition band + exact duration list drawn from the same values, subtitle "24 hours ending 2:30 PM", unknown time a visible dashed segment with a width floor. Replaces the shipping donut + four progress bars, which could show 25 h in a 24 h day | **Categories still meaning-blocked.** A 2026-08-23 attempt to settle them from posture data was withdrawn: sitting/standing measure POSTURE, and the team's own record anticipates standing-resting and sitting-active, so posture does not give awareness — see "evidence kept, conclusions withdrawn" below. FE Requirement Gathering 2026-07-23: daily = previous 24 h, own query, approach approved, Anuvathan owns; data team offered (2026-07-10) to return categories directly. The Mobile Queries sheet marks the pie-chart query "Needed" with no replacement recorded; the candidate sits on an unmerged branch held pending Vikum (remote-config impact). Categories arrive as durations — the app derives nothing, and the remainder is always UNKNOWN, never a behaviour. Overflow (>24 h) refuses to draw | Fixture-backed behind `PREVIEWS.last24HoursSampleData`; **no live path** | Canonical seconds; displayed h/min | Legacy defects measured on SM-1272/1275/1212 (25 h day; candidate query triples "resting") | Pending | **data-blocked** |
-| `horse-trends-activeness` | Horse Detail → Summary → Horse Trends | How has this horse's activity changed over the last 24 hours / 7 days? | **Decided (Inakshi, 2026-08-21):** line for 24 h that BREAKS at monitoring gaps (pale band), unit-less y-axis until Data Science names the unit, no Higher/Usual/Lower pill until the comparison is approved (the shipping pill fires on any difference at all). 7-day view arrives with the approved daily query | **meaning-blocked.** The query omits subquery resolutions, which is a real reproducibility concern, but the 2026-08-23 claim that its value varies with the request step was FALSE and is withdrawn (identical values at shared timestamps). `:15s` redefines the metric rather than fixing it, because `sum_over_time` takes in more samples. The silent `* 0` fallback IS a defect. Unlabelled axis and hidden badge remain correct | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; **no live path** | UNNAMED unit, deliberately | Legacy defects verified in `trend-widget-v2/activeness` (×1000 at :345, bare pill comparison) | Pending | **meaning-blocked** |
-| `horse-trends-rolling` | Horse Detail → Summary → Horse Trends | When did this horse roll in the last 24 hours, and how does this week compare? | **Decided (Inakshi, 2026-08-21):** 24 h = event dots at EXACT times with caption ("Rolled 3 times · …"), matching the Figma dots; 7 days = this week's bars with last week as markers (option B), today hollow, unobserved days empty dashed slots; tap opens Review History. "Partial Rolling" keeps the established 103/104/105 grouping (Review History ticket D2). Range labels are **24 hours / 7 days** — recorded deviation from the Figma annotation's Daily/Weekly | Backend events, not Prometheus. Contract asks: exact timestamps (not hourly buckets), explicit numeric count, org-timezone day boundaries | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; **no live path** | Counts | Legacy defects verified in `trend-widget-v2/rolling` (phone zone at :83, missing→0 at :50, last week via +7d shift) | Pending | **data-blocked** |
-| `horse-activeness-score` | Horse detail status strip | **To approve** | Score card: Low / Normal / High | Latest Data Science query is version-controlled; full specification/approval record still required | Temporary service adapter | Category boundaries exist in code; semantic wording review remains | Tested during implementation; fixture/evidence link to backfill | Not yet created | **backfill-required** |
+| `horse-last-24-hours` | Horse Detail → Summary | How did this horse spend the 24 hours ending at the selected time? | **Decided (Inakshi, 2026-08-21, "Option B"):** one flat composition band + exact duration list; Unknown is visible; overflow refuses to draw | Shipping, feature history and the Data Science changelog now establish a latest candidate (`up`, filtered in-stall, orientation-based resting; walking removed in the latest note). It remains **meaning-blocked** until the live Firebase value, category wording/calculation, effective-dated horse identity and missing/partial rules are approved | Fixture-backed behind `PREVIEWS.last24HoursSampleData`; target is a backend observation API | Canonical seconds; displayed h/min | Legacy 25-hour contradiction measured on SM-1272/1275/1212; candidate real-data suite still required | [`chart-specs/horse-last-24-hours.md`](chart-specs/horse-last-24-hours.md) | **meaning-blocked** |
+| `horse-trends-activeness` | Horse Detail → Summary → Horse Trends | How has this horse's relative activity changed over the last 24 hours / 7 days? | **Decided (Inakshi, 2026-08-21):** 24 h line breaks at monitoring gaps; unitless axis; no comparison pill until approved; 7 d view uses daily observations | Unmerged Data Science candidate `5ca4fc34` supplies explicit 24 h, 7 d and comparison queries. It is **not approval**: live Firebase values, zero/missing semantics, identity, unit/name and exact comparison wording/boundaries remain open | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; target is a backend observation API | Unitless relative index; no ×1,000 display scaling | Candidate queries recovered; real in/out/offline/assignment and physical-device evidence required | [`chart-specs/horse-trends-activeness.md`](chart-specs/horse-trends-activeness.md) | **meaning-blocked** |
+| `horse-trends-rolling` | Horse Detail → Summary → Horse Trends | When did this horse roll in the last 24 hours, and how do the latest seven barn days compare? | **Decided (Inakshi, 2026-08-21):** exact-time event dots + caption for 24 h; seven daily bars with prior-week markers; tap opens Review History; IDs 103/104/105 remain Partial Rolling | Event IDs/grouping are recovered. The shipping endpoint aggregates the short view by hour, so the target still needs a versioned exact-event/count/coverage contract in organization time | Fixture-backed behind `PREVIEWS.horseTrendsSampleData`; target is backend events/observation API | Counts and exact organization-local timestamps | Legacy grouping verified; exact-event, pagination, coverage and DST fixtures pending | [`chart-specs/horse-trends-rolling.md`](chart-specs/horse-trends-rolling.md) | **data-blocked** |
+| `horse-activeness-score` | Horse detail status strip | What does the monitor's current relative activity reading indicate? | Score card; exact middle label pending (`Med`/`Medium` in recovered sources, `Normal` in rebuild) | Query matches unmerged Data Science commit `d681f187`; exact value 100 and middle wording conflict between code/changelog/rebuild, so meaning is not approved | Temporary service adapter; target observation API | Unitless index; candidate bands around 100 and 900 | Characterization tests exist; representative real-data evidence pending | [`chart-specs/horse-trends-activeness.md`](chart-specs/horse-trends-activeness.md) §12 | **backfill-required** |
 | `horse-temperature-score` | Horse detail status strip | **To approve** | Temperature score card | Sensor query is version-controlled; full specification/approval record still required | Temporary service adapter | Canonical °C; display °C/°F | Fixture/evidence link to backfill | Not yet created | **backfill-required** |
 | `horse-noise-score` | Horse detail status strip | **To approve** | Noise Level score card | Sensor query is version-controlled; full specification/approval record still required | Temporary service adapter | Category thresholds/labels require recorded Data Science approval | Fixture/evidence link to backfill | Not yet created | **backfill-required** |
 
-These three rows record existing implementation honestly; they do not retroactively
-approve its meaning. The first register work should complete their specifications,
-then inventory the chart surfaces in the Data Science sheet and legacy app.
+The three status-strip rows record existing implementation honestly; they do not
+retroactively approve its meaning. Activeness now has a recovered-source contract;
+Temperature and Noise still need completed specifications and approval records.
 
 ## Product decisions — People in Stall (Inakshi, 2026-08-19)
 
@@ -513,11 +513,40 @@ customers receive.
 ### Standing position
 
 Last 24 Hours: **meaning-blocked**. Activeness: **meaning-blocked**, badge
-hidden, axis unlabelled. The open questions are not two but five: the
-state→category mapping; distinguishing out-of-stall from untracked and
-offline; the approved activeness formula, resolution, normalisation and name;
-the comparison observation and threshold (the digest records the badge
-becoming its own query); and the Rolling and tracking-identity contracts.
+hidden, axis unlabelled. The source reconciliation on 2026-08-27 narrowed the
+unknowns substantially without pretending that an unmerged candidate is approved.
+The exact gates now live in the linked specifications.
+
+### Recovered current-app contracts (2026-08-27)
+
+The shipping repository and its history contain more of the answer than the
+earlier register recorded:
+
+1. **Last 24 Hours:** active code confirms the runtime Firebase key and phone-side
+   subtraction; feature commit `ade60d7b` plus the Prometheus Query Changelog
+   provide the newer orientation-based candidate. The latest changelog removes
+   walking. The live Firebase value and formal category/identity approval remain.
+2. **Activeness trend:** feature commit `5ca4fc34` provides explicit hourly,
+   daily and comparison queries. Its `or vector(0)` still merges missing/out with
+   zero; the changelog and code also disagree at comparison boundaries/wording.
+3. **Activeness score:** commit `d681f187` matches the rewrite query. The legacy
+   code says value 100 is `Med`; changelog prose puts 100 in Low; the rewrite says
+   `Normal`. This is a narrow approval question, not a reason to rediscover the
+   query.
+4. **Rolling:** event IDs are stable (102; and 103/104/105 grouped as Partial
+   Rolling). The active short-range endpoint requests hourly aggregation, so it
+   cannot supply the exact timestamps the approved rebuild design requires.
+5. **Tracking identity:** Horse Detail fetches active horse/stall relations and
+   takes `data[0].stall`; Prometheus candidates then filter an adult horse signal,
+   not the selected horse ID. This is an implicit one-horse-per-stall assumption,
+   not a safe identity contract. The target must bind observations to horse ID and
+   effective assignment period and fail closed on ambiguity.
+
+Canonical reconciliations:
+
+- [`chart-specs/horse-last-24-hours.md`](chart-specs/horse-last-24-hours.md)
+- [`chart-specs/horse-trends-activeness.md`](chart-specs/horse-trends-activeness.md)
+- [`chart-specs/horse-trends-rolling.md`](chart-specs/horse-trends-rolling.md)
 
 ## Query corrections not yet accepted upstream
 

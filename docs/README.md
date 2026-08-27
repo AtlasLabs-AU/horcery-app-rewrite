@@ -25,6 +25,7 @@ Filenames are unchanged so existing references and greps keep working.
 | `CHART_ENGINEERING_STANDARD.md` | Canonical rules for whether and how every chart is designed, supplied with data, implemented, tested and approved |
 | `CHART_SPECIFICATION_TEMPLATE.md` | Required per-chart specification completed before implementation |
 | `CHART_AND_QUERY_REGISTER.md` | Controlled fleet-wide inventory of chart meaning, query/API status, units, evidence, approvals and linked specifications |
+| `chart-specs/` | Source-linked per-chart contracts; each separates recovered legacy behaviour, target decisions and unresolved approval gates |
 
 The renderer choice and its evidence remain in
 `decisions/CHART_RENDERER_DECISION.md`; these architecture documents govern the
