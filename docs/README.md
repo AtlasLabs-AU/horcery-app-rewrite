@@ -31,6 +31,13 @@ The renderer choice and its evidence remain in
 `decisions/CHART_RENDERER_DECISION.md`; these architecture documents govern the
 work that follows that decision.
 
+## decisions/ — choices made once, with their evidence
+
+| File | Status |
+|---|---|
+| `CHART_RENDERER_DECISION.md` | **Decided** 2026-08-19 — Victory Native on Skia |
+| `CLIP_DELIVERY_DECISION.md` | **Open** 2026-09-02 — should the phone download clips at all, or should the server deliver them? Needs Inakshi. Blocks porting clip download. |
+
 ## scope/ — what a page is, decided against the shipping app
 
 | File | Page |
@@ -68,6 +75,7 @@ by that path.
 | `Horcery_Horses_Dev_Tickets.md` | Horses list |
 | `Horcery_Review_History_Dev_Tickets.md` | Review History |
 | `Horcery_Manage_Alerts_Review.md` | Manage Alerts + create/edit alert flow — full review, rated 5/10, 8 tickets |
+| `Horcery_Clip_Download_Dev_Tickets.md` | Clip download — 5 tickets, plus one unrelated background-task bug found in the same pass |
 
 Written while reviewing the old app for parity. These describe
 `84-horcery-app-react-native`, not this repo. They live here because they were
