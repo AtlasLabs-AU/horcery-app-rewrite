@@ -13,7 +13,10 @@ import {
   type UsualCurvePoint,
   type Verdict,
 } from './lying-down';
-import type { PrometheusRangeSeries } from './occupancy-timeline';
+import {
+  isUsablePrometheusSample,
+  type PrometheusRangeSeries,
+} from './occupancy-timeline';
 
 /**
  * Horse in Stall — the Behavior Tracker daily and weekly charts.
@@ -292,7 +295,10 @@ function gapsIn(
   const stamps = [
     ...new Set(
       result.flatMap((series) =>
-        series.values.map(([at]) => at).filter((at) => at >= from && at <= to),
+        series.values
+          .filter(isUsablePrometheusSample)
+          .map(([at]) => at)
+          .filter((at) => at >= from && at <= to),
       ),
     ),
   ].sort((a, b) => a - b);

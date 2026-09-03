@@ -2,6 +2,7 @@ import { DateTime } from 'luxon';
 
 import {
   buildOccupancyTimeline,
+  isUsablePrometheusSample,
   type EpochSeconds,
   type OccupancyInterval,
   type PrometheusRangeSeries,
@@ -392,7 +393,13 @@ export function buildLyingDownWeek(input: BuildLyingDownWeekInput): LyingDownWee
   const asOf = now.toSeconds();
   const stamps: number[] = [];
   for (const raw of observedSource ?? []) {
-    for (const [timestamp] of raw.values) {
+    for (const sample of raw.values) {
+      // Prometheus can encode stale or corrupt samples as text such as `NaN`.
+      // A timestamp without a usable reading is not evidence that the horse
+      // was observed; otherwise an entirely corrupt day becomes a confident
+      // zero-duration day.
+      if (!isUsablePrometheusSample(sample)) continue;
+      const [timestamp] = sample;
       if (timestamp <= asOf) {
         stamps.push(timestamp);
         if (lastObservedAt === null || timestamp > lastObservedAt) lastObservedAt = timestamp;

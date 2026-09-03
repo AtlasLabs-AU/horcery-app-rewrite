@@ -75,6 +75,37 @@ describe('buildRollingWeek', () => {
     expect(built.days.find((d) => d.key === '2026-08-21')!.count).toBe(0);
   });
 
+  it('buckets a 6:30 AM event into the new barn day after spring-forward', () => {
+    const now = DateTime.fromISO('2026-03-08T12:00:00', { zone: ZONE });
+    const built = buildRollingWeek({
+      events: [{ at: DateTime.fromISO('2026-03-08T06:30:00', { zone: ZONE }).toSeconds(), kind: 'rolling' }],
+      observedDays: new Set(['2026-03-07', '2026-03-08']),
+      zone: ZONE,
+      now,
+      dayStartHour: 6,
+    });
+
+    expect(built.days.find((d) => d.key === '2026-03-07')!.count).toBe(0);
+    expect(built.days.find((d) => d.key === '2026-03-08')!.count).toBe(1);
+  });
+
+  it('keeps the 6 AM barn-day cut through fall-back', () => {
+    const now = DateTime.fromISO('2026-11-01T12:00:00', { zone: ZONE });
+    const built = buildRollingWeek({
+      events: [
+        { at: DateTime.fromISO('2026-11-01T05:30:00', { zone: ZONE }).toSeconds(), kind: 'rolling' },
+        { at: DateTime.fromISO('2026-11-01T06:30:00', { zone: ZONE }).toSeconds(), kind: 'rolling' },
+      ],
+      observedDays: new Set(['2026-10-31', '2026-11-01']),
+      zone: ZONE,
+      now,
+      dayStartHour: 6,
+    });
+
+    expect(built.days.find((d) => d.key === '2026-10-31')!.count).toBe(1);
+    expect(built.days.find((d) => d.key === '2026-11-01')!.count).toBe(1);
+  });
+
   it('keeps an unobserved day null — an empty slot, never a zero bar', () => {
     const built = week([], ALL_OBSERVED.filter((key) => key !== '2026-08-17'));
     expect(built.days.find((d) => d.key === '2026-08-17')!.count).toBeNull();

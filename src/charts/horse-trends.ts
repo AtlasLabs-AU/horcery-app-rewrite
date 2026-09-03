@@ -1,5 +1,7 @@
 import { DateTime } from 'luxon';
 
+import { barnDayKeyForInstant } from '@/charts/barn-day';
+
 /**
  * Horse Trends — Activeness and Rolling on the Horse Details page.
  *
@@ -132,9 +134,7 @@ export interface RollingWeek {
 
 /** Barn-day key for a moment, honouring the organization's chart start. */
 function barnDayKey(at: number, zone: string, dayStartHour: number): string {
-  return DateTime.fromSeconds(at, { zone })
-    .minus({ hours: dayStartHour })
-    .toFormat('yyyy-MM-dd');
+  return barnDayKeyForInstant(DateTime.fromSeconds(at, { zone }), dayStartHour);
 }
 
 export function buildRollingWeek({

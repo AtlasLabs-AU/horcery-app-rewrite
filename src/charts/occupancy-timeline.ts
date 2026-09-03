@@ -1,5 +1,7 @@
 import { DateTime } from 'luxon';
 
+import { barnDayKeyForInstant, barnDayStartForDate } from '@/charts/barn-day';
+
 /**
  * Occupancy timeline — the renderer-independent model behind People In Stall
  * (and its siblings: Sitting Down, People In Space, Stall Occupancy).
@@ -25,6 +27,20 @@ export interface PrometheusRangeSeries {
   metric: Record<string, string>;
   /** `[timestamp, value]` — Prometheus sends the value as a string. */
   values: [EpochSeconds, string][];
+}
+
+/**
+ * Whether a Prometheus sample can truthfully count as an observation.
+ *
+ * Prometheus serialises values as strings and can emit stale/corrupt values
+ * such as `NaN`. A timestamp attached to one of those values is not evidence
+ * that the monitor produced a usable reading. Keeping this predicate beside
+ * the response shape gives interval building and every coverage scan one rule.
+ */
+export function isUsablePrometheusSample(
+  sample: readonly [EpochSeconds, string],
+): boolean {
+  return Number.isFinite(sample[0]) && Number.isFinite(Number(sample[1]));
 }
 
 /** One continuous stretch of occupancy above the threshold. */
@@ -263,26 +279,21 @@ export function buildOccupancyTimeline(
     combineSameKeyStreams = false,
   } = input;
 
+  const dayStartHour = input.dayStartHour ?? 0;
   const now = input.now.setZone(zone);
   const nowSeconds = now.toSeconds();
-  // Which barn day "now" falls in: before the start hour, we are still in
-  // yesterday's barn day.
-  const nowKey = now.minus({ hours: input.dayStartHour ?? 0 }).toFormat(DAY_KEY);
-  const dayStartHour = input.dayStartHour ?? 0;
-  // Fractional is allowed: the organization's `chart_start_time` carries
-  // minutes, so a barn that starts at 05:30 is 5.5 here. Integer-only would
-  // have silently rounded a real customer setting.
-  if (!Number.isFinite(dayStartHour) || dayStartHour < 0 || dayStartHour >= 24) {
-    throw new RangeError(`dayStartHour must be 0 to <24, got ${dayStartHour}`);
-  }
-  const selected = calendarDate(input.selectedDate, zone).plus({ hours: dayStartHour });
+  // Compare local wall-clock time with the configured boundary. Subtracting
+  // elapsed hours shifts this key by one hour on daylight-saving transition
+  // days.
+  const nowKey = barnDayKeyForInstant(now, dayStartHour);
+  const selected = barnDayStartForDate(calendarDate(input.selectedDate, zone), dayStartHour);
 
   // Rows: `dayCount` calendar days ending on the selected date, oldest first.
   const days: OccupancyDay[] = [];
   for (let offset = dayCount - 1; offset >= 0; offset--) {
     const start = selected.minus({ days: offset });
     const followingMidnight = start.plus({ days: 1 });
-    const key = start.minus({ hours: dayStartHour }).toFormat(DAY_KEY);
+    const key = start.toFormat(DAY_KEY);
     const startSeconds = start.toSeconds();
     const nextMidnight = followingMidnight.toSeconds();
     const utcOffset = start.offset * 60;
@@ -339,9 +350,10 @@ export function buildOccupancyTimeline(
     if (group.length === 1) return group[0]!;
     const byTimestamp = new Map<EpochSeconds, number>();
     for (const raw of group) {
-      for (const [timestamp, value] of raw.values) {
+      for (const sample of raw.values) {
+        if (!isUsablePrometheusSample(sample)) continue;
+        const [timestamp, value] = sample;
         const numeric = Number(value);
-        if (!Number.isFinite(numeric)) continue;
         const seen = byTimestamp.get(timestamp);
         if (seen === undefined || numeric > seen) byTimestamp.set(timestamp, numeric);
       }
@@ -363,6 +375,7 @@ export function buildOccupancyTimeline(
     let previousTimestamp = Number.NEGATIVE_INFINITY;
 
     for (const sample of raw.values) {
+      if (!isUsablePrometheusSample(sample)) continue;
       const timestamp = sample[0];
       if (timestamp > nowSeconds) continue;
 

@@ -43,6 +43,18 @@ describe('live monitor range adapter', () => {
     expect(coverage.searchParams.get('query')).toBe(HORSE_IN_STALL_QUERY);
   });
 
+  it.each([
+    ['spring forward', '2026-03-08'],
+    ['fall back', '2026-11-01'],
+  ])('keeps the live query window on the 6 AM barn boundary through %s', (_name, date) => {
+    const now = DateTime.fromISO(`${date}T06:30:00`, { zone: ZONE });
+    const window = liveMonitorRangeWindow({ zone: ZONE, now });
+    const start = DateTime.fromSeconds(window.start, { zone: ZONE });
+
+    expect(window.selectedDate).toBe(date);
+    expect(start.toFormat('HH:mm')).toBe('06:00');
+  });
+
   it('decodes a captured real response and preserves the chart-domain total', () => {
     const result = decodePrometheusRangeResponse(sm1272LyingDownSegment);
     const now = DateTime.fromISO('2026-08-14T02:00:00', { zone: ZONE });

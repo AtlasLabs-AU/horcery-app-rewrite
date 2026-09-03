@@ -111,6 +111,26 @@ describe('buildLyingDownWeek', () => {
     expect(quiet?.bouts).toEqual([]);
   });
 
+  it('does not treat corrupt readings as proof that today was observed', () => {
+    const corrupt = series([]);
+    const todayStart = DateTime.fromISO('2026-08-19T06:00:00', { zone: ZONE }).toSeconds();
+    corrupt[0]!.values = corrupt[0]!.values.map(([timestamp, value]) => [
+      timestamp,
+      timestamp >= todayStart ? 'NaN' : value,
+    ]);
+
+    const week = buildLyingDownWeek({
+      result: corrupt,
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+
+    expect(week.today?.coverage).toBe('no-observations');
+    expect(week.today?.totalSeconds).toBeNull();
+    expect(headline(week)).toBeNull();
+  });
+
   it('reports out-of-stall separately from no data', () => {
     const week = buildLyingDownWeek({
       result: series([]),

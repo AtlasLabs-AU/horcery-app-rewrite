@@ -1,6 +1,6 @@
-import { DateTime } from 'luxon';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { barnDayAxisLabels } from '@/charts/barn-day';
 import { formatDuration, formatDurationCompact, type UsualCurvePoint } from '@/charts/lying-down';
 import { absencesCaption, type HorseInStallWeek } from '@/charts/horse-in-stall-behavior';
 import { useTokens } from '@/hooks/use-tokens';
@@ -166,7 +166,7 @@ export function HorseInStallRow({
             </View>
 
             <View style={[styles.axis, { width, marginTop: space.sm }]}>
-              {axisLabels(week.dayStartHour).map((label, index) => (
+              {barnDayAxisLabels(day.start, day.nextMidnight, zone).map((label, index) => (
                 <Text key={`${index}-${label}`} style={[type.micro, { color: colors.tertiary }]}>
                   {label}
                 </Text>
@@ -185,15 +185,6 @@ export function HorseInStallRow({
       </ChartStateSurface>
     </LyingDownRowShell>
   );
-}
-
-/** Five labels across the organization's barn day, including minute offsets. */
-function axisLabels(dayStartHour: number): string[] {
-  const hour = Math.floor(dayStartHour);
-  const minute = Math.round((dayStartHour - hour) * 60);
-  const base = DateTime.fromObject({ hour, minute });
-  const format = minute === 0 ? 'h a' : 'h:mm a';
-  return [0, 6, 12, 18, 24].map((offset) => base.plus({ hours: offset }).toFormat(format));
 }
 
 const styles = StyleSheet.create({

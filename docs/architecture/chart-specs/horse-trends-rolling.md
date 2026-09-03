@@ -153,6 +153,7 @@ cursor pagination and a documented maximum exact-event count. **Level of detail:
 |---|---|---|---|
 | 2026-08-21 | Exact 24-hour dots; seven-day bars with prior-week markers; Review History link | Inakshi | product review/register |
 | 2026-08-27 | Confirmed legacy event IDs/grouping and that legacy hourly aggregation does not supply exact times | Codex, factual audit | shipping app source; this specification |
+| 2026-09-03 | CQ-1: event bucketing now compares local wall-clock time with the configured barn-day boundary instead of subtracting elapsed hours across DST | Inakshi / engineering | `barn-day.ts`; spring-forward and fall-back regressions in `horse-trends.test.ts` |
 
 ## 11. Exceptions and remaining risks
 

@@ -292,6 +292,52 @@ describe('presentation', () => {
     expect(positionInDay(secondOneThirty, fall, ZONE)).toBeCloseTo(1.5 / 24);
   });
 
+  it.each([
+    ['spring forward', '2026-03-08'],
+    ['fall back', '2026-11-01'],
+  ])('keeps a 6 AM barn-day boundary at 6 AM through %s', (_name, selectedDate) => {
+    const now = T(`${selectedDate}T12:00:00`);
+    const [day] = build([], {
+      selectedDate,
+      now,
+      days: 1,
+      dayStartHour: 6,
+    }).days;
+
+    expect(day!.key).toBe(selectedDate);
+    expect(DateTime.fromSeconds(day!.start, { zone: ZONE }).toFormat('yyyy-MM-dd HH:mm')).toBe(
+      `${selectedDate} 06:00`,
+    );
+  });
+
+  it('recognises 6:30 AM after spring-forward as part of the new barn day', () => {
+    const selectedDate = '2026-03-08';
+    const now = T(`${selectedDate}T06:30:00`);
+    const [day] = build([], {
+      selectedDate,
+      now,
+      days: 1,
+      dayStartHour: 6,
+    }).days;
+
+    expect(day!.isToday).toBe(true);
+    expect(day!.end).toBe(now.toSeconds());
+  });
+
+  it('keeps a fractional barn start at the same wall-clock minute through DST', () => {
+    const selectedDate = '2026-03-08';
+    const [day] = build([], {
+      selectedDate,
+      now: T(`${selectedDate}T12:00:00`),
+      days: 1,
+      dayStartHour: 5.5,
+    }).days;
+
+    expect(DateTime.fromSeconds(day!.start, { zone: ZONE }).toFormat('yyyy-MM-dd HH:mm')).toBe(
+      `${selectedDate} 05:30`,
+    );
+  });
+
   it('formats the tooltip word for word as the current app', () => {
     const interval = { enter: secs('2026-08-14T07:02:00'), exit: secs('2026-08-14T07:41:00'), count: 2 };
 

@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 
+import { barnDayKeyForInstant, barnDayStartForDate } from '@/charts/barn-day';
 import { dayStartHourFrom } from '@/charts/lying-down';
 import type { PrometheusRangeSeries } from '@/charts/occupancy-timeline';
 
@@ -46,10 +47,11 @@ export function liveMonitorRangeWindow({
 }): MonitorRangeWindow {
   const localNow = now.setZone(zone);
   const dayStartHour = dayStartHourFrom(undefined);
-  const selectedDate = localNow.minus({ hours: dayStartHour }).toFormat('yyyy-MM-dd');
-  const endOfWindow = DateTime.fromISO(selectedDate, { zone })
-    .startOf('day')
-    .plus({ hours: dayStartHour });
+  const selectedDate = barnDayKeyForInstant(localNow, dayStartHour);
+  const endOfWindow = barnDayStartForDate(
+    DateTime.fromISO(selectedDate, { zone }),
+    dayStartHour,
+  );
   const start = endOfWindow.minus({ days: days - 1 }).toSeconds();
 
   return {

@@ -180,6 +180,34 @@ describe('buildHorseInStallWeek', () => {
     expect(absencesCaption(week.today, ZONE)).toBe('Partly recorded — time out is unknown');
   });
 
+  it('treats corrupt samples as an outage rather than proof of coverage', () => {
+    const raw = series([])[0]!;
+    const corruptFrom = ts('2026-08-19T11:40:00');
+    const corruptTo = ts('2026-08-19T15:30:00');
+    const week = buildHorseInStallWeek({
+      result: [
+        {
+          ...raw,
+          values: raw.values.map(([at, value]) => [
+            at,
+            at >= corruptFrom && at <= corruptTo ? 'NaN' : value,
+          ]),
+        },
+      ],
+      selectedDate: SELECTED,
+      zone: ZONE,
+      now: NOW,
+    });
+
+    expect(week.today?.partlyRecorded).toBe(true);
+    expect(week.today?.unobserved).toContainEqual({
+      enter: corruptFrom - STEP,
+      exit: corruptTo + STEP,
+    });
+    expect(week.today?.absences).toEqual([]);
+    expect(week.verdict).toBe('incomplete');
+  });
+
   it('badges a partly recorded day Incomplete, not Usual and not No history', () => {
     // Seen on device 2026-08-20: the row said "Some readings are missing" and
     // badged the same day "Usual". A partly recorded total is an undercount, so

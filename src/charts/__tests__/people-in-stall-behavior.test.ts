@@ -21,6 +21,7 @@ const ZONE = 'America/Chicago';
 const NOW = DateTime.fromISO('2026-08-19T22:00:00', { zone: ZONE });
 const SELECTED = NOW.minus({ hours: 6 }).toFormat('yyyy-MM-dd');
 const ESTABLISHED = NOW.minus({ months: 6 }).toISO();
+const ts = (iso: string) => DateTime.fromISO(iso, { zone: ZONE }).toSeconds();
 
 function build(
   result: PrometheusRangeSeries[],
@@ -80,6 +81,24 @@ describe('buildPeopleInStallWeek', () => {
   it('marks the hours it could not see, rather than counting them as quiet', () => {
     const result = build(monitorGapMidday(NOW), { usualCurve });
     expect(result.today?.unobserved.length).toBeGreaterThan(0);
+  });
+
+  it('treats corrupt samples as an outage rather than a fully watched day', () => {
+    const corruptFrom = ts('2026-08-19T11:40:00');
+    const corruptTo = ts('2026-08-19T15:30:00');
+    const corrupt = routineWeek(NOW).map((raw) => ({
+      ...raw,
+      values: raw.values.map(([at, value]) => [
+        at,
+        at >= corruptFrom && at <= corruptTo ? 'NaN' : value,
+      ] as [number, string]),
+    }));
+
+    const result = build(corrupt, { usualCurve });
+
+    expect(result.today?.unobserved.length).toBeGreaterThan(0);
+    expect(result.verdict).toBe('incomplete');
+    expect(outageCaption(result.today, ZONE)).toMatch(/^Monitor offline .+ — visits then are unknown$/);
   });
 });
 

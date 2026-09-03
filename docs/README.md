@@ -49,6 +49,7 @@ work that follows that decision.
 | `Horcery_Alerts_Architecture.md` | Alerts (Manage + create/edit) — frontend architecture v2: domain layer, descriptors, barn-time windows + drift, route-level permissions, slices A0–A5 |
 | `Horcery_Localization_Agentic_Implementation_Plan.md` | i18n (requirements §4b, hardening H2) |
 | `Horcery_Parity_and_QA_Audit_2026-08-18.md` | **Whole-app** parity audit (old app vs rewrite, every feature area) + device QA pass + code-review bug list + decisions needed. Full per-capability sweep tables in `appendix/parity-sweeps-2026-08-18/`. |
+| `Horcery_Chart_QA_Defects_2026-09-03.md` | **Charts** — verification of the GPT chart-QA report against `52943d2`: 16 confirmed defects as tickets (CQ-1…16, file:line, fix, test to pin), 2 claims that did not hold, and the implementation status of fixes completed since the review. |
 
 ## handovers/ — instructions written for Codex, and reviews of what came back
 

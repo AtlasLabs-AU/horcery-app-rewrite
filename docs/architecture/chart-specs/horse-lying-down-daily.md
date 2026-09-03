@@ -121,7 +121,7 @@ not a second opinion about whether anything is wrong. See §11-E2.
 | Chart family | line (cumulative within one day) |
 | Primary message | is this horse's rest normal for it today |
 | Series | (1) today's cumulative lying-down time; (2) this horse's usual cumulative progress, dashed; (3) observation coverage strip |
-| Axes | x = barn day, five ticks from `chart_start_time`; y = hidden, 0 → 1.15 × max(today, usual, average) |
+| Axes | x = barn day, five evenly positioned ticks derived from the actual zoned start/end span (including 23-hour and 25-hour DST days); y = hidden, 0 → 1.15 × max(today, usual, average) |
 | Legend | none. Three visually distinct elements, each explained by adjacent text; a legend on a 60 pt row would cost more than it returns |
 | Tooltip | none — see §6 |
 | Colour/token roles | `chartData` (reading), `chartDeviation` (reading when Low/High/Unusual), `chartReference` (dashed usual), `chartTrack` (coverage strip), `chartDeviationBed`/`chartDeviationInk` (badge). No literals; `no-color-literals` enforces |
@@ -201,11 +201,11 @@ five is the stated design target; no upper bound has been agreed — **§11-R4**
 - [ ] Contract version/entity/unit validation — no versioned contract exists (§3)
 - [x] Threshold and exact-boundary tests — `lyingDownVerdict`, including exactly-on-threshold
 - [x] Missing/partial/ambiguous-result tests — `lying-down.test.ts`
-- [x] Organization timezone, midnight and DST tests — `lying-down.test.ts`, `occupancy-timeline.test.ts`
+- [x] Organization timezone, midnight and DST tests — `lying-down.test.ts`, `occupancy-timeline.test.ts`, `barn-day.test.ts` (including axis labels)
 - [x] Normal, dense and maximum-supported deterministic fixtures — `src/charts/fixtures/lying-down.ts`
 - [x] Labels, units, legend, tooltip and honest-state component tests — `lying-down-row.test.tsx`
 - [x] Feature screen imports neither Victory nor Prometheus — `architecture-boundaries.test.ts`
-- [x] Regression test for each implementation defect found — colour-by-verdict, absence-is-not-deviation, `inStallDisagrees`, `comparisonDisagrees`, `dayStartHourFrom` fallbacks
+- [x] Regression test for each implementation defect found — colour-by-verdict, absence-is-not-deviation, `inStallDisagrees`, `comparisonDisagrees`, `dayStartHourFrom` fallbacks, CQ-2 all-`NaN` and mixed corrupt/valid coverage
 
 ### Physical devices
 
@@ -231,6 +231,8 @@ Evidence: `npm run check` green at 505 tests / 51 suites; commits `6e26f8f`,
 | 2026-08-19 | Barn day taken from organization `chart_start_time`, fallback 06:00 | Inakshi | commit `97a5e48` |
 | 2026-08-19 | Direction of deviation derived on the phone; threshold stays with Data Science | Inakshi | commit `be2985a` |
 | 2026-08-20 | Added a dev-only, read-only live-preview path (Protos → Live monitors) using sm-1275 / sm-1272 / sm-1212. It uses the shared row and raw range adapter; on 2026-08-20 sm-1275 returned no lying-down series, while sm-1272 and sm-1212 measured 199 min and 171 min in the prior 24 h. | Inakshi / engineering | `src/app/proto-live-charts.tsx`, `src/services/prometheus/monitor-range.ts` |
+| 2026-09-03 | CQ-1: barn-day boundaries, daily axis labels and live request windows now preserve the actual organization-time span through both daylight-saving transitions | Inakshi / engineering | `barn-day.ts`; DST regressions in `barn-day.test.ts`, `occupancy-timeline.test.ts` and `monitor-range.test.ts` |
+| 2026-09-03 | CQ-2: corrupt/non-finite samples no longer establish observation coverage, interrupt intervals or support a zero-duration claim | Inakshi / engineering | all-`NaN` regression in `lying-down.test.ts`; mixed-day regressions in both behaviour-chart tests |
 
 ## 11. Exceptions and remaining risks
 

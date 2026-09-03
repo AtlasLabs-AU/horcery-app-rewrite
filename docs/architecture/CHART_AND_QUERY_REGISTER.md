@@ -161,7 +161,11 @@ decision, so it is a standing obligation on this repo, not a one-off check:
 every defect below must stay guarded, and must stay pinned by a test.
 
 1. Absent reading must never render as a reassuring verdict.
-2. "Not observed" must stay distinct from an observed zero.
+2. "Not observed" must stay distinct from an observed zero. CQ-2 closed
+   2026-09-03: non-finite Prometheus readings no longer count as observation
+   coverage, freshness or interval input. One shared predicate governs Lying
+   Down, Horse in Stall and People in Stall, with all-corrupt and mixed-day
+   regressions.
 3. A "usual" computed over a window with missing days must not be presented as
    a normal — coverage has to reach the divisor.
 4. No silent truncation of the first bucket of the day.
@@ -169,7 +173,11 @@ every defect below must stay guarded, and must stay pinned by a test.
    hours); the combination rule needs Data Science sign-off.
 6. The history gate must key on the entity actually being judged.
 7. Day boundaries come from the organization's timezone and `chart_start_time`,
-   never the phone's.
+   never the phone's. CQ-1 closed 2026-09-03: the shared boundary now sets the
+   configured wall-clock hour/minute instead of adding elapsed hours, with
+   spring-forward and fall-back regression tests across chart bucketing and
+   the live Prometheus request window. Daily axis labels use the actual zoned
+   start/end span, so they stay aligned with 23-hour and 25-hour rows.
 8. No runtime override may change what a chart MEANS without a release and a
    test — Remote Config may show or hide a chart, not redefine it.
 
