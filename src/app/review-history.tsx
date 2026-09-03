@@ -17,6 +17,7 @@ import { EventCard, type HistoryEvent } from '@/components/review-history/event-
 import { formatEventTime, toHistoryEvents } from '@/components/review-history/event-rows';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
+import { font } from '@/constants/fonts';
 import { useForYouData } from '@/hooks/use-for-you-data';
 import { useOrganizationNow } from '@/hooks/use-organization-now';
 import {
@@ -192,7 +193,7 @@ export default function ReviewHistoryScreen() {
               hitSlop={8}
               accessibilityRole="button"
               testID="history-reset-filters">
-              <Text style={[type.footnote, { color: colors.accent, fontWeight: '600' }]}>
+              <Text style={[type.footnote, { color: colors.accent, fontFamily: font.semibold }]}>
                 Reset
               </Text>
             </Pressable>
@@ -313,7 +314,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
           accessibilityRole="button"
           testID="history-retry"
           style={styles.retry}>
-          <Text style={[type.subhead, { color: colors.accent, fontWeight: '600' }]}>
+          <Text style={[type.subhead, { color: colors.accent, fontFamily: font.semibold }]}>
             Try again
           </Text>
         </Pressable>

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 import { space, type } from '@/constants/tokens';
 
@@ -67,6 +68,6 @@ export function TextTabs<T extends string>({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: space.edge },
   tab: { alignItems: 'center', gap: space.xs },
-  selectedText: { fontWeight: '600' },
+  selectedText: { fontFamily: font.semibold },
   underline: { height: 2, alignSelf: 'stretch', borderRadius: 1 },
 });

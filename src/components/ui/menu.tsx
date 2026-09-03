@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { font } from '@/constants/fonts';
 import type { MenuAction, MenuProps } from '@/components/ui/menu-types';
 import { useSheetBackdrop } from '@/components/ui/sheet-backdrop';
 import { useTokens } from '@/hooks/use-tokens';
@@ -160,7 +161,7 @@ export function Menu({
                 testID={testID ? `${testID}-done` : undefined}
                 style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
                 {multiSelect ? (
-                  <Text style={[type.footnote, { color: colors.accent, fontWeight: '600' }]}>
+                  <Text style={[type.footnote, { color: colors.accent, fontFamily: font.semibold }]}>
                     Done
                   </Text>
                 ) : (

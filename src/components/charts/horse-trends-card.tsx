@@ -9,6 +9,7 @@ import {
   type RollingEvent,
   type RollingWeek,
 } from '@/charts/horse-trends';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 import { TextTabs } from '@/components/ui/text-tabs';
@@ -253,7 +254,7 @@ function Legend({ swatch, label }: { swatch: string; label: string }) {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowTitle: { fontWeight: '600' },
+  rowTitle: { fontFamily: font.semibold },
   strip: { height: STRIP_HEIGHT, borderRadius: STRIP_HEIGHT / 2 },
   axis: { flexDirection: 'row', justifyContent: 'space-between' },
   axisLabel: { textAlign: 'center' },

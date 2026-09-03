@@ -7,6 +7,7 @@ import { MediaCarousel } from '@/components/media/media-carousel';
 import { MediaTile } from '@/components/media/media-tile';
 import { Icon } from '@/components/ui/icon';
 import { Menu } from '@/components/ui/menu';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   speedText: {
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
   subtitle: {
     marginTop: space.xxs,

@@ -7,6 +7,8 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+import { font } from '@/constants/fonts';
+
 /**
  * Horcery brand primary — carried over from the current app's design tokens
  * (gluestack config --color-primary-500 / -600) so the rewrite matches the brand
@@ -73,30 +75,13 @@ export const Radius = {
   pill: 999,
 } as const;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+/** Compatibility aliases for the remaining Expo scaffold components. */
+export const Fonts = {
+  sans: font.regular,
+  serif: font.regular,
+  rounded: font.regular,
+  mono: font.mono,
+};
 
 export const Spacing = {
   half: 2,

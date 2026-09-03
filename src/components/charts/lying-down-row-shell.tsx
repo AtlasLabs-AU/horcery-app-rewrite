@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SplitRow } from '@/components/ui/split-row';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 import type { BadgeTone } from './lying-down-badge';
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
   name: { flexShrink: 1 },
   summary: { flexDirection: 'row', alignItems: 'baseline' },
   badge: { paddingVertical: 3, borderRadius: 99 },
-  badgeText: { fontWeight: '600' },
+  badgeText: { fontFamily: font.semibold },
   figure: { minWidth: FIGURE_COLUMN, flexShrink: 0, textAlign: 'right' },
   subline: { textAlign: 'right' },
 });

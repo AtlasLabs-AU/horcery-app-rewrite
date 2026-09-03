@@ -108,10 +108,10 @@ migration input, not a second system.
   `subhead` 15 · `footnote` 13 · `caption` 12 · `eyebrow` 12 caps/tracked ·
   `micro` 10 · `displayValue` 26 heavy · prose variants of body/subhead/
   footnote carrying `lineHeight` (24/21/19).
-- Rounded typeface. The face is a **per-platform token behind one name**:
-  iOS = SF Pro Rounded (or system `ui-rounded`); Android = an open-licensed
-  rounded face — **open decision, see R8. Do not ship SF Pro Rounded on
-  Android** (Apple's license is Apple-platforms-only).
+- **Inter on both platforms** (Inakshi, 2026-09-03). Regular, Medium,
+  SemiBold, Bold and SemiBold Italic are explicit local font assets loaded
+  before the splash screen clears. The app never downloads a font at runtime.
+  System monospace is retained only for code and diagnostic payloads.
 - Weight is selected via `fontFamily`, never `fontWeight`. Negative tracking
   on heading steps. `lineHeight` only on prose steps.
 
@@ -198,11 +198,12 @@ migration input, not a second system.
 6. Milestone review judges against the bar: calm, rounded, glassy,
    editorial — ink and grey with purple only on controls — smooth related
    motion.
+7. Custom-font evidence includes a cold start and the default, enlarged and
+   accessibility text sizes on both iOS and Android. Native headers, tabs and
+   segmented controls must be inspected on-device; a passing typecheck is not
+   rendering evidence.
 
 ## R8. Open decisions — flag, do not decide silently
 
-1. **Android rounded typeface** (SF Pro Rounded is not licensable there).
-   Propose 2–3 open-licensed rounded candidates with side-by-side renders;
-   Inakshi picks.
-2. **Charts implementation** — parked to a separate discussion; do not choose
+1. **Charts implementation** — parked to a separate discussion; do not choose
    a charting library as a side effect of other work.

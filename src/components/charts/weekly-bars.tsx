@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { LyingDownWeeklySummary } from '@/charts/lying-down';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 import { VictoryLyingDownWeeklyPlot } from './victory-lying-down-adapter';
@@ -202,7 +203,7 @@ export function WeeklyBars({
 
 const styles = StyleSheet.create({
   panel: { position: 'relative' },
-  panelTitle: { fontWeight: '600' },
+  panelTitle: { fontFamily: font.semibold },
   targets: { flexDirection: 'row', height: '100%' },
   axis: { flexDirection: 'row' },
   axisLabel: { textAlign: 'center' },

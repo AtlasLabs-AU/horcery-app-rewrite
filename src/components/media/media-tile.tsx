@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/icon';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 import { motion, radius, space, type } from '@/constants/tokens';
 
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm,
     paddingVertical: 2,
   },
-  title: { fontWeight: '700' },
+  title: { fontFamily: font.bold },
   subtitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: 3,
   },
-  tagText: { fontWeight: '600' },
+  tagText: { fontFamily: font.semibold },
   badge: {
     position: 'absolute',
     right: space.sm,

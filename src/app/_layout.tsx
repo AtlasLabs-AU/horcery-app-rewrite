@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
@@ -14,13 +15,26 @@ import { PREVIEWS } from '@/config/previews';
 import { useMembershipSync } from '@/hooks/use-membership-sync';
 import { useSession } from '@/hooks/use-session';
 import { Brand, Fyp } from '@/constants/theme';
+import { interFontSources } from '@/constants/fonts';
 import { initRemoteConfig } from '@acme/config/firebase-remote-config';
 import { queryClient } from '@acme/services';
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync().catch(() => {
+  // A splash-control failure must not prevent the app from rendering.
+});
+
+function hideSplashSafely() {
+  return SplashScreen.hideAsync().catch(() => {
+    // The splash may already be hidden. Rendering must continue either way.
+  });
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [fontsLoaded, fontError] = useFonts(interFontSources);
+
+  if (fontError) throw fontError;
+  if (!fontsLoaded) return null;
 
   return (
     /*
@@ -41,6 +55,12 @@ export default function RootLayout() {
 }
 
 export function ErrorBoundary(props: Parameters<typeof AppError>[0]) {
+  useEffect(() => {
+    // A render error can happen before SessionGate gets a chance to clear the
+    // splash. Always reveal the recoverable error screen.
+    void hideSplashSafely();
+  }, []);
+
   return <AppError {...props} />;
 }
 
@@ -76,7 +96,7 @@ function SessionGate() {
   }, []);
 
   useEffect(() => {
-    if (status !== 'loading') SplashScreen.hideAsync();
+    if (status !== 'loading') void hideSplashSafely();
   }, [status]);
 
   if (status === 'loading') {

@@ -18,6 +18,7 @@ import {
   signInWithEmailAndPassword,
 } from '@acme/config/firebase-rn';
 import { PREVIEWS } from '@/config/previews';
+import { font } from '@/constants/fonts';
 import { PrimaryButton } from '@/components/auth/primary-button';
 import { TextField } from '@/components/auth/text-field';
 import { SymbolView } from 'expo-symbols';
@@ -786,8 +787,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   googleGlyph: {
+    fontFamily: font.bold,
     fontSize: 19,
-    fontWeight: '700',
   },
   form: {
     gap: space.edge,

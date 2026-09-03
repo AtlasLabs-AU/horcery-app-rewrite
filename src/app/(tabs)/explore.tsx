@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { LiveMonitorPreviewLink } from '@/components/protos/live-monitor-preview-link';
+import { font } from '@/constants/fonts';
 import { Fyp, Spacing } from '@/constants/theme';
 
 /**
@@ -374,20 +375,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stallsLink: {
+    fontFamily: font.semibold,
     fontSize: 15,
-    fontWeight: '600',
     color: '#615FFF',
     paddingHorizontal: PAGE_MARGIN,
     paddingTop: Spacing.two,
   },
   title: {
+    fontFamily: font.bold,
     fontSize: 26,
-    fontWeight: '700',
     color: Fyp.headerTitle,
     paddingHorizontal: PAGE_MARGIN,
     paddingTop: Spacing.two,
   },
   subtitle: {
+    fontFamily: font.regular,
     fontSize: 13,
     color: Fyp.muted,
     paddingHorizontal: PAGE_MARGIN,
@@ -400,8 +402,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   sectionTitle: {
+    fontFamily: font.bold,
     fontSize: 19,
-    fontWeight: '700',
     color: Fyp.title,
     paddingHorizontal: PAGE_MARGIN,
     marginTop: Spacing.three,
@@ -428,11 +430,12 @@ const styles = StyleSheet.create({
   },
   overlayName: {
     color: '#FFFFFF',
+    fontFamily: font.bold,
     fontSize: 16,
-    fontWeight: '700',
   },
   overlayMeta: {
     color: 'rgba(255,255,255,0.72)',
+    fontFamily: font.regular,
     fontSize: 12,
     marginTop: 1,
   },
@@ -441,11 +444,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   captionName: {
+    fontFamily: font.bold,
     fontSize: 15,
-    fontWeight: '700',
     color: Fyp.title,
   },
   captionMeta: {
+    fontFamily: font.regular,
     fontSize: 12,
     color: Fyp.muted,
     marginTop: 1,
@@ -461,11 +465,12 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
   },
   glassName: {
+    fontFamily: font.bold,
     fontSize: 13,
-    fontWeight: '700',
     color: '#FFFFFF',
   },
   glassMeta: {
+    fontFamily: font.regular,
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 1,
@@ -487,11 +492,12 @@ const styles = StyleSheet.create({
   },
   railName: {
     color: '#FFFFFF',
+    fontFamily: font.bold,
     fontSize: 13,
-    fontWeight: '700',
   },
   railMeta: {
     color: 'rgba(255,255,255,0.7)',
+    fontFamily: font.regular,
     fontSize: 11,
     marginTop: 1,
   },

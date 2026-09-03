@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Menu } from '@/components/ui/menu';
+import { font } from '@/constants/fonts';
 import type { HorseGroup } from '@/hooks/use-horse-groups';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
@@ -138,5 +139,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   skeletonChip: { width: 104, borderWidth: 0 },
-  selectedText: { fontWeight: '600' },
+  selectedText: { fontFamily: font.semibold },
 });

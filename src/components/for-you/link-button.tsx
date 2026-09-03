@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 import { space, type } from '@/constants/tokens';
 
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     marginRight: -space.xs,
   },
   label: {
-    fontWeight: '600',
+    fontFamily: font.semibold,
   },
   pressed: {
     opacity: 0.5,

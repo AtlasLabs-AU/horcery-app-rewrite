@@ -18,6 +18,7 @@ import { authRn } from '@acme/config/firebase-rn';
 import { queries, queryClient } from '@acme/services';
 import { useAuthStore } from '@acme/stores/authorization-states';
 import { Icon, type IconName } from '@/components/ui/icon';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -278,7 +279,7 @@ function OrganizationRow({
       accessibilityState={{ selected: active }}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bed }]}>
       <View style={[styles.avatar, { backgroundColor: colors.bed }]}>
-        <Text style={[type.footnote, { color: colors.accent, fontWeight: '600' }]}>
+        <Text style={[type.footnote, { color: colors.accent, fontFamily: font.semibold }]}>
           {initials}
         </Text>
       </View>

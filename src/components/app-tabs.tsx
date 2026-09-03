@@ -1,5 +1,6 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -17,8 +18,8 @@ export default function AppTabs() {
       iconColor={{ default: colors.tertiary, selected: colors.foreground }}
       indicatorColor={colors.fillTonal}
       labelStyle={{
-        default: { color: colors.tertiary },
-        selected: { color: colors.foreground },
+        default: { color: colors.tertiary, fontFamily: font.medium },
+        selected: { color: colors.foreground, fontFamily: font.semibold },
       }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>

@@ -24,7 +24,7 @@
  * keeps colour out of screens; every hue below is the only place it lives.
  */
 
-import { Platform } from 'react-native';
+import { font } from '@/constants/fonts';
 
 /**
  * Media colours — the one group that is IDENTICAL in light and dark.
@@ -171,31 +171,28 @@ export type TokenColors = Record<keyof typeof palette.light, string>;
 
 /**
  * Type ramp — Apple text-style sizes, same steps on both platforms.
- * Rounded face: iOS system ui-rounded; the Android face is an open decision
- * (R8) — system default stands in until Inakshi picks.
+ * Inter is the shared iOS/Android face; each weight resolves to an explicit
+ * font file so the platforms never synthesize a different-looking weight.
  */
-const rounded = Platform.select({ ios: 'ui-rounded', default: undefined });
-
 export const type = {
-  largeTitle: { fontSize: 34, fontWeight: '700', fontFamily: rounded, letterSpacing: -0.6 },
-  title: { fontSize: 22, fontWeight: '600', fontFamily: rounded, letterSpacing: -0.4 },
-  title3: { fontSize: 20, fontWeight: '600', fontFamily: rounded, letterSpacing: -0.3 },
-  headline: { fontSize: 17, fontWeight: '600', fontFamily: rounded, letterSpacing: -0.2 },
-  body: { fontSize: 17, fontWeight: '400', fontFamily: rounded },
-  subhead: { fontSize: 15, fontWeight: '400', fontFamily: rounded },
-  footnote: { fontSize: 13, fontWeight: '400', fontFamily: rounded },
-  caption: { fontSize: 12, fontWeight: '400', fontFamily: rounded },
+  largeTitle: { fontSize: 34, fontFamily: font.bold, letterSpacing: -0.6 },
+  title: { fontSize: 22, fontFamily: font.semibold, letterSpacing: -0.4 },
+  title3: { fontSize: 20, fontFamily: font.semibold, letterSpacing: -0.3 },
+  headline: { fontSize: 17, fontFamily: font.semibold, letterSpacing: -0.2 },
+  body: { fontSize: 17, fontFamily: font.regular },
+  subhead: { fontSize: 15, fontFamily: font.regular },
+  footnote: { fontSize: 13, fontFamily: font.regular },
+  caption: { fontSize: 12, fontFamily: font.regular },
   /**
    * Smallest step (requirements R3.2). Chart axis ticks and nothing else —
    * added 2026-08-19 because the lying-down row had been inventing 9 px and
    * 10.5 px sizes off-ramp, which is the same class of mistake as a colour
    * literal but is not caught by `no-color-literals`.
    */
-  micro: { fontSize: 10, fontWeight: '400', fontFamily: rounded },
+  micro: { fontSize: 10, fontFamily: font.regular },
   eyebrow: {
     fontSize: 12,
-    fontWeight: '600',
-    fontFamily: rounded,
+    fontFamily: font.semibold,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
   },

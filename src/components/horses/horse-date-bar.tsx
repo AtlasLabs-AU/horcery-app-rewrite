@@ -2,6 +2,7 @@ import type { DateTime } from 'luxon';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { font } from '@/constants/fonts';
 import { radius, space, type } from '@/constants/tokens';
 import { canGoBack, canGoForward, dayLabel, isToday } from '@/hooks/playhead-data';
 import { useTokens } from '@/hooks/use-tokens';
@@ -60,7 +61,7 @@ export function HorseDateBar({
             accessibilityRole="button"
             accessibilityLabel="Back to today"
             testID="horse-date-today">
-            <Text style={[type.footnote, { color: colors.accent, fontWeight: '600' }]}>
+            <Text style={[type.footnote, { color: colors.accent, fontFamily: font.semibold }]}>
               Back to today
             </Text>
           </Pressable>

@@ -1,11 +1,12 @@
 import { Host } from '@expo/ui';
 import { Picker, Text as SwiftUIText } from '@expo/ui/swift-ui';
-import { frame, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
+import { font as swiftUIFont, frame, pickerStyle, tag } from '@expo/ui/swift-ui/modifiers';
 
 import {
   SEGMENTED_HEIGHT_IOS as HEIGHT,
   type SegmentedControlProps,
 } from '@/components/ui/segmented-control-types';
+import { font } from '@/constants/fonts';
 
 /**
  * iOS half of the universal `SegmentedControl` (surface layer): SwiftUI
@@ -27,7 +28,9 @@ export function SegmentedControl<T extends string>({
         modifiers={[pickerStyle('segmented'), frame({ width, height: HEIGHT })]}
         testID={testID}>
         {options.map((option) => (
-          <SwiftUIText key={option.value} modifiers={[tag(option.value)]}>
+          <SwiftUIText
+            key={option.value}
+            modifiers={[tag(option.value), swiftUIFont({ family: font.medium, textStyle: 'subheadline' })]}>
             {option.label}
           </SwiftUIText>
         ))}

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useToast } from '@/components/ui/toast';
 import { config } from '@/config/env';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   surface: { alignItems: 'center', justifyContent: 'center' },
   image: { height: IMAGE_HEIGHT, width: '100%', maxWidth: IMAGE_MAX_WIDTH },
   copy: { textAlign: 'center' },
-  product: { fontWeight: '600', fontStyle: 'italic' },
+  product: { fontFamily: font.semiboldItalic },
   cta: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   comingSoon: { alignItems: 'center', justifyContent: 'center', minHeight: 148 },
 });

@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { radius, space, type } from '@/constants/tokens';
 import type { AlertRulePayload } from '@/domain/alerts/payload';
 import { useTokens } from '@/hooks/use-tokens';
+import { font } from '@/constants/fonts';
 
 /**
  * DEV ONLY (A3): while writes are blocked, Save opens this instead — the
@@ -72,5 +73,5 @@ const styles = StyleSheet.create({
   content: { padding: space.edge, gap: space.md, paddingBottom: space.xxl },
   block: { padding: space.card, borderRadius: radius.md, borderCurve: 'continuous', gap: space.xs },
   label: { textTransform: 'uppercase', letterSpacing: 0.6 },
-  mono: { fontFamily: 'Menlo', fontSize: 12, lineHeight: 17 },
+  mono: { fontFamily: font.mono, fontSize: 12, lineHeight: 17 },
 });

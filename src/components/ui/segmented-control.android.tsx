@@ -9,6 +9,7 @@ import {
   SEGMENTED_HEIGHT_ANDROID as HEIGHT,
   type SegmentedControlProps,
 } from '@/components/ui/segmented-control-types';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 /**
@@ -45,7 +46,7 @@ export function SegmentedControl<T extends string>({
               inactiveBorderColor: colors.divider,
             }}>
             <SegmentedButton.Label>
-              <ComposeText>{option.label}</ComposeText>
+              <ComposeText style={{ fontFamily: font.medium }}>{option.label}</ComposeText>
             </SegmentedButton.Label>
           </SegmentedButton>
         ))}

@@ -246,12 +246,12 @@ rules that stop drift. That canvas is exactly the §4 surface layer. So:
    by how "good" the value is.
 3. **Rounded geometry.** Large continuous-curve corners from a six-step radius
    scale (Clarity: 28 compact cards / 36 hero cards), capsule buttons and
-   pills, a rounded typeface. `borderCurve: 'continuous'` on every non-capsule
+   pills, Inter typography. `borderCurve: 'continuous'` on every non-capsule
    radius.
 4. **A named type ramp** with the same steps on both platforms (sizes mirror
-   Apple's text styles), rendered in a rounded face that is itself a
-   per-platform token behind one name; weight selected via font family (never
-   `fontWeight`), tight tracking on headings, lineHeight only on prose steps.
+   Apple's text styles), rendered in Inter on both platforms; weight selected
+   via explicit font family (never `fontWeight`), tight tracking on headings,
+   lineHeight only on prose steps.
    A screen says `variant="headline"` — it never knows which font file that
    resolves to.
 5. **One 4-pt spacing scale.** Prefer `gap` over margins; one screen-edge
@@ -289,10 +289,14 @@ screen ever branches on platform to look right.
 
 **Decisions this creates (small, logged):**
 
-- **Android rounded typeface.** SF Pro Rounded (Clarity's face) is licensed
-  for Apple platforms only — bundling it on Android is a license violation.
-  iOS uses SF Pro Rounded or system `ui-rounded`; Android needs a chosen
-  open-licensed rounded face (or a deliberate system-face decision).
+- **Inter typography — resolved 2026-09-03.** `@expo-google-fonts/inter`
+  0.4.2 supplies OFL-licensed local assets for both platforms. Five explicit
+  weight/style families are loaded before the splash screen clears, avoiding
+  network font fetching, Android/iOS drift and synthetic weights. Runtime
+  loading is accepted for R&D; before store release, compare it with Expo's
+  native font config plugin and record the cold-start and error-path evidence.
+  Android font registration remains unverified until it is rendered on an
+  Android emulator or device.
 - **Icons unchanged:** expo-symbols on iOS / Material symbols on Android.
   Clarity's Hugeicons Pro is paid and would be a level-6 dependency — not
   adopted.
@@ -879,10 +883,9 @@ hardening H1–H4.
 | 3 | Confirm Stall Monitor access for Inakshi | Gates the internal-use rollout stage and all provisioning testing |
 | 4 | Agree working rhythm (Inakshi's weekly time for decisions + device testing) | A "you and me" build moves at the pace of your availability |
 | 5 | Charts renderer spike (§6a) | Run BEFORE implementing charts on For You or Stalls. People In Stall first. Output: side-by-side videos, scorecard, device measurements, recommendation |
-| 6 | Android rounded typeface (see §4d) | SF Pro Rounded cannot ship on Android; needed before the type ramp lands, an hour's comparison |
-| 7 | Backend endpoint for 6-digit password-reset codes | Inakshi chose in-app code reset (2026-08-14) over Firebase's web reset page; Firebase alone cannot issue codes, so the dev team needs to add issue+verify endpoints before the flow goes live. The prototype's flow is front-end only. |
-| 8 | Apple/Google sign-in wiring | Front-end approved for preview 2026-08-14; real wiring needs native builds + backend acceptance of those identities (and Apple sign-in is mandatory on iOS once Google ships) |
-| 9 | Cross-platform Home Screen widgets — deferred | Optional, not part of the current rebuild milestone. `expo-widgets` is installed but no widget target is configured. When reopened, use one shared specification, build iOS, and run a one-day Android compatibility spike before choosing a dependency; do not custom-build by default. |
+| 6 | Backend endpoint for 6-digit password-reset codes | Inakshi chose in-app code reset (2026-08-14) over Firebase's web reset page; Firebase alone cannot issue codes, so the dev team needs to add issue+verify endpoints before the flow goes live. The prototype's flow is front-end only. |
+| 7 | Apple/Google sign-in wiring | Front-end approved for preview 2026-08-14; real wiring needs native builds + backend acceptance of those identities (and Apple sign-in is mandatory on iOS once Google ships) |
+| 8 | Cross-platform Home Screen widgets — deferred | Optional, not part of the current rebuild milestone. `expo-widgets` is installed but no widget target is configured. When reopened, use one shared specification, build iOS, and run a one-day Android compatibility spike before choosing a dependency; do not custom-build by default. |
 
 ## 8. Success criteria
 

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { AlertsPermissionsProvider } from '@/components/alerts/alerts-permissions';
 import { Icon } from '@/components/ui/icon';
+import { font } from '@/constants/fonts';
 import { space } from '@/constants/tokens';
 import { useTokens } from '@/hooks/use-tokens';
 
@@ -20,7 +21,11 @@ export default function AlertsLayout() {
   const { colors } = useTokens();
   return (
     <AlertsPermissionsProvider>
-      <Stack>
+      <Stack
+        screenOptions={{
+          headerTitleStyle: { fontFamily: font.semibold },
+          headerLargeTitleStyle: { fontFamily: font.bold },
+        }}>
         <Stack.Screen name="new" options={{ title: 'New alert' }} />
         <Stack.Screen name="configure" options={{ title: 'Alert' }} />
         {/* The targets picker is a FORM SHEET so it keeps a native header (search + Done). */}

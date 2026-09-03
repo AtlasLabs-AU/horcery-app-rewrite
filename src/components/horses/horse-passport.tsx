@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { PassportField } from '@/hooks/horse-detail-data';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 import { radius, space, type } from '@/constants/tokens';
 
@@ -64,5 +65,5 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   label: { flex: 1 },
-  value: { flex: 1, textAlign: 'right', fontWeight: '500' },
+  value: { flex: 1, textAlign: 'right', fontFamily: font.medium },
 });

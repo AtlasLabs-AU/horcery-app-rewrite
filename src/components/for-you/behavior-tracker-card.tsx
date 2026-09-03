@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { SectionCard, SectionHeader } from "@/components/for-you/card";
+import { font } from "@/constants/fonts";
 import { SplitRow } from "@/components/ui/split-row";
 import { ChartPlaceholder } from "@/components/for-you/chart-placeholder";
 import {
@@ -893,7 +894,7 @@ const styles = StyleSheet.create({
     minHeight: space.xl,
     textAlign: "center",
   },
-  selectedCaption: { fontWeight: "600" },
+  selectedCaption: { fontFamily: font.semibold },
   sampleNotice: { marginTop: 8, textAlign: "center" },
   selectedRow: {
     marginTop: space.edge,
