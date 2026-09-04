@@ -191,6 +191,33 @@ decision wrong, and the near-miss is named so the lesson keeps its teeth.
     certify that something is fast enough to ship. Anything not tested on real
     hardware is written down as untested, not assumed to be fine.
 
+## Production claims have four evidence levels (added 2026-09-04)
+
+17. **Do not confuse what the code intends with what the customer receives.**
+    Every claim about production behaviour must distinguish four evidence
+    levels:
+
+    - **Source code:** what the component is programmed to do.
+    - **Release:** whether that code is in the production build.
+    - **Runtime data and configuration:** what values production actually
+      supplies to the released code.
+    - **Observed result:** what screenshots, logs or direct tests demonstrate.
+
+    A lower level does not prove a higher one. Reading source code cannot prove
+    the deployed release, and reading the release cannot prove its runtime data
+    or customer-visible result. State which levels were verified. When a level
+    is missing, give the conclusion conditionally and name the missing check;
+    do not turn an implementation detail into a definitive production claim.
+    In particular, a negative claim such as "production is not using UTC"
+    requires evidence from every level that could make the statement false.
+
+    *Why this is a principle.* On 2026-09-04, the Home clock was reported as not
+    UTC because its component was not hardcoded to UTC. That answered a source-
+    code question, not the production question: the released component uses an
+    organization timezone supplied at runtime, and that value can itself be
+    UTC. The missing runtime check made a technically narrow statement become a
+    confidently wrong customer-level conclusion.
+
 ## Tie-break
 
 **Smooth over showy.** When principles collide — glass that costs frames on
