@@ -18,6 +18,7 @@ today** and are worth tickets for the dev team regardless of the rewrite.
 | B4 | Nothing is ever cached | `packages/services/src/index.ts:70` | The global QueryClient sets only `retry` and `networkMode`. With no `staleTime`, every query is stale on arrival — leaving the tab and returning refetches the entire screen. |
 | B5 | `retry: 2` on every read | same | Three attempts against a dead endpoint. Strong candidate for the never-resolving skeletons seen on device. |
 | B6 | Remote Config fetch timeout never applied | `packages/config/src/firebase-remote-config/index.ts` | Sets `fetchTimeMillis`, which is not a real setting. The intended 30s timeout silently never applied; fetches use the 60s default. Correct key is `fetchTimeoutMillis`. |
+| B7 | Home weather looks like a contradictory stall reading and may be stale or from the wrong location | `organization-details-widget/index.tsx:102-118,175-240`; `stall-card/index.tsx:206-217,295-314` | Home uses outside weather for the first organization location while Stall uses the SMD's `external_temperature`. Home does not label the distinction, choose a location explicitly, or directly refresh weather on focus. See [`Horcery_Home_Weather_and_Time_Dev_Ticket.md`](../dev-tickets/Horcery_Home_Weather_and_Time_Dev_Ticket.md). |
 
 ## Structural performance problems
 

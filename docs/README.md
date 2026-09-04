@@ -77,6 +77,7 @@ by that path.
 | `Horcery_Review_History_Dev_Tickets.md` | Review History |
 | `Horcery_Manage_Alerts_Review.md` | Manage Alerts + create/edit alert flow — full review, rated 5/10, 8 tickets |
 | `Horcery_Clip_Download_Dev_Tickets.md` | Clip download — 5 tickets, plus one unrelated background-task bug found in the same pass |
+| `Horcery_Home_Weather_and_Time_Dev_Ticket.md` | Home weather/time mismatch — production data sources, root cause, rewrite contract and acceptance tests |
 
 Written while reviewing the old app for parity. These describe
 `84-horcery-app-react-native`, not this repo. They live here because they were
