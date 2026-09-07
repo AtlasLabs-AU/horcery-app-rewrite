@@ -19,6 +19,9 @@ import { Last24HoursCard } from '@/components/charts/last-24-hours-card';
 import { buildLast24Hours } from '@/charts/last-24-hours';
 import { ordinaryDay as last24OrdinaryDay } from '@/charts/fixtures/last-24-hours';
 import { HorseTrendsCard } from '@/components/charts/horse-trends-card';
+import { LyingDownTimeline } from '@/components/charts/lying-down-timeline';
+import { buildLyingDownTimeline } from '@/charts/lying-down-timeline';
+import { previewWeek as lyingDownPreviewWeek } from '@/charts/fixtures/lying-down-timeline';
 import { buildActivenessDay, buildRollingWeek } from '@/charts/horse-trends';
 import {
   activenessWithGap,
@@ -46,7 +49,7 @@ import {
 import { radius, space, type } from '@/constants/tokens';
 import { stallFrameUrl, stallHasFrame, stallRecordedStreamUrl } from '@/hooks/horses-data';
 import { deriveOverlay } from '@/hooks/horse-status-data';
-import { dayLabel, isToday, latestSelectable } from '@/hooks/playhead-data';
+import { dayLabel, isToday, latestSelectable, readingsAtLabel } from '@/hooks/playhead-data';
 import { useHorseDetail } from '@/hooks/use-horse-detail';
 import { useHorseStatus } from '@/hooks/use-horse-status';
 import { useOnlineStatus } from '@/hooks/use-online-status';
@@ -146,6 +149,7 @@ export default function HorseDetailScreen() {
         stall: horse.stall,
         hasResolvedStall: horse.hasResolvedStall,
         detailsFailed: horse.detailsFailed,
+        historicalAssignmentKnown: playhead.isLive,
         now,
       });
   const status = useHorseStatus({
@@ -508,11 +512,15 @@ export default function HorseDetailScreen() {
                       <HorseStatusStrip
                         status={status.status}
                         readings={status.readings}
-                        atLabel={
-                          playhead.isLive
-                            ? 'Live'
-                            : `${dayLabel(playhead.day, now)}, ${playhead.cursor.toFormat('h:mm a')}`
-                        }
+                        atLabel={readingsAtLabel({
+                          isLive: playhead.isLive,
+                          day: playhead.day,
+                          // The slice the readings were queried at, not the
+                          // cursor — see `readingsAtLabel` (CQ-7).
+                          readAt: status.readAt,
+                          zone: timezone ?? now.zoneName ?? 'UTC',
+                          now,
+                        })}
                       />
                       {status.hasMonitor ? <BuiltInSettingsNote /> : null}
                     </>
@@ -532,6 +540,40 @@ export default function HorseDetailScreen() {
                         segments: last24OrdinaryDay,
                       })}
                       width={width - TAB_WIDTH_INSET - space.lg * 2}
+                    />
+                    <Text
+                      style={[
+                        type.micro,
+                        styles.last24Sample,
+                        { color: colors.tertiary },
+                      ]}>
+                      Sample data — not this horse
+                    </Text>
+                  </View>
+                ) : null}
+                {PREVIEWS.lyingDownTimelineSampleData ? (
+                  <View
+                    style={[
+                      styles.last24Card,
+                      { backgroundColor: colors.card, borderColor: colors.divider },
+                    ]}>
+                    <View style={styles.timelineHeader}>
+                      <Text style={[type.headline, { color: colors.foreground }]}>Lying Down</Text>
+                      <Text style={[type.micro, { color: colors.tertiary }]}>
+                        7 days to {now.toFormat('ccc d MMM')}
+                      </Text>
+                    </View>
+                    <LyingDownTimeline
+                      timeline={buildLyingDownTimeline({
+                        result: lyingDownPreviewWeek(timezone ?? now.zoneName ?? 'UTC', now),
+                        selectedDate: now.toFormat('yyyy-MM-dd'),
+                        zone: timezone ?? now.zoneName ?? 'UTC',
+                        now,
+                        // Assigned to this stall on the Tuesday of the preview week.
+                        assignedAt: now.minus({ days: 2 }).startOf('day').plus({ hours: 12, minutes: 10 }).toSeconds(),
+                      })}
+                      width={width - TAB_WIDTH_INSET - space.lg * 2}
+                      testID="horse-lying-down-timeline"
                     />
                     <Text
                       style={[
@@ -721,6 +763,12 @@ const styles = StyleSheet.create({
     padding: space.lg,
   },
   last24Sample: { textAlign: "center", marginTop: space.md },
+  timelineHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: space.md,
+  },
   tabIntro: { gap: space.sm, paddingTop: space.xs },
   gap: { height: space.md },
   footer: { paddingVertical: space.lg },

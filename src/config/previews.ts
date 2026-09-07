@@ -98,4 +98,10 @@ export const PREVIEWS = {
    * badge-less until Data Science approves both.
    */
   horseTrendsSampleData: __DEV__ && optedIn,
+
+  /**
+   * Lying Down 7-day timeline on Horse Details, from FIXTURE readings, same
+   * reason and same visible marker. Built to the 2026-09-07 accuracy brief.
+   */
+  lyingDownTimelineSampleData: __DEV__ && optedIn,
 } as const;
