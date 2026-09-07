@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { monitorGapMidday } from '@/charts/fixtures/horse-in-stall-behavior';
@@ -28,13 +28,25 @@ import { radius, space, type } from '@/constants/tokens';
  * exist: the approved query, and dated assignment history so each row can
  * come from the stall the horse was actually in that day (defect CQ-8). Until
  * then every row is from the current stall, and the chart says so.
+ *
+ * The card is the home of every stall chart, as in the shipping app: stall row,
+ * then Horse in Stall, then Lying Down, then the rest as they are built. The
+ * screen passes the charts it owns as `children`, drawn beneath the strip, so
+ * this card holds the order without holding every chart's data.
  */
 
 const FALLBACK_ZONE = 'America/Chicago';
 const WIDTH_FALLBACK = 320;
 const HOUR = 3600;
 
-export function HorseStallCard({ stallName }: { stallName?: string }) {
+export function HorseStallCard({
+  stallName,
+  children,
+}: {
+  stallName?: string;
+  /** Further stall charts, in the order they follow Horse in Stall. */
+  children?: ReactNode;
+}) {
   const { colors } = useTokens();
   const assigned = !!stallName;
   const [width, setWidth] = useState(WIDTH_FALLBACK);
@@ -125,6 +137,7 @@ export function HorseStallCard({ stallName }: { stallName?: string }) {
           </Text>
         </View>
       ) : null}
+      {children}
     </View>
   );
 }

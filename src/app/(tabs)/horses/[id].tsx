@@ -526,7 +526,10 @@ export default function HorseDetailScreen() {
                     </>
                   )
                 ) : null}
-                <HorseStallCard stallName={horse.row?.stallName} />
+                {/* Section order matches the shipping app (Inakshi, 2026-09-07):
+                    Last 24 hours, Horse Trends, then the Stall card holding
+                    every stall chart — Horse in Stall, Lying Down, and the rest
+                    as they are built. */}
                 {PREVIEWS.last24HoursSampleData ? (
                   <View
                     style={[
@@ -540,40 +543,6 @@ export default function HorseDetailScreen() {
                         segments: last24OrdinaryDay,
                       })}
                       width={width - TAB_WIDTH_INSET - space.lg * 2}
-                    />
-                    <Text
-                      style={[
-                        type.micro,
-                        styles.last24Sample,
-                        { color: colors.tertiary },
-                      ]}>
-                      Sample data — not this horse
-                    </Text>
-                  </View>
-                ) : null}
-                {PREVIEWS.lyingDownTimelineSampleData ? (
-                  <View
-                    style={[
-                      styles.last24Card,
-                      { backgroundColor: colors.card, borderColor: colors.divider },
-                    ]}>
-                    <View style={styles.timelineHeader}>
-                      <Text style={[type.headline, { color: colors.foreground }]}>Lying Down</Text>
-                      <Text style={[type.micro, { color: colors.tertiary }]}>
-                        7 days to {now.toFormat('ccc d MMM')}
-                      </Text>
-                    </View>
-                    <LyingDownTimeline
-                      timeline={buildLyingDownTimeline({
-                        result: lyingDownPreviewWeek(timezone ?? now.zoneName ?? 'UTC', now),
-                        selectedDate: now.toFormat('yyyy-MM-dd'),
-                        zone: timezone ?? now.zoneName ?? 'UTC',
-                        now,
-                        // Assigned to this stall on the Tuesday of the preview week.
-                        assignedAt: now.minus({ days: 2 }).startOf('day').plus({ hours: 12, minutes: 10 }).toSeconds(),
-                      })}
-                      width={width - TAB_WIDTH_INSET - space.lg * 2}
-                      testID="horse-lying-down-timeline"
                     />
                     <Text
                       style={[
@@ -620,6 +589,38 @@ export default function HorseDetailScreen() {
                     </Text>
                   </View>
                 ) : null}
+                <HorseStallCard stallName={horse.row?.stallName}>
+                  {PREVIEWS.lyingDownTimelineSampleData ? (
+                    <View testID="horse-lying-down-section">
+                      <View style={styles.timelineHeader}>
+                        <Text style={[type.headline, { color: colors.foreground }]}>Lying Down</Text>
+                        <Text style={[type.micro, { color: colors.tertiary }]}>
+                          7 days to {now.toFormat('ccc d MMM')}
+                        </Text>
+                      </View>
+                      <LyingDownTimeline
+                        timeline={buildLyingDownTimeline({
+                          result: lyingDownPreviewWeek(timezone ?? now.zoneName ?? 'UTC', now),
+                          selectedDate: now.toFormat('yyyy-MM-dd'),
+                          zone: timezone ?? now.zoneName ?? 'UTC',
+                          now,
+                          // Assigned to this stall on the Tuesday of the preview week.
+                          assignedAt: now.minus({ days: 2 }).startOf('day').plus({ hours: 12, minutes: 10 }).toSeconds(),
+                        })}
+                        width={width - TAB_WIDTH_INSET - space.card * 2}
+                        testID="horse-lying-down-timeline"
+                      />
+                      <Text
+                        style={[
+                          type.micro,
+                          styles.last24Sample,
+                          { color: colors.tertiary },
+                        ]}>
+                        Sample data — not this horse
+                      </Text>
+                    </View>
+                  ) : null}
+                </HorseStallCard>
                 <HorsePassport fields={passport} />
               </View>
             ) : (

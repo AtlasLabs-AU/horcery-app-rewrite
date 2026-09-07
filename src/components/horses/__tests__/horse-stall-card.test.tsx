@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 import { HorseStallCard } from '@/components/horses/horse-stall-card';
 
@@ -48,6 +49,23 @@ describe('HorseStallCard', () => {
     expect(screen.getByText('Sample data — not this horse')).toBeTruthy();
     expect(screen.getByText('From Stall 4, the stall this horse is in now')).toBeTruthy();
     expect(screen.getByText('Today')).toBeTruthy();
+  });
+
+  it('draws further stall charts beneath Horse in Stall, inside the card', async () => {
+    // The shipping app keeps every stall chart in one card, Stall Occupancy
+    // first, so a customer finds Lying Down where it has always been.
+    mockPreviews.horseInStallSampleData = true;
+    await render(
+      <HorseStallCard stallName="Stall 4">
+        <Text testID="next-chart">Lying Down</Text>
+      </HorseStallCard>,
+    );
+    const card = screen.getByTestId('horse-stall-card');
+    const kids = card.children.map((child) =>
+      typeof child === 'string' ? child : (child as { props: { testID?: string } }).props.testID,
+    );
+    expect(kids.indexOf('horse-stall-chart')).toBeGreaterThan(-1);
+    expect(kids.indexOf('next-chart')).toBe(kids.indexOf('horse-stall-chart') + 1);
   });
 
   it('lets a long stall name wrap instead of cutting it off', async () => {
