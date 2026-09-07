@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { barnDayAxisLabels } from '@/charts/barn-day';
 import type { HorseInStallStrip as StripModel, HorseInStallStripRow } from '@/charts/horse-in-stall-strip';
 import { formatDuration, formatDurationCompact } from '@/charts/lying-down';
+import { font } from '@/constants/fonts';
 import { useTokens } from '@/hooks/use-tokens';
 
 import { ChartStateSurface } from './chart-state-surface';
@@ -36,9 +37,15 @@ const IN_STALL_READINGS = 'in-stall readings';
 
 const STRIP_HEIGHT = 12;
 const ROW_GAP = 10;
-const LABEL_WIDTH = 44;
-/** Apple's minimum comfortable target; the strip is far thinner than a finger. */
-const MIN_TAP_HEIGHT = 44;
+/** A floor, not a fixed width: "Wed" at an accessibility size must not clip. */
+const LABEL_MIN_WIDTH = 44;
+/**
+ * Row pitch is 36 pt, under the 44 pt a tap target should have. Seven rows at
+ * 44 pt is a 308 pt block that does not fit the card, so the rows are made
+ * contiguous with hitSlop instead: every point of the block belongs to some
+ * row. Recorded as an exception in PRINCIPLES.md (2026-09-05).
+ */
+const ROW_MIN_HEIGHT = 26;
 
 export interface HorseInStallStripProps {
   data: StripModel;
@@ -80,9 +87,14 @@ export function HorseInStallStrip({ data, width, sourceNote, testID }: HorseInSt
           ? 'a day, no average yet'
           : `a day, ${formatDuration(summary.usualDailyAverageSeconds)} avg`;
 
-  const trackWidth = Math.max(0, width - LABEL_WIDTH);
+  const trackWidth = Math.max(0, width - LABEL_MIN_WIDTH);
   const open = rows.find((row) => row.key === openKey) ?? null;
-  const detail = open ? weeklyDayDetail(open.detail, zone, IN_STALL) : null;
+  const detail = open ? rowWording(open, zone) : null;
+  // One axis for seven rows, taken from the top row. KNOWN LIMIT: on the two
+  // clock-change days a year the barn day is 23 or 25 hours, and that one
+  // row's true quarter marks sit up to 45 minutes off these labels. Each row
+  // is still scaled to its own real span, so the runs are in the right place;
+  // only the shared tick text is approximate for that row.
   const axis = rows[0] ? barnDayAxisLabels(rows[0].start, rows[0].nextMidnight, zone) : [];
 
   return (
@@ -112,11 +124,11 @@ export function HorseInStallStrip({ data, width, sourceNote, testID }: HorseInSt
               selected={openKey === row.key}
               dimmed={openKey !== null && openKey !== row.key}
               onPress={() => setOpenKey(openKey === row.key ? null : row.key)}
-              label={weeklyDayDetail(row.detail, zone, IN_STALL)}
+              label={rowWording(row, zone)}
             />
           ))}
 
-          <View style={[styles.axis, { marginLeft: LABEL_WIDTH, width: trackWidth }]}>
+          <View style={[styles.axis, { marginLeft: LABEL_MIN_WIDTH, width: trackWidth }]}>
             {axis.map((label, index) => (
               <Text key={`${index}-${label}`} style={[type.micro, { color: colors.tertiary }]}>
                 {label}
@@ -128,7 +140,6 @@ export function HorseInStallStrip({ data, width, sourceNote, testID }: HorseInSt
             <View
               testID="horse-in-stall-strip-detail"
               style={[
-                styles.panel,
                 {
                   marginTop: space.md,
                   padding: space.md,
@@ -154,6 +165,23 @@ export function HorseInStallStrip({ data, width, sourceNote, testID }: HorseInSt
       </ChartStateSurface>
     </LyingDownRowShell>
   );
+}
+
+/**
+ * The tap panel's words for a row, and the screen reader's — one source.
+ *
+ * A partly recorded day gets the reason the shared table withholds: that
+ * table lists nothing for a partial day so as not to imply the list is
+ * complete, which is right for visits, but here the grey stretch is the whole
+ * point and colour must never be the only carrier. The sentence is the one
+ * already agreed for this chart's daily caption.
+ */
+function rowWording(row: HorseInStallStripRow, zone: string): { title: string; detail?: string } {
+  const words = weeklyDayDetail(row.detail, zone, IN_STALL);
+  if (row.coverage === 'partial' && !row.isToday && !words.detail) {
+    return { ...words, detail: 'Partly recorded — time out is unknown' };
+  }
+  return words;
 }
 
 function StripRow({
@@ -186,18 +214,25 @@ function StripRow({
       accessibilityLabel={[label.title, label.detail].filter(Boolean).join('. ')}
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.row, { minHeight: MIN_TAP_HEIGHT * 0.6, opacity: dimmed ? 0.4 : 1 }]}>
+      hitSlop={{ top: ROW_GAP / 2, bottom: ROW_GAP / 2 }}
+      style={[styles.row, { minHeight: ROW_MIN_HEIGHT, opacity: dimmed ? 0.4 : 1 }]}>
       <Text
         style={[
           type.micro,
           styles.label,
           { color: selected || row.isToday ? colors.foreground : colors.tertiary },
-        ]}
-        numberOfLines={1}>
+        ]}>
         {row.label}
       </Text>
 
-      <View style={[styles.track, { width: trackWidth, backgroundColor: colors.chartBand }]}>
+      <View style={[styles.track, { width: trackWidth }]}>
+        {/* The pale bed is "out", so it covers only the part of the day that
+            has happened. Painting it full-width drew the rest of today as a
+            horse that has been out since now. */}
+        <View
+          testID="horse-in-stall-strip-bed"
+          style={[styles.run, { left: 0, width: elapsed * trackWidth, backgroundColor: colors.chartBand }]}
+        />
         {row.inStall.map((stretch) => (
           <View
             key={`in-${stretch.enter}`}
@@ -245,7 +280,7 @@ function StripRow({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: ROW_GAP },
-  label: { width: LABEL_WIDTH },
+  label: { minWidth: LABEL_MIN_WIDTH },
   track: {
     height: STRIP_HEIGHT,
     borderRadius: STRIP_HEIGHT / 2,
@@ -259,10 +294,14 @@ const styles = StyleSheet.create({
   },
   remaining: {
     backgroundColor: 'transparent',
-    borderWidth: StyleSheet.hairlineWidth,
+    // 1 pt, not hairline: Android draws hairline dashes unreliably, and this
+    // outline is the only thing saying "not happened yet".
+    borderWidth: 1,
     borderStyle: 'dashed',
+    // Butts against the elapsed part; only the far end is a cap.
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
   },
   axis: { flexDirection: 'row', justifyContent: 'space-between' },
-  panel: {},
-  panelTitle: { fontWeight: '600' },
+  panelTitle: { fontFamily: font.semibold },
 });

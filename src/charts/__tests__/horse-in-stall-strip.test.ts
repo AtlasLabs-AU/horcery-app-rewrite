@@ -29,6 +29,9 @@ describe('buildHorseInStallStrip', () => {
     expect(rows[0]?.isToday).toBe(true);
     expect(rows[0]?.label).toBe('Today');
     expect(rows.slice(1).every((row) => !row.isToday)).toBe(true);
+    // Short weekdays, not one-letter initials: "T" twice and "S" twice is not
+    // a row identity.
+    expect(rows.slice(1).map((row) => row.label)).toEqual(['Tue', 'Mon', 'Sun', 'Sat', 'Fri', 'Thu']);
     // Reading downward goes into the past.
     expect(rows[1]!.start).toBeGreaterThan(rows[2]!.start);
   });
@@ -76,8 +79,10 @@ describe('buildHorseInStallStrip', () => {
 
   it('carries the weekly verdict and figures for the header', () => {
     const { summary } = strip();
-    expect(summary.dailyAverageSeconds).not.toBeNull();
-    expect(['usual', 'low', 'high', 'unusual']).toContain(summary.verdict);
+    // Routine turnout is ~19 h in against a stated 19 h normal: Usual, not
+    // merely "some verdict".
+    expect(summary.dailyAverageSeconds).toBeGreaterThan(18 * HOUR);
+    expect(summary.verdict).toBe('usual');
   });
 
   it('does not judge a week with silent days in it', () => {
@@ -112,6 +117,31 @@ describe('observationGaps', () => {
     expect(gap!.enter).toBeLessThanOrEqual(holeFrom);
     expect(gap!.exit).toBeGreaterThanOrEqual(holeTo);
     expect(gap!.exit - gap!.enter).toBeLessThan(4 * HOUR + 180);
+  });
+
+  it('is empty for an empty or inverted window', () => {
+    expect(observationGaps([], to, from)).toEqual([]);
+    expect(observationGaps([], from, from)).toEqual([]);
+  });
+
+  it('measures the cadence from the data rather than assuming one', () => {
+    // 90 s readings: the limit is 4 × 90 = 360 s. Dropping three consecutive
+    // readings leaves a 360 s gap — at the limit, not over it — so nothing is
+    // reported; dropping four leaves 450 s and must be.
+    const dropping = (count: number) => {
+      const stamps: number[] = [];
+      let dropped = 0;
+      for (let t = from; t <= to; t += 90) {
+        if (t >= from + HOUR && dropped < count) {
+          dropped++;
+          continue;
+        }
+        stamps.push(t);
+      }
+      return observationGaps(series(stamps), from, to);
+    };
+    expect(dropping(3)).toEqual([]);
+    expect(dropping(4)).toHaveLength(1);
   });
 
   it('treats corrupt samples as absence, not coverage', () => {

@@ -85,6 +85,75 @@ describe('HorseInStallStrip', () => {
     expect(String(silent!.props.accessibilityLabel)).not.toMatch(/Out/);
   });
 
+  it('shows a dash and no rows when nothing came back', async () => {
+    await render(chart([]));
+    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^horse-in-stall-strip-row-/)).toHaveLength(0);
+    expect(screen.getByText('No in-stall readings for this period')).toBeTruthy();
+  });
+
+  it('draws not-recorded over in-stall, and the bed only over elapsed time', async () => {
+    await render(chart(monitorGapMidday(NOW)));
+    const today = screen.getAllByTestId(/^horse-in-stall-strip-row-/)[0]!;
+    const track = today.children[1] as unknown as {
+      children: { props: { testID?: string; style: unknown } }[];
+    };
+    const kinds = track.children.map((child) => child.props.testID ?? 'run');
+    // bed, in-stall runs, grey gaps, then the dashed remainder — in that order.
+    expect(kinds[0]).toBe('horse-in-stall-strip-bed');
+    expect(kinds.at(-1)).toBe('horse-in-stall-strip-remaining');
+    const flat = (style: unknown) => Object.assign({}, ...([] as object[]).concat(style as object[]));
+    const bed = flat(track.children[0]!.props.style) as { width: number };
+    const remaining = flat(track.children.at(-1)!.props.style) as { left: number; width: number };
+    expect(remaining.left).toBeCloseTo(bed.width, 5);
+    expect(bed.width + remaining.width).toBeCloseTo(340 - 44, 5);
+  });
+
+  it('gives the screen reader exactly what the panel says', async () => {
+    await render(chart());
+    const row = screen.getAllByTestId(/^horse-in-stall-strip-row-/)[1]!;
+    await fireEvent.press(row);
+    const panel = screen.getByTestId('horse-in-stall-strip-detail');
+    const panelText = panel.children
+      .map((child) =>
+        typeof child === 'string'
+          ? child
+          : (child as unknown as { props: { children: string } }).props.children,
+      )
+      .join('. ');
+    expect(String(row.props.accessibilityLabel)).toBe(panelText);
+  });
+
+  it('says in words that a partly recorded day is partly recorded', async () => {
+    // Cut a four-hour hole out of YESTERDAY'S barn day, so the partial day is
+    // a finished one whose panel would otherwise carry only a total. NOW is
+    // 05:00, an hour before rollover, so yesterday's barn day is the calendar
+    // day two back.
+    const raw = routineTurnout(NOW)[0]!;
+    const holeFrom = NOW.minus({ days: 2 }).set({ hour: 11, minute: 40 }).toSeconds();
+    const holeTo = NOW.minus({ days: 2 }).set({ hour: 15, minute: 30 }).toSeconds();
+    await render(
+      chart([{ ...raw, values: raw.values.filter(([t]) => t < holeFrom || t > holeTo) }]),
+    );
+    const rows = screen.getAllByTestId(/^horse-in-stall-strip-row-/);
+    const partial = rows.find((row) =>
+      /Partly recorded/.test(String(row.props.accessibilityLabel)),
+    );
+    expect(partial).toBeTruthy();
+    // And never a guessed absence on that day.
+    expect(String(partial!.props.accessibilityLabel)).not.toMatch(/Out \d/);
+  });
+
+  it('recedes the other rows while one is open', async () => {
+    await render(chart());
+    const rows = () => screen.getAllByTestId(/^horse-in-stall-strip-row-/);
+    await fireEvent.press(rows()[2]!);
+    const flat = (style: unknown) => Object.assign({}, ...([] as object[]).concat(style as object[]));
+    expect((flat(rows()[2]!.props.style) as { opacity: number }).opacity).toBe(1);
+    expect((flat(rows()[0]!.props.style) as { opacity: number }).opacity).toBeLessThan(1);
+    expect(rows()[2]!.props.accessibilityState).toEqual({ selected: true });
+  });
+
   it('says where the rows come from while assignment history is undated', async () => {
     await render(chart(routineTurnout(NOW), 'From Stall 4, the stall this horse is in now'));
     expect(screen.getByText(/From Stall 4/)).toBeTruthy();

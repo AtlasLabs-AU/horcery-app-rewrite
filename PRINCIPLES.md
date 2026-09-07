@@ -107,6 +107,14 @@ control exist on **both** platforms, behave the **same** way on both, and accept
 our design tokens? If not, universal primitives are the principled answer rather
 than the lazy one.
 
+## Recorded exceptions to the 44 pt tap target (principle 12)
+
+- **Seven-day Horse in Stall strip rows (2026-09-05).** Seven rows at 44 pt
+  each is a 308 pt block that does not fit the Stall card. Rows are on a 36 pt
+  pitch and made contiguous with `hitSlop`, so every point of the block belongs
+  to exactly one row and there is no dead space between targets. Any future
+  row-per-day chart inherits this exception rather than re-deriving it.
+
 ## Colour (decided by Inakshi, 2026-08-17)
 
 The look is **editorial**: white canvas, ink and grey doing the work, one

@@ -49,6 +49,12 @@ export function HorseStallCard({ stallName }: { stallName?: string }) {
    * established stall so the history gate does not fire. The fixture is the
    * one with a mid-day outage and two silent days, because those are the
    * states this chart most needs to get right.
+   *
+   * KNOWN LIMIT: the fixture lays its days out on a 06:00 barn day while the
+   * card cuts days at the organization's `chart_start_time`. On an org that
+   * starts its day elsewhere the preview shows an extra partial stretch on one
+   * row that the fixture did not intend. Preview artefact only; the same
+   * pattern as For You.
    */
   const sample = useMemo(() => {
     if (!assigned || !PREVIEWS.horseInStallSampleData) return null;

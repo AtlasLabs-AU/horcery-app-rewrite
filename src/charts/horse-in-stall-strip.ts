@@ -1,4 +1,4 @@
-import type { DateTime } from 'luxon';
+import { DateTime } from 'luxon';
 
 import { buildHorseInStallWeek, buildHorseInStallWeekly } from './horse-in-stall-behavior';
 import type { DayCoverage, LyingDownWeeklyDay, LyingDownWeeklySummary } from './lying-down';
@@ -36,10 +36,8 @@ import type { PrometheusRangeSeries } from './occupancy-timeline';
  * does not hide it.
  */
 
-export interface StripStretch {
-  enter: number;
-  exit: number;
-}
+/** A run the horse was in the stall. Same shape as a gap; different meaning. */
+export type StripStretch = ObservationGap;
 
 export interface HorseInStallStripRow {
   /** `yyyy-MM-dd` in the organization's zone. Stable key, never shown. */
@@ -120,7 +118,9 @@ export function buildHorseInStallStrip({
       if (!detail) throw new Error(`weekly model lost day ${day.key}`);
       return {
         key: day.key,
-        label: day.isToday ? 'Today' : detail.weekday,
+        // Short weekday, not the weekly model's one-letter axis initial: two
+        // rows reading "T" and two reading "S" is not a row identity.
+        label: day.isToday ? 'Today' : DateTime.fromISO(day.key, { zone }).toFormat('ccc'),
         isToday: day.isToday,
         start: day.start,
         upTo,
@@ -130,6 +130,14 @@ export function buildHorseInStallStrip({
         inStall: day.bouts.map((bout) => ({ enter: bout.enter, exit: bout.exit })),
         // A day with no observations at all is one whole gap, which is what
         // draws it grey end to end rather than as an empty (out) track.
+        // KNOWN LIMIT (review, 2026-09-05): `coverage` comes from the week
+        // model's own gap scan, which measures cadence over undeduplicated
+        // stamps across every stream, while this scan deduplicates. With five
+        // streams at 90 s the two limits are 300 s and 360 s, so a hole between
+        // them is badged Incomplete but draws no grey. The fix is one scan —
+        // `buildLyingDownWeek` computing `unobserved` with `observationGaps` and
+        // deriving `coverage` from it — and belongs in lying-down.ts, which is
+        // mid-edit elsewhere as this is written. Tracked in the register.
         unobserved:
           day.coverage === 'no-observations'
             ? [{ enter: day.start, exit: upTo }]
