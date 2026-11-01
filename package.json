@@ -11,7 +11,7 @@
     "@react-native-firebase/auth": "^26.2.0",
     "@react-native-firebase/remote-config": "^26.2.0",
     "@tanstack/react-query": "^5.101.4",
-    "expo": "~57.0.12",
+    "expo": "~58.0.22",
     "expo-build-properties": "^57.0.10",
     "expo-constants": "~57.0.10",
     "expo-dev-client": "^57.0.11",
